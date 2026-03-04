@@ -1,0 +1,12 @@
+#pragma once
+
+#include "NativeGameplayTags.h"
+
+namespace HOGGameplayTags
+{
+	//Team (아군적군 구분하는태그)
+	HOGWARTSLEGACYCLONE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Team_Player)
+	HOGWARTSLEGACYCLONE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Team_Enemy)
+	HOGWARTSLEGACYCLONE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Team_Object)
+	
+}
