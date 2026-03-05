@@ -3,15 +3,64 @@
 
 #include "Character/BaseCharacter.h"
 
-// Sets default values
+#include "GameFramework/Controller.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 ABaseCharacter::ABaseCharacter()
 {
-	// disable tick by default, enable it in child classes if needed
-    PrimaryActorTick.bCanEverTick = false;
-    PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
-	// disable decals by default, enable it in child classes if needed
-    GetMesh()->bReceivesDecals = false;
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->bReceivesDecals = false;
+	}
 }
 
+void ABaseCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+}
 
+void ABaseCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	//나중에 GAS용
+}
+
+void ABaseCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	//나중에 GAS용
+}
+
+void ABaseCharacter::SetTeamTag(FGameplayTag NewTeamTag)
+{
+	TeamTag = NewTeamTag;
+}
+
+bool ABaseCharacter::HasTeamTag(FGameplayTag QueryTag) const
+{
+	return TeamTag.IsValid() && TeamTag.MatchesTag(QueryTag);
+}
+
+void ABaseCharacter::Die()
+{
+	HandleDeath();
+}
+
+void ABaseCharacter::HandleDeath_Implementation()
+{
+	if (bIsDead)return;
+	bIsDead = true;
+
+	//일단 정지처리만 구현
+
+	UCharacterMovementComponent* MoveComp = Cast<UCharacterMovementComponent>(GetCharacterMovement());
+	if (MoveComp)
+	{
+		MoveComp->DisableMovement();
+	}
+}
