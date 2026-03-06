@@ -27,4 +27,13 @@ namespace HOGGameplayTags
 	
 	//Enemy Ability 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Attack, "Ability.Attack")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Spell_BasicAttack, "Spell.BasicAttack")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Protego, "Spell.Protego")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Accio, "Spell.Accio")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Incendio, "Spell.Incendio")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Leviosa, "Spell.Leviosa")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Stupefy, "Spell.Stupefy")
+	
+	
 }

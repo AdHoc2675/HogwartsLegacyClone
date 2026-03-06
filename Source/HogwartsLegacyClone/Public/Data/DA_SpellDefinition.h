@@ -27,7 +27,7 @@ public:
 	FText DisplayName;
 	
 	//아이콘 (UI 같은거에 나올 이미지.)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Spell|ID")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Spell|UI")
 	TObjectPtr<UTexture2D> Icon = nullptr;
 	
 	//쿨타임

@@ -33,6 +33,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void PlayerTick(float DeltaTime) override;
 
 protected:
 	/** BP에서 지정할 InputConfig (DA_InputConfig) */
