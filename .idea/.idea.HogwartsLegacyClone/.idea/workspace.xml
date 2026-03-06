@@ -8,9 +8,30 @@
     <projectFile>Intermediate/ProjectFiles/HogwartsLegacyClone.vcxproj</projectFile>
     <projectFile>Intermediate/ProjectFiles/UE5.vcxproj</projectFile>
   </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/StarterContent/Architecture/Floor_400x400.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Maps/Share/ThirdPersonMap.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Maps/Share/ThirdPersonMap.umap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Data/BP_DA_InputConfig.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Data/BP_DA_InputConfig.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/GameFramework/BP_HOG_GameInstance.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/GameFramework/BP_HOG_GameInstance.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/GameFramework/BP_HOG_PlayerState.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/GameFramework/BP_HOG_PlayerState.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Input/IMC_Default.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Input/IMC_Default.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/Player/PlayerCharacterBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/Player/PlayerCharacterBase.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GA_SpellBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GA_SpellBase.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/HOGAbilitySystemComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/HOGAbilitySystemComponent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GameFramework/HOG_PlayerState.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GameFramework/HOG_PlayerState.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/Player/PlayerCharacterBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/Player/PlayerCharacterBase.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Data/DA_SpellDefinition.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Data/DA_SpellDefinition.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GA_SpellBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GA_SpellBase.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GameFramework/HOG_PlayerState.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GameFramework/HOG_PlayerState.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,9 +45,9 @@
     <commands />
     <urls />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 7
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
   <component name="ProjectId" id="3ASUdpeJ2nfHrjKVxnosKHA4IG1" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -39,7 +60,12 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "DOHEE__CharacterBase",
+    "git-widget-placeholder": "도희__SpellBasicAttack",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -131,7 +157,10 @@
       </method>
     </configuration>
     <configuration default="true" type="docker-deploy" factoryName="dockerfile" temporary="true">
-      <deployment type="dockerfile" />
+      <deployment type="dockerfile">
+        <settings />
+      </deployment>
+      <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />
       <method v="2" />
     </configuration>
     <configuration name="EpicGames.Perforce.Fixture/Dockerfile" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
@@ -154,6 +183,8 @@
       <option name="presentableId" value="Default" />
       <updated>1772585556032</updated>
       <workItem from="1772585558468" duration="273000" />
+      <workItem from="1772676790592" duration="438000" />
+      <workItem from="1772757936717" duration="5048000" />
     </task>
     <servers />
   </component>

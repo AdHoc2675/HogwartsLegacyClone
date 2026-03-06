@@ -6,6 +6,8 @@
 #include "GA_SpellBase.generated.h"
 
 class UDA_SpellDefinition;
+class APlayerCharacterBase;
+class ULockOnComponent;
 
 /**
  * UGA_SpellBase
@@ -16,7 +18,7 @@ class UDA_SpellDefinition;
  * - 대신 “스펠 데이터(쿨타임/데미지/사거리/타겟 조건)”를 DataAsset로부터 가져오고,
  *   공통 검증(타겟 태그 조건 등)을 제공한다.
  *
- * [데이터 파이프라인]
+ * [데이터 파이프라인]0
  *   (1) UDA_SpellDefinition (PrimaryDataAsset)
  *       - SpellID(게임플레이태그)를 키로, 쿨타임/데미지/사거리/타겟 요구태그 등을 보관
  *   (2) UHOG_GameInstance 의 SpellRegistry
@@ -118,6 +120,16 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Targeting")
 	bool DoesTargetMeetRequirements(AActor* Target) const;
+	
+	/**
+ * AcquireTargetFromLockOn()
+ * - PlayerCharacterBase에 부착된 LockOnComponent를 통해 타겟을 선정한다.
+ * - RequiredTargetTags는 SpellDefinition의 TargetRequiredTags를 그대로 사용한다(현재 단계).
+ * - 타겟이 없거나 LockOnComponent가 없으면 OutTarget=nullptr, OutAimPoint는 Fallback으로 채운다.
+ */
+	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Targeting")
+	bool AcquireTargetFromLockOn(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags, FVector& OutAimPoint) const;
+	
 
 protected:
 	/**
@@ -139,4 +151,6 @@ protected:
 	 * - ASC가 없는 경우: 현재 버전에서는 false(=요구태그 만족 불가)로 처리.
 	 */
 	bool HasAllRequiredTags(AActor* Target, const FGameplayTagContainer& Required) const;
+	
+	bool GetCenterAimPoint(FVector& OutAimPoint, float RangeOverride = -1.f) const;
 };

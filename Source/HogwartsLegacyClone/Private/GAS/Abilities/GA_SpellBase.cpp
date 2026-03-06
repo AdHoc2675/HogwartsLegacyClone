@@ -8,6 +8,8 @@
 #include "GameFramework/Actor.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
+#include "Character/Player/PlayerCharacterBase.h"
+#include "Component/LockOnComponent.h"
 
 UGA_SpellBase::UGA_SpellBase()
 {
@@ -36,11 +38,7 @@ UDA_SpellDefinition* UGA_SpellBase::GetSpellDefinition() const
 
 	// 3) World를 얻고 GameInstance를 얻어온다.
 	//    여기서 UHOG_GameInstance는 SpellRegistry를 관리한다.
-	if (!CurrentActorInfo)
-	{
-		return nullptr;
-	}
-
+	
 	UWorld* World = GetWorld();
 	if (!World)
 	{
@@ -141,6 +139,112 @@ bool UGA_SpellBase::DoesTargetMeetRequirements(AActor* Target) const
 		return false;
 	}
 
+	return true;
+}
+
+bool UGA_SpellBase::AcquireTargetFromLockOn(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags,
+	FVector& OutAimPoint) const
+{
+	OutTarget = nullptr;
+	OutTargetTags.Reset();
+	OutAimPoint = FVector::ZeroVector;
+
+	// Definition 필요 (RequiredTags / Range 등)
+	UDA_SpellDefinition* Def = GetSpellDefinitionOrWarn();
+	if (!Def)
+	{
+		// Definition 없어도 조준점은 최대한 주기
+		GetCenterAimPoint(OutAimPoint, 2000.f);
+		return false;
+	}
+
+	if (!CurrentActorInfo)
+	{
+		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		return false;
+	}
+
+	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
+	if (!PlayerCharacter)
+	{
+		// Avatar가 플레이어 캐릭터가 아닐 수도 있으니 fallback
+		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		return false;
+	}
+
+	ULockOnComponent* LockOn = PlayerCharacter->GetLockOnComponent();
+	if (!LockOn)
+	{
+		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		return false;
+	}
+
+	// LockOn의 탐색 범위는 스펠의 CastRange에 맞춰 동기화(임시 정책)
+	LockOn->MaxRange = Def->CastRange;
+
+	FLockOnTargetResult Result;
+	const bool bFound = LockOn->FindBestTarget(Def->TargetRequiredTags, Result);
+
+	// 타겟이 없으면 AimPoint만이라도 반환
+	if (!bFound || !IsValid(Result.TargetActor))
+	{
+		// LockOnComponent가 채운 AimPoint가 있으면 그걸 쓰고, 없으면 센터에임 fallback
+		if (!Result.AimPoint.IsNearlyZero())
+		{
+			OutAimPoint = Result.AimPoint;
+		}
+		else
+		{
+			GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		}
+		return false;
+	}
+
+	// 2차 검증: 기존 SpellBase 공통 규칙(Blocked/Required)로 최종 판정
+	if (!DoesTargetMeetRequirements(Result.TargetActor))
+	{
+		// 요구조건 불만족이면 타겟 무효 처리(하지만 AimPoint는 타겟 위치로)
+		OutAimPoint = Result.TargetActor->GetActorLocation();
+		return false;
+	}
+
+	OutTarget = Result.TargetActor;
+	OutTargetTags = Result.TargetTags;
+	OutAimPoint = Result.AimPoint.IsNearlyZero() ? Result.TargetActor->GetActorLocation() : Result.AimPoint;
+	return true;
+}
+
+bool UGA_SpellBase::GetCenterAimPoint(FVector& OutAimPoint, float RangeOverride) const
+{
+	if (!CurrentActorInfo)
+	{
+		return false;
+	}
+
+	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
+	if (!Avatar)
+	{
+		return false;
+	}
+
+	APawn* Pawn = Cast<APawn>(Avatar);
+	if (!Pawn)
+	{
+		return false;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+	if (!PC || !PC->PlayerCameraManager)
+	{
+		return false;
+	}
+
+	const float UseRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
+	const FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
+	const FVector CamForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
+
+	OutAimPoint = CamLoc + (CamForward * UseRange);
 	return true;
 }
 

@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
 #include "Engine/LocalPlayer.h"
+#include "GAS/HOGAbilitySystemComponent.h"
 
 AHOG_PlayerController::AHOG_PlayerController()
 {
@@ -41,6 +42,25 @@ void AHOG_PlayerController::SetupInputComponent()
 
 	BindDefaultActions();
 	BindAbilityActions();
+}
+
+void AHOG_PlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+	
+	APlayerCharacterBase* PC = GetPlayerCharacterBase();
+	if (!PC)
+	{
+		return;
+	}
+	
+	UHOGAbilitySystemComponent* HOGASC = PC->GetHOGAbilitySystemComponent();
+	if (!HOGASC)
+	{
+		return;	
+	}
+	
+	HOGASC->ProcessAbilityInput(DeltaTime,false);
 }
 
 void AHOG_PlayerController::ApplyDefaultMappingContext()
@@ -134,6 +154,8 @@ void AHOG_PlayerController::BindAbilityActions()
 	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
 	if (!EIC)
 		return;
+	
+	AbilityActionToTag.Reset();
 
 	// Tag->Action 맵 바인딩
 	for (const TPair<FGameplayTag, UInputAction*>& Pair : InputConfig->AbilityInputActions)
