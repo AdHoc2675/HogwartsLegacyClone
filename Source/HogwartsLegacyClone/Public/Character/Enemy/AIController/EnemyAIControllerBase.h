@@ -10,7 +10,6 @@
  * 
  */
 struct FAIStimulus;
-class UAIPerceptionComponent;
 class UBehaviorTreeComponent;
 class UBlackboardComponent;
 class AEnemyCharacterBase;
@@ -37,9 +36,6 @@ protected:
 	void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 
 	void OnEnemyDeath();
-	
-	UPROPERTY(VisibleAnywhere, Category = "AI")
-	UAIPerceptionComponent* AIPerceptionComp;
 
 	UPROPERTY()
 	UBehaviorTreeComponent* BehaviorTreeComp;

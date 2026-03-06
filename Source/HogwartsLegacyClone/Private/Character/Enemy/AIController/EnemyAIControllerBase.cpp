@@ -14,7 +14,7 @@
 AEnemyAIControllerBase::AEnemyAIControllerBase()
 {
 	// Perception 컴포넌트 생성
-	AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>("AIPerceptionComp");
+	UAIPerceptionComponent* AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>("AIPerceptionComp");
 	SetPerceptionComponent(*AIPerceptionComp);
 }
 
@@ -132,7 +132,7 @@ void AEnemyAIControllerBase::StopBehaviorTree()
 void AEnemyAIControllerBase::BindCallbacks()
 {
 	// OnTargetPerceptionUpdated 콜백 함수 등록
-	if (AIPerceptionComp)
+	if (UAIPerceptionComponent* AIPerceptionComp = GetPerceptionComponent())
 	{
 		AIPerceptionComp->OnTargetPerceptionUpdated.
 		                  AddDynamic(this, &AEnemyAIControllerBase::OnTargetPerceptionUpdated);

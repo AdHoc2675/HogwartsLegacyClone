@@ -26,9 +26,11 @@ EBTNodeResult::Type UBTTask_ActivateAbility::ExecuteTask(UBehaviorTreeComponent&
 	UAbilitySystemComponent* ASC = ASCInterface->GetAbilitySystemComponent();
 	if (!ASC) return EBTNodeResult::Failed;
 	
+	// 실행할 어빌리티 추가
 	FGameplayTagContainer TagContainer;
 	TagContainer.AddTag(AbilityTag);
 	
+	// 어빌리티 실행
 	bool bSuccess = ASC->TryActivateAbilitiesByTag(TagContainer);
 	
 	return bSuccess ? EBTNodeResult::Succeeded : EBTNodeResult::Failed;
