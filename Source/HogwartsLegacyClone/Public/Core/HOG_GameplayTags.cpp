@@ -19,6 +19,14 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill2, "Input.Skill2")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill3, "Input.Skill3")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill4, "Input.Skill4")
+
+	//State
+	UE_DEFINE_GAMEPLAY_TAG(State_Dead, "State.Dead")
+	UE_DEFINE_GAMEPLAY_TAG(State_Hit, "State.Hit")
+	UE_DEFINE_GAMEPLAY_TAG(State_Attacking, "State.Attacking")
+	
+	//Enemy Ability 
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Attack, "Ability.Attack")
 	
 	UE_DEFINE_GAMEPLAY_TAG(Spell_BasicAttack, "Spell.BasicAttack")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Protego, "Spell.Protego")
