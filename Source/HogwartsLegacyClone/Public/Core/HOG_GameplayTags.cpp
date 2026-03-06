@@ -19,4 +19,13 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill2, "Input.Skill2")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill3, "Input.Skill3")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill4, "Input.Skill4")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Spell_BasicAttack, "Spell.BasicAttack")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Protego, "Spell.Protego")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Accio, "Spell.Accio")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Incendio, "Spell.Incendio")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Leviosa, "Spell.Leviosa")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Stupefy, "Spell.Stupefy")
+	
+	
 }

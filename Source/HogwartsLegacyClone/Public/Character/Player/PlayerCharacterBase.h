@@ -11,7 +11,8 @@
 
 class USpringArmComponent;
 class UCameraComponent;
-
+class ULockOnComponent;
+class UHOGAbilitySystemComponent;
 
 /**
  * 플레이어 캐릭터 베이스
@@ -51,9 +52,21 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void Input_AbilityInputReleased(FGameplayTag InputTag);
+	
+public:
+	UFUNCTION(BlueprintPure, Category="Components")
+	ULockOnComponent* GetLockOnComponent() const { return LockOnComponent; }
+	
+	UFUNCTION(BlueprintPure,Category="GAS")
+	UHOGAbilitySystemComponent* GetHOGAbilitySystemComponent() const;
 
 protected:
 	virtual void BeginPlay() override;
+	
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
+	
+	void InitializeAbilityActorInfo();
 
 
 #pragma region Camera
@@ -85,6 +98,7 @@ protected:
 #pragma endregion
 	
 
+protected:
 	// Capsule
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Capsule")
 	float CapsuleRadius = 34.f;
@@ -98,4 +112,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Mesh")
 	FRotator MeshRelativeRotation = FRotator(0.f, -90.f, 0.f);
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<ULockOnComponent> LockOnComponent;
+	
+
 };

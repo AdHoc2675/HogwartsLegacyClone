@@ -4,9 +4,14 @@
 #include "Character/Player/PlayerCharacterBase.h"
 
 #include "Camera/CameraComponent.h"
+#include "Component/LockOnComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+
+#include "GameFramework/HOG_PlayerState.h"
+#include "GAS/HOGAbilitySystemComponent.h"
+#include "HOGDebugHelper.h"
 
 
 APlayerCharacterBase::APlayerCharacterBase()
@@ -50,12 +55,63 @@ APlayerCharacterBase::APlayerCharacterBase()
 		MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
-	
+	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 }
+
 
 void APlayerCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void APlayerCharacterBase::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	
+	InitializeAbilityActorInfo();
+}
+
+void APlayerCharacterBase::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	InitializeAbilityActorInfo();
+}
+
+void APlayerCharacterBase::InitializeAbilityActorInfo()
+{
+	AHOG_PlayerState* HOGPlayerState = GetPlayerState<AHOG_PlayerState>();
+	if (!HOGPlayerState)
+	{
+		return;
+	}
+	
+	UHOGAbilitySystemComponent* HOGASC = Cast<UHOGAbilitySystemComponent>(HOGPlayerState->GetAbilitySystemComponent());
+	if (!HOGASC)
+	{
+		return;
+	}
+
+	// OwnerActor = PlayerState, AvatarActor = Character
+	HOGASC->InitAbilityActorInfo(HOGPlayerState, this);
+	
+	Debug::Print(FString::Printf(
+		TEXT("[PlayerCharacterBase] ASC Init Success | ASC=%s | Owner=%s | Avatar=%s"),
+		*GetNameSafe(HOGASC),
+		*GetNameSafe(HOGASC->GetOwnerActor()),
+		*GetNameSafe(HOGASC->GetAvatarActor())
+	), FColor::Green);
+}
+
+UHOGAbilitySystemComponent* APlayerCharacterBase::GetHOGAbilitySystemComponent() const
+{
+	const AHOG_PlayerState* HOGPlayerState = GetPlayerState<AHOG_PlayerState>();
+	if (!HOGPlayerState)
+	{
+		return nullptr;
+	}
+	
+	return Cast<UHOGAbilitySystemComponent>(HOGPlayerState->GetAbilitySystemComponent());
 }
 
 void APlayerCharacterBase::Input_Move(const FInputActionValue& Value)
@@ -95,11 +151,23 @@ void APlayerCharacterBase::Input_JumpCompleted()
 
 void APlayerCharacterBase::Input_AbilityInputPressed(FGameplayTag InputTag)
 {
-	//나중에 마법 GAS
+	UHOGAbilitySystemComponent* HOGASC=GetHOGAbilitySystemComponent();
+	if (!HOGASC||!InputTag.IsValid())
+	{
+		return;
+	}
+	
+	HOGASC->AbilityInputTagPressed(InputTag);
 }
 
 void APlayerCharacterBase::Input_AbilityInputReleased(FGameplayTag InputTag)
 {
-	//나중에 마법 GAS
+	UHOGAbilitySystemComponent* HOGASC=GetHOGAbilitySystemComponent();
+	if (!HOGASC||!InputTag.IsValid())
+	{
+		return;
+	}
+	
+	HOGASC->AbilityInputTagReleased(InputTag);
 }
 

@@ -4,14 +4,46 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "AbilitySystemInterface.h"
 #include "HOG_PlayerState.generated.h"
+
+class UHOGAbilitySystemComponent;
+class UHOGAttributeSet;
+class UDA_AbilitySet;
 
 /**
  * 
  */
+
 UCLASS()
-class HOGWARTSLEGACYCLONE_API AHOG_PlayerState : public APlayerState
+class HOGWARTSLEGACYCLONE_API AHOG_PlayerState : public APlayerState, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
+
+public:
+	AHOG_PlayerState();
+
+	// IAbilitySystemInterface
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+
+	UHOGAbilitySystemComponent* GetHOGAbilitySystemComponent() const;
 	
+	UHOGAttributeSet* GetAttributeSet() const ;
+	
+protected:
+	virtual void BeginPlay() override;
+
+protected:
+	// ASC
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="GAS")
+	TObjectPtr<UHOGAbilitySystemComponent> AbilitySystemComponent;
+
+	// Attributes
+	UPROPERTY()
+	TObjectPtr<UHOGAttributeSet> AttributeSet;
+	
+	//AbilitySet
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GAS")
+	TObjectPtr<UDA_AbilitySet> AbilitySet;
 };
