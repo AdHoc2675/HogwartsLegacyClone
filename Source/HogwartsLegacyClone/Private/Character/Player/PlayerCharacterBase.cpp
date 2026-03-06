@@ -11,6 +11,7 @@
 
 #include "GameFramework/HOG_PlayerState.h"
 #include "GAS/HOGAbilitySystemComponent.h"
+#include "Core/HOG_GameplayTags.h"
 #include "HOGDebugHelper.h"
 
 
@@ -67,6 +68,8 @@ void APlayerCharacterBase::BeginPlay()
 void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+	
+	TeamTag=HOGGameplayTags::Team_Player;
 	
 	InitializeAbilityActorInfo();
 }
