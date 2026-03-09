@@ -3,6 +3,7 @@
 
 #include "Character/BaseCharacter.h"
 
+#include "Component/CombatComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -10,6 +11,8 @@ ABaseCharacter::ABaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
+	
+	CombatComponent=CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
 
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
 	{
@@ -53,13 +56,15 @@ void ABaseCharacter::Die()
 
 void ABaseCharacter::HandleDeath_Implementation()
 {
-	if (bIsDead)return;
+	if (bIsDead)
+	{
+		return;
+	}
+
 	bIsDead = true;
 
-	//일단 정지처리만 구현
-
-	UCharacterMovementComponent* MoveComp = Cast<UCharacterMovementComponent>(GetCharacterMovement());
-	if (MoveComp)
+	// 일단 정지처리만 구현
+	if (UCharacterMovementComponent* MoveComp = Cast<UCharacterMovementComponent>(GetCharacterMovement()))
 	{
 		MoveComp->DisableMovement();
 	}
