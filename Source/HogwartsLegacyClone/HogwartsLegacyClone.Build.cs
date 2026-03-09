@@ -17,8 +17,11 @@ public class HogwartsLegacyClone : ModuleRules
 			"GameplayAbilities", 
 			"GameplayTags", 
 			"GameplayTasks",
+
 			"Niagara"
-			
+			"AnimGraphRuntime",
+			"AIModule"
+
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
