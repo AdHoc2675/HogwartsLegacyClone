@@ -40,4 +40,10 @@ namespace HOGGameplayTags
 	HOGWARTSLEGACYCLONE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Spell_Stupefy)
 	
 	
+	//BasicAttack State 
+	
+	//Protego State
+	HOGWARTSLEGACYCLONE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Spell_Protego_Active)
+	HOGWARTSLEGACYCLONE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Spell_Protego_ParrySuccess)
+	
 }
