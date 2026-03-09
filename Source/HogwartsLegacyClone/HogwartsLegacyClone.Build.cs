@@ -16,7 +16,8 @@ public class HogwartsLegacyClone : ModuleRules
 			"EnhancedInput",
 			"GameplayAbilities", 
 			"GameplayTags", 
-			"GameplayTasks"
+			"GameplayTasks",
+			"Niagara"
 			
 		});
 
