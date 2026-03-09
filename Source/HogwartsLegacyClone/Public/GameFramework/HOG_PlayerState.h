@@ -10,9 +10,14 @@
 class UHOGAbilitySystemComponent;
 class UHOGAttributeSet;
 class UDA_AbilitySet;
+class USpellComponent;
 
 /**
- * 
+ * PlayerState
+ * - ASC 호스트
+ * - AttributeSet 보관
+ * - AbilitySet 지급
+ * - SpellComponent 보관
  */
 
 UCLASS()
@@ -26,10 +31,14 @@ public:
 	// IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-
+	UFUNCTION(BlueprintPure, Category="HOG|GAS")
 	UHOGAbilitySystemComponent* GetHOGAbilitySystemComponent() const;
+
+	UFUNCTION(BlueprintPure, Category="HOG|GAS")
+	UHOGAttributeSet* GetAttributeSet() const;
 	
-	UHOGAttributeSet* GetAttributeSet() const ;
+	UFUNCTION(BlueprintPure, Category="HOG|Spell")
+	USpellComponent* GetSpellComponent() const;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -42,8 +51,12 @@ protected:
 	// Attributes
 	UPROPERTY()
 	TObjectPtr<UHOGAttributeSet> AttributeSet;
-	
-	//AbilitySet
+
+	// Spell Runtime
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Spell")
+	TObjectPtr<USpellComponent> SpellComponent;
+
+	// AbilitySet
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GAS")
 	TObjectPtr<UDA_AbilitySet> AbilitySet;
 };
