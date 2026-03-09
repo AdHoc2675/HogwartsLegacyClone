@@ -8,11 +8,9 @@
 #include "GAS/Attributes/HOGAttributeSet.h"
 #include "Character/BaseCharacter.h"
 #include "HOGDebugHelper.h"
-#include "Core/HOG_GameplayTags.h"
 #include "GameplayEffect.h"
 #include "GameFramework/PlayerState.h"
 #include "GameplayEffectExtension.h"
-
 
 
 UCombatComponent::UCombatComponent()
@@ -170,13 +168,6 @@ FDamageResult UCombatComponent::ApplyDamageRequest(const FDamageRequest& InReque
 	if (ShouldIgnoreDamage(InRequest))
 	{
 		DebugPrint(TEXT("[CombatComponent] ApplyDamageRequest ignored | ShouldIgnoreDamage returned true"));
-		return Result;
-	}
-
-	// Protego / Parry 판정
-	if (TryHandleProtegoDefense(InRequest, Result))
-	{
-		HandleDamageResult(InRequest, Result);
 		return Result;
 	}
 
@@ -410,116 +401,4 @@ void UCombatComponent::DebugPrint(const FString& Message) const
 	}
 
 	Debug::Print(Message);
-}
-
-void UCombatComponent::OpenProtegoParryWindow(float DurationSeconds)
-{
-	if (DurationSeconds <= 0.0f)
-	{
-		ProtegoParryWindowEndTime = -1.0f;
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		ProtegoParryWindowEndTime = -1.0f;
-		return;
-	}
-
-	ProtegoParryWindowEndTime = World->GetTimeSeconds() + DurationSeconds;
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] OpenProtegoParryWindow | EndTime=%.2f | Duration=%.2f"),
-		ProtegoParryWindowEndTime,
-		DurationSeconds
-	));
-}
-
-void UCombatComponent::ClearProtegoParryWindow()
-{
-	ProtegoParryWindowEndTime = -1.0f;
-
-	DebugPrint(TEXT("[CombatComponent] ClearProtegoParryWindow"));
-}
-
-bool UCombatComponent::IsProtegoParryWindowActive() const
-{
-	const UWorld* World = GetWorld();
-	if (!World)
-	{
-		return false;
-	}
-
-	if (ProtegoParryWindowEndTime < 0.0f)
-	{
-		return false;
-	}
-
-	return World->GetTimeSeconds() <= ProtegoParryWindowEndTime;
-}
-
-bool UCombatComponent::HasOwnerGameplayTag(const FGameplayTag& Tag) const
-{
-	if (!Tag.IsValid())
-	{
-		return false;
-	}
-
-	if (!AbilitySystemComponent.IsValid())
-	{
-		return false;
-	}
-
-	return AbilitySystemComponent->HasMatchingGameplayTag(Tag);
-}
-
-bool UCombatComponent::TryHandleProtegoDefense(const FDamageRequest& InRequest, FDamageResult& OutResult)
-{
-	// Protego 활성 상태가 아니면 여기서 처리 안 함
-	if (!HasOwnerGameplayTag(HOGGameplayTags::State_Spell_Protego_Active))
-	{
-		return false;
-	}
-
-	// 1) 패링 성공
-	if (IsProtegoParryWindowActive())
-	{
-		OutResult.bWasApplied = false;
-		OutResult.bWasBlocked = true;
-		OutResult.bWasParried = true;
-		OutResult.bKilledTarget = false;
-		OutResult.FinalDamage = 0.0f;
-
-		if (bConsumeParryWindowOnSuccess)
-		{
-			ClearProtegoParryWindow();
-		}
-
-		AActor* AttackerActor = InRequest.SourceActor.Get();
-
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] Protego Parry Success | Target=%s | Attacker=%s"),
-			*GetNameSafe(InRequest.TargetActor),
-			*GetNameSafe(AttackerActor)
-		));
-
-		OnParrySuccess.Broadcast(AttackerActor);
-		return true;
-	}
-
-	// 2) 일반 블록
-	OutResult.bWasApplied = false;
-	OutResult.bWasBlocked = true;
-	OutResult.bWasParried = false;
-	OutResult.bKilledTarget = false;
-	OutResult.FinalDamage = 0.0f;
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] Protego Block | Target=%s | Source=%s"),
-		*GetNameSafe(InRequest.TargetActor),
-		*GetNameSafe(InRequest.SourceActor)
-	));
-
-	return true;
 }

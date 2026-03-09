@@ -1,13 +1,14 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
 #include "GAS/Abilities/Spell/Protego/GA_Spell_Protego.h"
 
-#include "AbilitySystemComponent.h"
-#include "Component/CombatComponent.h"
 #include "GAS/Abilities/Spell/Protego/GE_Protego.h"
 #include "GAS/Abilities/Spell/Protego/ProtegoActor.h"
-#include "GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.h"
+
+#include "AbilitySystemComponent.h"
 #include "GameFramework/Actor.h"
-#include "Character/BaseCharacter.h"
-#include "GameFramework/HOG_GameState.h"
+#include "GameFramework/Character.h"
 #include "Engine/World.h"
 #include "HOGDebugHelper.h"
 
@@ -16,11 +17,10 @@ UGA_Spell_Protego::UGA_Spell_Protego()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
-void UGA_Spell_Protego::ActivateAbility(
-	const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo,
-	const FGameplayEventData* TriggerEventData)
+void UGA_Spell_Protego::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+                                        const FGameplayAbilityActorInfo* ActorInfo,
+                                        const FGameplayAbilityActivationInfo ActivationInfo,
+                                        const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
@@ -44,21 +44,7 @@ void UGA_Spell_Protego::ActivateAbility(
 		return;
 	}
 
-	// 일반 시전 쿨타임 체크는 SpellComponent 정책을 탄다.
-	{
-		FSpellCastCheckResult CheckResult;
-		if (!CanCastAsNormal(CheckResult))
-		{
-			const FSpellCastRequest FailedRequest = BuildSpellCastRequest(ESpellCastContext::Normal);
-			NotifySpellCastFailedResult(FailedRequest, CheckResult);
-
-			Debug::Print(TEXT("[GA_Spell_Protego] CanCastAsNormal failed"), FColor::Red);
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-			return;
-		}
-	}
-
-	// 코스트/커밋
+	// 코스트/쿨다운/기본 Commit
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -131,44 +117,15 @@ void UGA_Spell_Protego::ActivateAbility(
 		Debug::Print(TEXT("[GA_Spell_Protego] ProtegoActorClass is null"), FColor::Yellow);
 	}
 
-	// 3) CombatComponent 패링 윈도우 오픈 + 이벤트 바인딩
-	CachedCombatComponent = GetOwnerCombatComponent();
-	if (CachedCombatComponent)
-	{
-		CachedCombatComponent->OpenProtegoParryWindow(ParryWindowSeconds);
-		BindCombatDelegates();
-
-		Debug::Print(
-			FString::Printf(TEXT("[GA_Spell_Protego] Parry Window Opened | Duration=%.2f"), ParryWindowSeconds),
-			FColor::Cyan
-		);
-	}
-	else
-	{
-		Debug::Print(TEXT("[GA_Spell_Protego] CombatComponent not found"), FColor::Red);
-	}
-
-	// 4) 일반 시전 성공 통지 -> 쿨타임 시작
-	NotifySpellCastSucceeded(ESpellCastContext::Normal);
-
-	// 현재는 수동 종료 전까지 유지
+	// 지금 단계는 일단 지속형 Ability로 두고,
+	// GE duration 종료 타이밍과 맞춰 추후 AbilityTask로 정리하면 된다.
+	// 현재는 수동 종료 전까지 유지.
 }
 
-void UGA_Spell_Protego::EndAbility(
-	const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo,
-	bool bReplicateEndAbility,
-	bool bWasCancelled)
+void UGA_Spell_Protego::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+                                   const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
+                                   bool bWasCancelled)
 {
-	UnbindCombatDelegates();
-
-	if (CachedCombatComponent)
-	{
-		CachedCombatComponent->ClearProtegoParryWindow();
-		CachedCombatComponent = nullptr;
-	}
-
 	// 1) 스폰한 ProtegoActor 정리
 	if (SpawnedProtegoActor)
 	{
@@ -188,108 +145,4 @@ void UGA_Spell_Protego::EndAbility(
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UGA_Spell_Protego::HandleParrySuccess(AActor* AttackerActor)
-{
-	Debug::Print(
-		FString::Printf(TEXT("[GA_Spell_Protego] HandleParrySuccess | Attacker=%s"), *GetNameSafe(AttackerActor)),
-		FColor::Yellow
-	);
-
-	TryTriggerCounterStupefy(AttackerActor);
-}
-
-UCombatComponent* UGA_Spell_Protego::GetOwnerCombatComponent() const
-{
-	AActor* AvatarActor = GetAvatarActorFromActorInfo();
-	if (!AvatarActor)
-	{
-		return nullptr;
-	}
-
-	return AvatarActor->FindComponentByClass<UCombatComponent>();
-}
-
-bool UGA_Spell_Protego::TryTriggerCounterStupefy(AActor* AttackerActor)
-{
-	if (!IsValid(AttackerActor))
-	{
-		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | AttackerActor invalid"), FColor::Red);
-		return false;
-	}
-
-	if (!CounterStupefyAbilityClass)
-	{
-		Debug::Print(TEXT("[GA_Spell_Protego] CounterStupefyAbilityClass is null"), FColor::Red);
-		return false;
-	}
-
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC)
-	{
-		Debug::Print(TEXT("[GA_Spell_Protego] ASC missing"), FColor::Red);
-		return false;
-	}
-
-	FGameplayAbilitySpec* FoundSpec = nullptr;
-
-	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
-	{
-		if (!Spec.Ability)
-		{
-			continue;
-		}
-
-		if (Spec.Ability->GetClass() == CounterStupefyAbilityClass)
-		{
-			FoundSpec = &Spec;
-			break;
-		}
-	}
-
-	if (!FoundSpec)
-	{
-		Debug::Print(TEXT("[GA_Spell_Protego] Counter Stupefy spec not found on ASC"), FColor::Red);
-		return false;
-	}
-
-	UGA_SpellStupefy* StupefyInstance = Cast<UGA_SpellStupefy>(FoundSpec->GetPrimaryInstance());
-	if (!StupefyInstance)
-	{
-		Debug::Print(TEXT("[GA_Spell_Protego] Stupefy primary instance missing"), FColor::Red);
-		return false;
-	}
-
-	StupefyInstance->PrepareCastContext(ESpellCastContext::ParryCounter, AttackerActor);
-
-	const bool bActivated = ASC->TryActivateAbility(FoundSpec->Handle);
-
-	Debug::Print(
-		FString::Printf(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy | Activated=%d"), bActivated ? 1 : 0),
-		bActivated ? FColor::Green : FColor::Red
-	);
-
-	return bActivated;
-}
-
-void UGA_Spell_Protego::BindCombatDelegates()
-{
-	if (!CachedCombatComponent)
-	{
-		return;
-	}
-
-	CachedCombatComponent->OnParrySuccess.RemoveDynamic(this, &UGA_Spell_Protego::HandleParrySuccess);
-	CachedCombatComponent->OnParrySuccess.AddDynamic(this, &UGA_Spell_Protego::HandleParrySuccess);
-}
-
-void UGA_Spell_Protego::UnbindCombatDelegates()
-{
-	if (!CachedCombatComponent)
-	{
-		return;
-	}
-
-	CachedCombatComponent->OnParrySuccess.RemoveDynamic(this, &UGA_Spell_Protego::HandleParrySuccess);
 }

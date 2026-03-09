@@ -7,19 +7,17 @@
 #include "GameplayEffectTypes.h"
 #include "GA_Spell_Protego.generated.h"
 
+
 class UGE_Protego;
 class AProtegoActor;
-class UCombatComponent;
-class UGameplayAbility;
 
 /**
  * Protego 스펠 Ability
  * - 자신에게 GE_Protego 적용
  * - ProtegoActor 생성 및 Avatar에 부착
- * - CombatComponent의 Protego Parry Window 오픈
- * - 패링 성공 시 자동 Stupefy 반격
- * - 종료 시 보호막 Actor / GE / 바인딩 정리
+ * - 종료 시 보호막 Actor / GE 정리
  */
+
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Protego : public UGA_SpellBase
 {
@@ -43,16 +41,6 @@ protected:
 		bool bWasCancelled) override;
 
 protected:
-	UFUNCTION()
-	void HandleParrySuccess(AActor* AttackerActor);
-
-protected:
-	UCombatComponent* GetOwnerCombatComponent() const;
-	bool TryTriggerCounterStupefy(AActor* AttackerActor);
-	void BindCombatDelegates();
-	void UnbindCombatDelegates();
-
-protected:
 	/** Protego 활성 상태를 부여하는 GE 클래스 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego")
 	TSubclassOf<UGE_Protego> ProtegoEffectClass;
@@ -61,22 +49,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego")
 	TSubclassOf<AProtegoActor> ProtegoActorClass;
 
-	/** 패링 성공 시 자동 반격으로 사용할 Stupefy Ability 클래스 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Parry")
-	TSubclassOf<UGameplayAbility> CounterStupefyAbilityClass;
-
-	/** Protego 활성 직후 패링 판정 시간 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Parry", meta=(ClampMin="0.01"))
-	float ParryWindowSeconds = 0.30f;
-
 	/** 스폰된 Protego Actor 참조 */
 	UPROPERTY()
 	TObjectPtr<AProtegoActor> SpawnedProtegoActor;
 
 	/** 적용한 GE 핸들 */
 	FActiveGameplayEffectHandle ActiveProtegoEffectHandle;
-
-	/** 바인딩된 CombatComponent 캐시 */
-	UPROPERTY(Transient)
-	TObjectPtr<UCombatComponent> CachedCombatComponent;
+	
 };
