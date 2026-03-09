@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,12 +6,55 @@
 #include "GAS/Abilities/GA_SpellBase.h"
 #include "GA_Spell_Leviosa.generated.h"
 
+class UAnimMontage;
+
 /**
- * 
+ *
+ * Leviosa (부유 마법)
+ * - 대상(Movable Object 또는 적)을 타겟팅하여 공중으로 띄움.
+ * - 향후 이동, F/V/Q/E 키를 통한 세부 거리/회전 제어 로직이 추가될 예정
+ * - 혹은 간단히 대상을 위로 띄우는 정도로만 구현
  */
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Leviosa : public UGA_SpellBase
 {
 	GENERATED_BODY()
-	
+
+public:
+	UGA_Spell_Leviosa();
+
+protected:
+	virtual void ActivateAbility(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	) override;
+
+	virtual void EndAbility(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		bool bReplicateEndAbility,
+		bool bWasCancelled
+	) override;
+
+	// 애니메이션 재생 종료 콜백
+	UFUNCTION()
+	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// 타겟 부유 시작 상태 진입 (태그 바인딩 및 상태 적용용)
+	UFUNCTION(BlueprintCallable, Category = "HOG|Spell|Leviosa")
+	void StartLevitation();
+
+protected:
+	// ====== Leviosa 옵션 ======
+
+	// 캐스팅 애니메이션
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Anim")
+	TObjectPtr<UAnimMontage> CastMontage;
+
+	// 현재 제어 중인 대상 (런타임 트래킹 용도)
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> LevitatedTarget;
 };
