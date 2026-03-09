@@ -16,6 +16,7 @@ class UHOGAttributeSet;
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDamageAppliedSignature, const FDamageResult&, DamageResult);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnParrySuccessSignature, AActor*, AttackerActor);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 
@@ -38,6 +39,12 @@ protected:
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category="Combat")
 	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat|Protego")
+	float ProtegoParryWindowEndTime = -1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Protego")
+	bool bConsumeParryWindowOnSuccess = true;
 
 protected:
 	
@@ -99,6 +106,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Combat")
 	FDamageResult ApplyDamageRequest(const FDamageRequest& InRequest);
+	
+	UPROPERTY(BlueprintAssignable, Category="Combat|Event")
+	FOnParrySuccessSignature OnParrySuccess;
 
 protected:
 	
@@ -112,4 +122,18 @@ protected:
 	void HandleDeath();
 
 	void DebugPrint(const FString& Message) const;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category="Combat|Protego")
+	void OpenProtegoParryWindow(float DurationSeconds);
+
+	UFUNCTION(BlueprintCallable, Category="Combat|Protego")
+	void ClearProtegoParryWindow();
+
+	UFUNCTION(BlueprintPure, Category="Combat|Protego")
+	bool IsProtegoParryWindowActive() const;
+
+protected:
+	bool HasOwnerGameplayTag(const FGameplayTag& Tag) const;
+	bool TryHandleProtegoDefense(const FDamageRequest& InRequest, FDamageResult& OutResult);
 };
