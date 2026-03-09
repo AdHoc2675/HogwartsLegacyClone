@@ -8,6 +8,8 @@
 
 #include "BaseCharacter.generated.h"
 
+class UCombatComponent;
+
 /**
  * 공통 캐릭터 베이스
  * - TeamTag (GameplayTag) : 값은 자식(Player/Enemy)에서 기본값으로 세팅
@@ -49,6 +51,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="State")
 	virtual void Die();
+	
+	// -------------------------
+	// Component
+	// -------------------------
+	UFUNCTION(BlueprintPure, Category="Component")
+	UCombatComponent* GetCombatComponent() const { return CombatComponent; }
+
 
 protected:
 	virtual void BeginPlay() override;
@@ -66,6 +75,8 @@ protected:
 	virtual void HandleDeath_Implementation();
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UCombatComponent> CombatComponent;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Tag|Team")
 	FGameplayTag TeamTag;
