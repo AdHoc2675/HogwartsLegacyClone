@@ -18,7 +18,7 @@ public class HogwartsLegacyClone : ModuleRules
 			"GameplayTags", 
 			"GameplayTasks",
 
-			"Niagara"
+			"Niagara",
 			"AnimGraphRuntime",
 			"AIModule"
 
