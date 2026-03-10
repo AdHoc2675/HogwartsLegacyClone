@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Interactable/InteractableChest.h"
@@ -23,39 +23,39 @@ void AInteractableChest::BeginPlay()
 	
 	if (AbilitySystemComponent)
 	{
-		// ¿ÀºêÁ§Æ® ¼Ò¼Ó ÅÂ±× ºÎ¿©
+		// ì˜¤ë¸Œì íŠ¸ ì†Œì† íƒœê·¸ ë¶€ì—¬
 		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Team_Object);
 
-		// ÃÊ±â »óÅÂ¸¦ '´İÈû(Closed)'À¸·Î ¼³Á¤
+		// ì´ˆê¸° ìƒíƒœë¥¼ 'ë‹«í˜(Closed)'ìœ¼ë¡œ ì„¤ì •
 		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Interactable_Chest_Closed);
 	}
 }
 
 bool AInteractableChest::CanInteract_Implementation(AActor* Interactor)
 {
-	// ASC°¡ Å¸°Ù¿¡ ÀÖ´Ù¸é, Å¸°ÙÀÌ ÇöÀç "´İÈù" »óÅÂÀÏ ¶§¸¸ »óÈ£ÀÛ¿ë °¡´É
+	// ASCê°€ íƒ€ê²Ÿì— ìˆë‹¤ë©´, íƒ€ê²Ÿì´ í˜„ì¬ "ë‹«íŒ" ìƒíƒœì¼ ë•Œë§Œ ìƒí˜¸ì‘ìš© ê°€ëŠ¥
 	return AbilitySystemComponent && AbilitySystemComponent->HasMatchingGameplayTag(HOGGameplayTags::Interactable_Chest_Closed);
 }
 
 void AInteractableChest::Interact_Implementation(AActor* Interactor)
 {
-	// 1. CanInteract ·ÎÁ÷À» ÅëÇØ »óÅÂ È®ÀÎ (ÅÂ±× ±â¹İ)
+	// 1. CanInteract ë¡œì§ì„ í†µí•´ ìƒíƒœ í™•ì¸ (íƒœê·¸ ê¸°ë°˜)
 	if (!CanInteract(Interactor))
 	{
 		return;
 	}
 
-	// 2. »óÅÂ ÀüÈ¯: ´İÈû ÅÂ±× Á¦°Å, ¿­¸² ÅÂ±× Ãß°¡
+	// 2. ìƒíƒœ ì „í™˜: ë‹«í˜ íƒœê·¸ ì œê±°, ì—´ë¦¼ íƒœê·¸ ì¶”ê°€
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->RemoveLooseGameplayTag(HOGGameplayTags::Interactable_Chest_Closed);
 		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Interactable_Chest_Opened);
 	}
 
-	// 3. Blueprint ÀÌº¥Æ® È£Ãâ (ÇÊ¿äÇÑ °æ¿ì)
+	// 3. Blueprint ì´ë²¤íŠ¸ í˜¸ì¶œ (í•„ìš”í•œ ê²½ìš°)
 	PlayOpenAnimation();
 
-	// 4. ¸ùÅ¸ÁÖ Àç»ı
+	// 4. ëª½íƒ€ì£¼ ì¬ìƒ
 	if (BaseMesh && OpenMontage)
 	{
 		UAnimInstance* AnimInstance = BaseMesh->GetAnimInstance();
@@ -65,5 +65,5 @@ void AInteractableChest::Interact_Implementation(AActor* Interactor)
 		}
 	}
 
-	//TODO: ¾ÆÀÌÅÛ Áö±Ş, »ç¿îµå Àç»ı µî Ãß°¡ÀûÀÎ »óÈ£ÀÛ¿ë È¿°ú ±¸Çö 
+	//TODO: ì•„ì´í…œ ì§€ê¸‰, ì‚¬ìš´ë“œ ì¬ìƒ ë“± ì¶”ê°€ì ì¸ ìƒí˜¸ì‘ìš© íš¨ê³¼ êµ¬í˜„ 
 }

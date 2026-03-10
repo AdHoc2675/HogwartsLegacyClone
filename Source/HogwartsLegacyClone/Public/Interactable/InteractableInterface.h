@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -21,11 +21,11 @@ class HOGWARTSLEGACYCLONE_API IInteractableInterface
 	GENERATED_BODY()
 
 public:
-	// »óÈ£ÀÛ¿ë °¡´É ¿©ºÎ È®ÀÎ
+	// ìƒí˜¸ì‘ìš© ê°€ëŠ¥ ì—¬ë¶€ í™•ì¸
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	bool CanInteract(AActor* Interactor);
 
-	// ½ÇÁ¦ »óÈ£ÀÛ¿ë ½ÇÇà (ex: »óÀÚ ¿­±â ¾Ö´Ï¸ŞÀÌ¼Ç, ¾ÆÀÌÅÛ Áö±Ş µî)
+	// ì‹¤ì œ ìƒí˜¸ì‘ìš© ì‹¤í–‰ (ex: ìƒì ì—´ê¸° ì• ë‹ˆë©”ì´ì…˜, ì•„ì´í…œ ì§€ê¸‰ ë“±)
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Interaction")
 	void Interact(AActor* Interactor);
 };

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -27,23 +27,23 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
-	// IInteractableInterface ±¸ÇöºÎ
+	// IInteractableInterface êµ¬í˜„ë¶€
 	virtual bool CanInteract_Implementation(AActor* Interactor) override;
 	virtual void Interact_Implementation(AActor* Interactor) override;
 
-	// »óÀÚ ¸Ş½¬ (¶Ñ²± ¾Ö´Ï¸ŞÀÌ¼Ç µîÀ» À§ÇØ ºĞ¸® ±ÇÀå)
+	// ìƒì ë©”ì‰¬ (ëšœê»‘ ì• ë‹ˆë©”ì´ì…˜ ë“±ì„ ìœ„í•´ ë¶„ë¦¬ ê¶Œì¥)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
 	TObjectPtr<USkeletalMeshComponent> BaseMesh;
 
-	// ÅÂ±× °ü¸®¸¦ À§ÇÑ ±âÃÊ ASC 
+	// íƒœê·¸ ê´€ë¦¬ë¥¼ ìœ„í•œ ê¸°ì´ˆ ASC 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
-	// Å¸°Ù ¾Ö´Ï¸ŞÀÌ¼Ç ¿¬Ãâ
+	// íƒ€ê²Ÿ ì• ë‹ˆë©”ì´ì…˜ ì—°ì¶œ
 	UFUNCTION(BlueprintImplementableEvent, Category = "Interaction")
 	void PlayOpenAnimation();
 
-	// »óÀÚ°¡ ¿­¸± ¶§ Àç»ıÇÒ ¸ùÅ¸ÁÖ
+	// ìƒìê°€ ì—´ë¦´ ë•Œ ì¬ìƒí•  ëª½íƒ€ì£¼
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
 	TObjectPtr<UAnimMontage> OpenMontage;
 };
