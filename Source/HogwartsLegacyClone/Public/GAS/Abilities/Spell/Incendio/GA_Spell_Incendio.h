@@ -9,6 +9,7 @@
 class UAnimMontage;
 class UGameplayEffect;
 class UNiagaraSystem;
+class USoundBase;
 
 /**
  * 근거리 화염 마법 (Incendio)
@@ -54,6 +55,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Trace")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 
+	// 자기 자신/무기 등 제외할지
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Trace")
+	bool bIgnoreSelf = true;
+
 	// ====== 효과 (Gameplay Effects) ======
 
 	// 즉발 데미지 이펙트 (폭발 딜)
@@ -68,6 +73,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Visual")
 	TObjectPtr<UNiagaraSystem> FireVFX;
 
+	// 디버그 라인(선택)
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Debug")
-	bool bDrawDebug = false;
+	bool bDrawDebugLine = false;
+
+	// ====== 사운드 효과 ======
+
+	// 마법 시전 시(주문 외우기) 음성 사운드
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Sound")
+	TObjectPtr<USoundBase> CastVoiceSound;
+
+	// 화염 발사/폭발 사운드
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Sound")
+	TObjectPtr<USoundBase> ExplosionSound;
 };
