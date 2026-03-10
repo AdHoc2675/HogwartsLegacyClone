@@ -3,8 +3,10 @@
 
 #include "Character/Enemy/EnemyCharacterBase.h"
 
+#include "HOGDebugHelper.h"
+#include "Character/Enemy/Interface/IMeleeAttacker.h"
 #include "Components/CapsuleComponent.h"
-#include "Data/Enemy/DA_EnemyConfig.h"
+#include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "GAS/Attributes/EnemyAttributeSet.h"
 #include "Core/HOG_GameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -46,8 +48,20 @@ float AEnemyCharacterBase::GetHealthPercent() const
 	return MaxHP > 0.f ? GetHealth() / MaxHP : 0.f;
 }
 
+float AEnemyCharacterBase::GetMinAttackRange() const
+{
+	// MeleeRange
+	if (const IIMeleeAttacker* Melee = Cast<IIMeleeAttacker>(this))
+	{
+		return Melee->GetMeleeAttackRange();
+	}
+	
+	return 100.f;
+}
+
 UBehaviorTree* AEnemyCharacterBase::GetBehaviorTree() const
 {
+	UDA_EnemyConfigBase* EnemyConfig = GetEnemyConfig();
 	return EnemyConfig ? EnemyConfig->BehaviorTree : nullptr;
 }
 
@@ -124,6 +138,7 @@ void AEnemyCharacterBase::InitializeAbilitySystem()
 // Attribute 초기화
 void AEnemyCharacterBase::InitializeAttributes()
 {
+	UDA_EnemyConfigBase* EnemyConfig = GetEnemyConfig();
 	if (!AbilitySystemComponent || !EnemyConfig || !EnemyConfig->DefaultAttributes) return;
 	
 	// Effect 컨텍스트 생성
@@ -147,6 +162,7 @@ void AEnemyCharacterBase::InitializeAttributes()
 // StartUp Ability 주입(데이터 어셋에 캐싱된 데이터 참조)
 void AEnemyCharacterBase::GiveStartupAbilities()
 {
+	UDA_EnemyConfigBase* EnemyConfig = GetEnemyConfig();
 	if (!AbilitySystemComponent || !EnemyConfig) return;
 	
 	for (const TSubclassOf<UGameplayAbility>& AbilityClass : EnemyConfig->StartupAbilities)
