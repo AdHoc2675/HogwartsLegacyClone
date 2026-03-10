@@ -11,6 +11,7 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_Move, "Input.Move")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Look, "Input.Look")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Jump, "Input.Jump")
+	UE_DEFINE_GAMEPLAY_TAG(Input_Interact, "Input.Interact")
 
 	//Ability 입력
 	UE_DEFINE_GAMEPLAY_TAG(Input_Primary, "Input.Primary")
@@ -41,4 +42,9 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_Active, "State.Spell.Protego.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_ParrySuccess, "State.Spell.Protego.ParrySuccess")
 	
+
+	//Interactable Object
+	UE_DEFINE_GAMEPLAY_TAG(Interactable_Chest_Opened, "Interactable.Chest.Opened")
+	UE_DEFINE_GAMEPLAY_TAG(Interactable_Chest_Closed, "Interactable.Chest.Closed")
+
 }
