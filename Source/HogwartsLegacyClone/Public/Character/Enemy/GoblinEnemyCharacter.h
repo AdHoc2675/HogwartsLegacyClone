@@ -4,16 +4,25 @@
 
 #include "CoreMinimal.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
+#include "Interface/IMeleeAttacker.h"
 #include "GoblinEnemyCharacter.generated.h"
 
+class UDA_GoblinConfig;
 /**
  * 
  */
 UCLASS()
-class HOGWARTSLEGACYCLONE_API AGoblinEnemyCharacter : public AEnemyCharacterBase
+class HOGWARTSLEGACYCLONE_API AGoblinEnemyCharacter : public AEnemyCharacterBase, public IIMeleeAttacker
 {
 	GENERATED_BODY()
 	
 	virtual void OnHealthChanged(float OldValue, float NewValue) override;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Config")
+	TObjectPtr<UDA_GoblinConfig> GoblinConfig;
+	
+	virtual UDA_EnemyConfigBase* GetEnemyConfig() const override;
+	// IMeleeAttacker
+	virtual float GetMeleeAttackRange() const override;
+	virtual TArray<FGameplayTag> GetMeleeAttackTags() const override;
 };

@@ -9,7 +9,7 @@
 
 #include "EnemyCharacterBase.generated.h"
 
-class UDA_EnemyConfig;
+class UDA_EnemyConfigBase;
 class UEnemyAttributeSet;
 class AController;
 class UBehaviorTree;
@@ -28,7 +28,8 @@ public:
 	AEnemyCharacterBase();
 	
 	// ===== Data Asset =====
-	FORCEINLINE const UDA_EnemyConfig* GetEnemyData() const { return EnemyConfig; }
+	// 자식에서 오버라이드
+	virtual UDA_EnemyConfigBase* GetEnemyConfig() const { return nullptr; }
 	
 	// ===== IAbilitySystemInterface =====
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
@@ -37,6 +38,7 @@ public:
 	float GetHealth() const;
 	float GetMaxHealth() const;
 	float GetHealthPercent() const;
+	float GetMinAttackRange() const;
 	
 	// ===== BehaviorTree =====
 	UBehaviorTree* GetBehaviorTree() const;
@@ -51,6 +53,7 @@ public:
 	FOnEnemyDeath OnEnemyDeath;
 	// 적이 데미지를 받는 경우 호출
 	FOnEnemyDamaged OnEnemyDamaged;
+
 	
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -60,10 +63,6 @@ protected:
 	virtual void InitializeAttributes();
 	virtual void GiveStartupAbilities();
 	virtual void BindAttributeCallbacks();
-	
-	// ===== 데이터 에셋 =====
-	UPROPERTY(EditAnywhere, Category = "Data")
-	UDA_EnemyConfig* EnemyConfig;
 	
 	// ===== GAS =====
 	UPROPERTY(VisibleAnywhere, Category = "GAS")

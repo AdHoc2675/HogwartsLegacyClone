@@ -47,20 +47,19 @@ AEnemyCharacterBase* AEnemyAIControllerBase::GetEnemyCharacter() const
 void AEnemyAIControllerBase::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-	
-	// 캐릭터 캐싱
+    
 	EnemyCharacter = Cast<AEnemyCharacterBase>(InPawn);
 	if (!EnemyCharacter) return;
 
-	// 콜백 등록
-	BindCallbacks();
-
-	// BT 시작
+	// BT 먼저 시작
 	StartBehaviorTree();
-
+    
 	// 컴포넌트 캐싱
 	BehaviorTreeComp = Cast<UBehaviorTreeComponent>(BrainComponent);
 	BlackboardComp = GetBlackboardComponent();
+    
+	// 콜백 등록은 마지막에
+	BindCallbacks();
 }
 
 void AEnemyAIControllerBase::OnUnPossess()
@@ -95,12 +94,11 @@ void AEnemyAIControllerBase::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulu
 		return;
 	}
 	
-	// 현재 타겟을 놏쳤을 때 타겟 클리어
+	//현재 타겟을 놏쳤을 때 타겟 클리어
 	if (GetTargetActor() == Actor)
 	{
 		ClearTargetActor();
 	}
-	
 }
 
 void AEnemyAIControllerBase::OnEnemyDeath()

@@ -1,5 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Data/Enemy/DA_EnemyConfig.h"
+#include "Data/Enemy/DA_DementorConfig.h"
 
