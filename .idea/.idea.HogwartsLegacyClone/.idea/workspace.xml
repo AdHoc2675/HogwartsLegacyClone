@@ -12,24 +12,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Data/BP_DA_InputConfig.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Data/BP_DA_InputConfig.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Input/Actions/IA_Protego.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Input/Actions/IA_Protego.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Input/IMC_Default.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Input/IMC_Default.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Component/CombatComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Component/CombatComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GA_SpellBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GA_SpellBase.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Protego/GA_Spell_Protego.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Protego/GA_Spell_Protego.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GameFramework/HOG_PlayerState.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GameFramework/HOG_PlayerState.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Component/CombatComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Component/CombatComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_Enum.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_Enum.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_Struct.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_Struct.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GA_SpellBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GA_SpellBase.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Protego/GA_Spell_Protego.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Protego/GA_Spell_Protego.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GameFramework/HOG_PlayerState.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GameFramework/HOG_PlayerState.h" afterDir="false" />
-    </list>
+    <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -57,7 +40,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "CombatComponent",
+    "git-widget-placeholder": "main",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -185,6 +168,7 @@
       <workItem from="1773015491613" duration="648000" />
       <workItem from="1773045952064" duration="1000" />
       <workItem from="1773045984344" duration="663000" />
+      <workItem from="1773103732131" duration="1206000" />
     </task>
     <servers />
   </component>
