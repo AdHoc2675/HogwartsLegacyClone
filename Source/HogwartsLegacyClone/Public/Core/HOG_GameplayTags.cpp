@@ -42,6 +42,9 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_Active, "State.Spell.Protego.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_ParrySuccess, "State.Spell.Protego.ParrySuccess")
 	
+	// Leviosa State	
+	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Leviosa_Levitated, "State.Spell.Leviosa.Levitated")
+	
 
 	//Interactable Object
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_Chest_Opened, "Interactable.Chest.Opened")
