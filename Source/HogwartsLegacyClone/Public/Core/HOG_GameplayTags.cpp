@@ -52,5 +52,7 @@ namespace HOGGameplayTags
 	
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_Burnable_Unlit, "Interactable.Burnable.Unlit")
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_Burnable_Lit, "Interactable.Burnable.Lit")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Interactable_Levitatable_Grounded, "Interactable.Levitatable.Grounded")
 
 }
