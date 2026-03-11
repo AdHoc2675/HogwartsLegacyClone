@@ -101,6 +101,6 @@ void UGA_Base::LogAbility(const TCHAR* Prefix, bool bWasCancelled) const
 		*GetNameSafe(SourceObj)
 	);
 
-	// 취소면 빨강으로
-	Debug::Print(Msg, bWasCancelled ? FColor::Red : FColor::MakeRandomColor());
+	// // 취소면 빨강으로
+	// Debug::Print(Msg, bWasCancelled ? FColor::Red : FColor::MakeRandomColor());
 }

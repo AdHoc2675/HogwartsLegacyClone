@@ -38,11 +38,11 @@ void UGA_Spell_Leviosa::ActivateAbility(
 	if (bHasTarget && IsValid(AcquiredTarget))
 	{
 		LevitatedTarget = AcquiredTarget;
-		Debug::Print(FString::Printf(TEXT("[Leviosa] Target Acquired: %s"), *LevitatedTarget->GetName()), FColor::Cyan);
+		// Debug::Print(FString::Printf(TEXT("[Leviosa] Target Acquired: %s"), *LevitatedTarget->GetName()), FColor::Cyan);
 	}
 	else
 	{
-		Debug::Print(TEXT("[Leviosa] No valid Target. (Casting empty)"), FColor::Yellow);
+		// Debug::Print(TEXT("[Leviosa] No valid Target. (Casting empty)"), FColor::Yellow);
 	}
 
 	// 2. 캐스팅 애니메이션 실행 (지팡이를 휘두르는 모션 등)
@@ -81,7 +81,7 @@ void UGA_Spell_Leviosa::StartLevitation()
 
 	if (IsValid(LevitatedTarget))
 	{
-		Debug::Print(FString::Printf(TEXT("[Leviosa] Started Levitating %s! (Awaiting Input/Physics Logic)"), *LevitatedTarget->GetName()), FColor::Green);
+		// Debug::Print(FString::Printf(TEXT("[Leviosa] Started Levitating %s! (Awaiting Input/Physics Logic)"), *LevitatedTarget->GetName()), FColor::Green);
 
 		// 대상이 허공에 뜨는 상태를 부여하는 GameplayEffect나 Tag (ex: State.Levitated)를 해당 액터에게 적용하는 로직 추가 가능
 	}
@@ -107,7 +107,7 @@ void UGA_Spell_Leviosa::EndAbility(
 	if (IsValid(LevitatedTarget))
 	{
 		// TODO: 대상의 중력을 복구하고 원래 물리 상태로 되돌리는 로직 등
-		Debug::Print(FString::Printf(TEXT("[Leviosa] Dropped %s"), *LevitatedTarget->GetName()), FColor::Red);
+		// Debug::Print(FString::Printf(TEXT("[Leviosa] Dropped %s"), *LevitatedTarget->GetName()), FColor::Red);
 
 		LevitatedTarget = nullptr;
 	}

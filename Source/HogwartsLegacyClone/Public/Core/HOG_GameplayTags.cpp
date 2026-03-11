@@ -24,21 +24,30 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Dead, "State.Dead")
 	UE_DEFINE_GAMEPLAY_TAG(State_Hit, "State.Hit")
 	UE_DEFINE_GAMEPLAY_TAG(State_Attacking, "State.Attacking")
-	
+
+	//CombatState
+	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Active, "State.Combat.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Inactive, "State.Combat.Inactive")
+
+
+	// Casting State
+	UE_DEFINE_GAMEPLAY_TAG(State_Casting_Active, "State.Casting.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Casting_Inactive, "State.Casting.Inactive")
+
+
 	//Enemy Ability 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Attack, "Ability.Attack")
-	
+
 	UE_DEFINE_GAMEPLAY_TAG(Spell_BasicAttack, "Spell.BasicAttack")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Protego, "Spell.Protego")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Accio, "Spell.Accio")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Incendio, "Spell.Incendio")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Leviosa, "Spell.Leviosa")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Stupefy, "Spell.Stupefy")
-	
+
 	//BasicAttack
-	
+
 	//Protage State
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_Active, "State.Spell.Protego.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_ParrySuccess, "State.Spell.Protego.ParrySuccess")
-	
 }

@@ -209,14 +209,14 @@ bool ULockOnComponent::FindBestTarget(const FGameplayTagContainer& RequiredTarge
 
     if (bDebugPrint)
     {
-        // 프로젝트 규칙: Core/HOG_Debug.h 사용
-        Debug::Print(FString::Printf(TEXT("[LockOn] Target=%s Dist=%.0f Angle=%.1f Score=%.2f Tags=%s"),
-            *GetNameSafe(BestActor),
-            BestDist,
-            BestAngle,
-            BestScore,
-            *BestTags.ToStringSimple()
-        ));
+        // // 프로젝트 규칙: Core/HOG_Debug.h 사용
+        // Debug::Print(FString::Printf(TEXT("[LockOn] Target=%s Dist=%.0f Angle=%.1f Score=%.2f Tags=%s"),
+        //     *GetNameSafe(BestActor),
+        //     BestDist,
+        //     BestAngle,
+        //     BestScore,
+        //     *BestTags.ToStringSimple()
+        // ));
     }
 
     return true;

@@ -49,14 +49,14 @@ void UGA_SpellStupefy::ActivateAbility(
 	{
 		NotifySpellCastFailedResult(CastRequest, CheckResult);
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_SpellStupefy] Cast Failed | SpellID=%s | Reason=%d"),
-				*SpellID.ToString(),
-				static_cast<int32>(CheckResult.FailReason)
-			),
-			FColor::Red
-		);
+		// Debug::Print(
+		// 	FString::Printf(
+		// 		TEXT("[GA_SpellStupefy] Cast Failed | SpellID=%s | Reason=%d"),
+		// 		*SpellID.ToString(),
+		// 		static_cast<int32>(CheckResult.FailReason)
+		// 	),
+		// 	FColor::Red
+		// );
 
 		ResetPendingCastData();
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
@@ -69,7 +69,7 @@ void UGA_SpellStupefy::ActivateAbility(
 
 	if (!ResolveTargetForCast(CastContext, TargetActor, TargetTags, AimPoint))
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] No valid target resolved."), FColor::Red);
+		// Debug::Print(TEXT("[GA_SpellStupefy] No valid target resolved."), FColor::Red);
 
 		ResetPendingCastData();
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
@@ -78,7 +78,7 @@ void UGA_SpellStupefy::ActivateAbility(
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] CommitAbility failed."), FColor::Red);
+		// Debug::Print(TEXT("[GA_SpellStupefy] CommitAbility failed."), FColor::Red);
 
 		ResetPendingCastData();
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
@@ -92,7 +92,7 @@ void UGA_SpellStupefy::ActivateAbility(
 	const bool bApplied = ApplyStupefyToTarget(CastContext, TargetActor, TargetTags);
 	if (!bApplied)
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] ApplyStupefyToTarget failed."), FColor::Red);
+		// Debug::Print(TEXT("[GA_SpellStupefy] ApplyStupefyToTarget failed."), FColor::Red);
 
 		ResetPendingCastData();
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
@@ -101,15 +101,15 @@ void UGA_SpellStupefy::ActivateAbility(
 
 	NotifySpellCastSucceeded(CastContext);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_SpellStupefy] Success | Context=%d | Target=%s | SlowMotionANS=%s"),
-			static_cast<int32>(CastContext),
-			*GetNameSafe(TargetActor),
-			*ParrySlowMotionANSName.ToString()
-		),
-		FColor::Cyan
-	);
+	// Debug::Print(
+	// 	FString::Printf(
+	// 		TEXT("[GA_SpellStupefy] Success | Context=%d | Target=%s | SlowMotionANS=%s"),
+	// 		static_cast<int32>(CastContext),
+	// 		*GetNameSafe(TargetActor),
+	// 		*ParrySlowMotionANSName.ToString()
+	// 	),
+	// 	FColor::Cyan
+	// );
 
 	ResetPendingCastData();
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
@@ -187,7 +187,7 @@ bool UGA_SpellStupefy::ApplyStupefyToTarget(
 	UCombatComponent* CombatComp = SourceActor->FindComponentByClass<UCombatComponent>();
 	if (!CombatComp)
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] CombatComponent missing on SourceActor."), FColor::Red);
+		// Debug::Print(TEXT("[GA_SpellStupefy] CombatComponent missing on SourceActor."), FColor::Red);
 		return false;
 	}
 
@@ -204,10 +204,10 @@ bool UGA_SpellStupefy::ApplyStupefyToTarget(
 
 	if (!DamageResult.bWasApplied)
 	{
-		Debug::Print(
-			FString::Printf(TEXT("[GA_SpellStupefy] Damage not applied | Target=%s"), *GetNameSafe(TargetActor)),
-			FColor::Red
-		);
+		// Debug::Print(
+		// 	FString::Printf(TEXT("[GA_SpellStupefy] Damage not applied | Target=%s"), *GetNameSafe(TargetActor)),
+		// 	FColor::Red
+		// );
 		return false;
 	}
 
@@ -235,13 +235,13 @@ bool UGA_SpellStupefy::ApplyStunEffectToTarget(AActor* TargetActor)
 
 	if (!StunEffectClass)
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] StunEffectClass is null. Stun skipped."), FColor::Yellow);
+		// Debug::Print(TEXT("[GA_SpellStupefy] StunEffectClass is null. Stun skipped."), FColor::Yellow);
 		return false;
 	}
 
 	if (!TargetActor->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] Target has no ASC. Stun skipped."), FColor::Yellow);
+		// Debug::Print(TEXT("[GA_SpellStupefy] Target has no ASC. Stun skipped."), FColor::Yellow);
 		return false;
 	}
 
@@ -260,7 +260,7 @@ bool UGA_SpellStupefy::ApplyStunEffectToTarget(AActor* TargetActor)
 	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
 	if (!SourceASC)
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] Source ASC missing. Stun skipped."), FColor::Yellow);
+		// Debug::Print(TEXT("[GA_SpellStupefy] Source ASC missing. Stun skipped."), FColor::Yellow);
 		return false;
 	}
 
@@ -270,7 +270,7 @@ bool UGA_SpellStupefy::ApplyStunEffectToTarget(AActor* TargetActor)
 	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(StunEffectClass, GetAbilityLevel(), EffectContext);
 	if (!SpecHandle.IsValid())
 	{
-		Debug::Print(TEXT("[GA_SpellStupefy] Failed to make stun effect spec."), FColor::Red);
+		// Debug::Print(TEXT("[GA_SpellStupefy] Failed to make stun effect spec."), FColor::Red);
 		return false;
 	}
 
@@ -282,10 +282,10 @@ bool UGA_SpellStupefy::ApplyStunEffectToTarget(AActor* TargetActor)
 	const bool bApplied = ActiveGEHandle.WasSuccessfullyApplied();
 	if (bApplied)
 	{
-		Debug::Print(
-			FString::Printf(TEXT("[GA_SpellStupefy] Stun applied | Target=%s"), *GetNameSafe(TargetActor)),
-			FColor::Yellow
-		);
+		// Debug::Print(
+		// 	FString::Printf(TEXT("[GA_SpellStupefy] Stun applied | Target=%s"), *GetNameSafe(TargetActor)),
+		// 	FColor::Yellow
+		// );
 	}
 
 	return bApplied;
