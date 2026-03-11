@@ -40,7 +40,7 @@ bool AInteractableChest::CanInteract_Implementation(AActor* Interactor)
 void AInteractableChest::Interact_Implementation(AActor* Interactor)
 {
 	// 1. CanInteract 로직을 통해 상태 확인 (태그 기반)
-	if (!CanInteract(Interactor))
+	if (!IInteractableInterface::Execute_CanInteract(this, Interactor))
 	{
 		return;
 	}

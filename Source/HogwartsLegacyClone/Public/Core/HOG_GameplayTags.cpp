@@ -46,5 +46,8 @@ namespace HOGGameplayTags
 	//Interactable Object
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_Chest_Opened, "Interactable.Chest.Opened")
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_Chest_Closed, "Interactable.Chest.Closed")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Interactable_Burnable_Unlit, "Interactable.Burnable.Unlit")
+	UE_DEFINE_GAMEPLAY_TAG(Interactable_Burnable_Lit, "Interactable.Burnable.Lit")
 
 }
