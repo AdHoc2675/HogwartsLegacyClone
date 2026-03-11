@@ -41,7 +41,7 @@ bool AInteractableBurnable::CanInteract_Implementation(AActor* Interactor)
 
 void AInteractableBurnable::Interact_Implementation(AActor* Interactor)
 {
-	if (!CanInteract(Interactor))
+	if (!IInteractableInterface::Execute_CanInteract(this, Interactor))
 	{
 		return;
 	}
@@ -56,13 +56,12 @@ void AInteractableBurnable::Interact_Implementation(AActor* Interactor)
 	FString InteractorName = Interactor ? Interactor->GetName() : TEXT("Unknown");
 	Debug::Print(FString::Printf(TEXT("[Burnable] %s에 마법이 적중하여 점화 (By %s)"), *GetName(), *InteractorName), FColor::Orange);
 
-
 	// 불꽃 시각 효과 켜기
 	if (FireVFXComp)
 	{
 		FireVFXComp->Activate(true);
 	}
 
-	// 블루프린트 측 이벤트 호출 (사운드 재생 등에 활용)
+	// 블루프린트 측 이벤트 호출
 	PlayIgniteEffects();
 }

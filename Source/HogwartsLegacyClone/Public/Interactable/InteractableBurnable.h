@@ -33,7 +33,7 @@ public:
 	virtual bool CanInteract_Implementation(AActor* Interactor) override;
 	virtual void Interact_Implementation(AActor* Interactor) override;
 
-	// 불이 붙을 때 실행할 블루프린트 이벤트 (사운드 등 편의용)
+	// 불이 붙을 때 실행할 블루프린트 이벤트
 	UFUNCTION(BlueprintImplementableEvent, Category = "Interaction")
 	void PlayIgniteEffects();
 
