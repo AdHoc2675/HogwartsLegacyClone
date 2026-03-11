@@ -207,7 +207,7 @@ void UGA_Spell_Incendio::FireIncendio()
 				}
 			}
 
-			Debug::Print(FString::Printf(TEXT("[Incendio] Hit -> %s, Dmg: %.1f"), *TargetActor->GetName(), BaseDmg));
+			// Debug::Print(FString::Printf(TEXT("[Incendio] Hit -> %s, Dmg: %.1f"), *TargetActor->GetName(), BaseDmg));
 		}
 	}
 }

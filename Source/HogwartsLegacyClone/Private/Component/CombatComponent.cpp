@@ -409,7 +409,7 @@ void UCombatComponent::DebugPrint(const FString& Message) const
 		return;
 	}
 
-	Debug::Print(Message);
+	// Debug::Print(Message);
 }
 
 void UCombatComponent::OpenProtegoParryWindow(float DurationSeconds)

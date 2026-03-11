@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.h"
 
 #include "HOGDebugHelper.h"
 #include "Data/DA_SpellDefinition.h"
+#include "Character/Player/PlayerCharacterBase.h"
 
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
@@ -19,6 +19,15 @@
 UGA_Spell_BasicAttack::UGA_Spell_BasicAttack()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+
+	ComboIndex = 0;
+	bComboInProgress = false;
+	bNextComboQueued = false;
+	CurrentComboStep = 0;
+	bBranchConsumed = false;
+	CurrentPlayingMontage = nullptr;
+	bAdvancingComboFromBranch = false;
+	LastComboQueuedTime=-1.f;
 }
 
 void UGA_Spell_BasicAttack::ActivateAbility(
@@ -29,99 +38,300 @@ void UGA_Spell_BasicAttack::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	// 커밋 단계에서는 CanActivate 검증을 더 넣어도 되지만,
-	// 지금은 “추가만”으로 최소 실행 경로만 보장.
+	// 첫 입력: 콤보 시작
+	bComboInProgress = true;
+	bNextComboQueued = false;
+	CurrentComboStep = 0;
+	bBranchConsumed = false;
+	bAdvancingComboFromBranch = false;
+	CurrentPlayingMontage = nullptr;
+
 	PlayComboMontageOrFire(ActorInfo);
+}
+
+void UGA_Spell_BasicAttack::InputPressed(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
+
+	APlayerCharacterBase* PlayerCharacter = ActorInfo
+		? Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get())
+		: nullptr;
+
+	if (!bComboInProgress)
+	{
+		Debug::Print(TEXT("[BasicAttack] InputPressed Ignored: Combo not in progress"), FColor::Orange);
+		return;
+	}
+
+	if (!PlayerCharacter)
+	{
+		Debug::Print(TEXT("[BasicAttack] InputPressed Ignored: PlayerCharacter is null"), FColor::Red);
+		return;
+	}
+
+	Debug::Print(FString::Printf(
+		TEXT("[BasicAttack] InputPressed While Combo | CanQueue=%s | CurrentStep=%d"),
+		PlayerCharacter->CanQueueNextCombo() ? TEXT("true") : TEXT("false"),
+		CurrentComboStep
+	), FColor::Yellow);
+
+	if (PlayerCharacter->CanQueueNextCombo())
+	{
+		bNextComboQueued = true;
+
+		if (UWorld* World = GetWorld())
+		{
+			LastComboQueuedTime = World->GetTimeSeconds();
+		}
+
+		Debug::Print(FString::Printf(
+			TEXT("[BasicAttack] Next Combo Queued | CurrentStep=%d | Buffer=%.2f"),
+			CurrentComboStep,
+			ComboInputBufferSeconds
+		), FColor::Yellow);
+	}
+	else
+	{
+		Debug::Print(TEXT("[BasicAttack] Combo Input Ignored: ComboWindow Closed"), FColor::Orange);
+	}
 }
 
 void UGA_Spell_BasicAttack::PlayComboMontageOrFire(const FGameplayAbilityActorInfo* ActorInfo)
 {
-	ACharacter* Character = ActorInfo ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
-
-	// 몽타주가 없거나 캐릭터/애님이 없으면 즉시 발사
-	if (ComboMontages.Num() == 0 || !Character || !Character->GetMesh())
+	if (!TryPlayCurrentComboMontage(ActorInfo))
 	{
 		FireHitScan(ActorInfo);
+		ResetComboState();
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
+	}
+
+	// 현재 단계: 각 타 시작 즉시 타격 처리
+	// 나중에 AttackHit Notify로 분리 가능
+	FireHitScan(ActorInfo);
+}
+
+bool UGA_Spell_BasicAttack::TryPlayCurrentComboMontage(const FGameplayAbilityActorInfo* ActorInfo)
+{
+	ACharacter* Character = ActorInfo ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
+	if (!Character)
+	{
+		return false;
+	}
+
+	if (!Character->GetMesh())
+	{
+		return false;
 	}
 
 	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
 	if (!AnimInstance)
 	{
-		FireHitScan(ActorInfo);
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-		return;
+		return false;
 	}
 
-	// 유효한 몽타주 찾기
-	int32 SafeIndex = ComboIndex % ComboMontages.Num();
-	UAnimMontage* MontageToPlay = ComboMontages[SafeIndex].Get();
+	if (!ComboMontages.IsValidIndex(CurrentComboStep))
+	{
+		return false;
+	}
 
+	UAnimMontage* MontageToPlay = ComboMontages[CurrentComboStep].Get();
 	if (!MontageToPlay)
 	{
-		FireHitScan(ActorInfo);
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-		return;
+		return false;
 	}
 
-	ComboIndex = (ComboIndex + 1) % ComboMontages.Num();
+	bBranchConsumed = false;
+	bAdvancingComboFromBranch = false;
 
-	// 몽타주 재생
-	const float PlayRate = 1.f;
-	const float Duration = AnimInstance->Montage_Play(MontageToPlay, PlayRate);
+	AnimInstance->Montage_Stop(0.05f);
+
+	const float Duration = AnimInstance->Montage_Play(MontageToPlay, 1.f);
+
+	Debug::Print(FString::Printf(
+		TEXT("[BasicAttack] Montage_Play Result | Step=%d | Duration=%.3f"),
+		CurrentComboStep,
+		Duration
+	), Duration > 0.f ? FColor::Green : FColor::Red);
 
 	if (Duration <= 0.f)
 	{
-		FireHitScan(ActorInfo);
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-		return;
+		return false;
 	}
 
-	// 몽타주 종료 콜백
+	CurrentPlayingMontage = MontageToPlay;
+
 	FOnMontageEnded EndDelegate;
 	EndDelegate.BindUObject(this, &UGA_Spell_BasicAttack::OnMontageEnded);
 	AnimInstance->Montage_SetEndDelegate(EndDelegate, MontageToPlay);
 
-	// “발사 타이밍”을 몽타주 노티파이로 정밀하게 하고 싶으면 다음 단계에서 처리.
-	// 현재는 간단 버전: 몽타주 시작 즉시 발사
-	FireHitScan(ActorInfo);
+	return true;
+}
+
+void UGA_Spell_BasicAttack::TryAdvanceComboFromBranchPoint()
+{
+	if (!bComboInProgress)
+	{
+		Debug::Print(TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: Combo not in progress"), FColor::Orange);
+		return;
+	}
+
+	if (bBranchConsumed)
+	{
+		Debug::Print(TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: Branch already consumed"), FColor::Orange);
+		return;
+	}
+
+	if (!IsComboInputBufferedValid())
+	{
+		Debug::Print(TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: No valid buffered combo"), FColor::Orange);
+		return;
+	}
+
+	const int32 NextStep = CurrentComboStep + 1;
+	const bool bHasNextStep = ComboMontages.IsValidIndex(NextStep);
+
+	if (!bHasNextStep)
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: No next step | CurrentStep=%d"),
+			CurrentComboStep
+		), FColor::Orange);
+		return;
+	}
+
+	bBranchConsumed = true;
+	bNextComboQueued = false;
+	LastComboQueuedTime=-1.f;
+	bAdvancingComboFromBranch = true;
+	CurrentComboStep = NextStep;
+
+	Debug::Print(FString::Printf(
+		TEXT("[BasicAttack] Branch Advance Combo | NextStep=%d"),
+		CurrentComboStep
+	), FColor::Yellow);
+
+	if (!TryPlayCurrentComboMontage(CurrentActorInfo))
+	{
+		Debug::Print(TEXT("[BasicAttack] Branch Advance Failed: TryPlayCurrentComboMontage failed"), FColor::Red);
+		ResetComboState();
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		return;
+	}
+
+	FireHitScan(CurrentActorInfo);
 }
 
 void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
+	Debug::Print(FString::Printf(
+		TEXT("[BasicAttack] OnMontageEnded | Montage=%s | CurrentPlaying=%s | Step=%d | Queued=%s | Interrupted=%s | BranchAdvancing=%s"),
+		*GetNameSafe(Montage),
+		*GetNameSafe(CurrentPlayingMontage),
+		CurrentComboStep,
+		bNextComboQueued ? TEXT("true") : TEXT("false"),
+		bInterrupted ? TEXT("true") : TEXT("false"),
+		bAdvancingComboFromBranch ? TEXT("true") : TEXT("false")
+	), bInterrupted ? FColor::Orange : FColor::Green);
+
+	// 현재 추적 중인 몽타주와 다르면 무시
+	if (Montage != CurrentPlayingMontage)
+	{
+		Debug::Print(TEXT("[BasicAttack] OnMontageEnded Ignored: Not current playing montage"), FColor::Orange);
+		return;
+	}
+
+	// 브랜치 전환으로 이전 타가 끊긴 경우는 정상
+	if (bInterrupted && bAdvancingComboFromBranch)
+	{
+		Debug::Print(TEXT("[BasicAttack] OnMontageEnded Ignored: Interrupted by combo branch advance"), FColor::Orange);
+		return;
+	}
+
+	// 진짜 인터럽트면 종료
+	if (bInterrupted)
+	{
+		ResetComboState();
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
+	// 브랜치 노티파이를 놓쳤을 때 fallback
+	const int32 NextStep = CurrentComboStep + 1;
+	const bool bHasNextStep = ComboMontages.IsValidIndex(NextStep);
+
+	if (IsComboInputBufferedValid() && bHasNextStep)
+	{
+		CurrentComboStep = NextStep;
+		bNextComboQueued = false;
+		LastComboQueuedTime=-1.f;
+
+		Debug::Print(FString::Printf(
+			TEXT("[BasicAttack] Advance Combo From MontageEnd | NextStep=%d"),
+			CurrentComboStep
+		), FColor::Yellow);
+
+		if (!TryPlayCurrentComboMontage(CurrentActorInfo))
+		{
+			ResetComboState();
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+			return;
+		}
+
+		FireHitScan(CurrentActorInfo);
+		return;
+	}
+
+	Debug::Print(TEXT("[BasicAttack] Combo End"), FColor::Silver);
+
+	ResetComboState();
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-bool UGA_Spell_BasicAttack::BuildTraceStartEnd(const FGameplayAbilityActorInfo* ActorInfo, FVector& OutStart, FVector& OutEnd, AActor*& OutLockTarget) const
+void UGA_Spell_BasicAttack::ResetComboState()
+{
+	bComboInProgress = false;
+	bNextComboQueued = false;
+	CurrentComboStep = 0;
+	ComboIndex = 0;
+	bBranchConsumed = false;
+	CurrentPlayingMontage = nullptr;
+	bAdvancingComboFromBranch = false;
+	LastComboQueuedTime=-1.f;
+
+	Debug::Print(TEXT("[BasicAttack] ResetComboState"), FColor::Silver);
+}
+
+bool UGA_Spell_BasicAttack::BuildTraceStartEnd(
+	const FGameplayAbilityActorInfo* ActorInfo,
+	FVector& OutStart,
+	FVector& OutEnd,
+	AActor*& OutLockTarget
+) const
 {
 	OutLockTarget = nullptr;
 
-	// 사거리: Definition 기반
 	const float Range = GetCastRange();
 	if (Range <= 0.f)
 	{
 		return false;
 	}
 
-	// LockOn 기반 타겟/조준점 획득
 	FGameplayTagContainer TargetTags;
 	FVector AimPoint;
 	AActor* Target = nullptr;
 
 	AcquireTargetFromLockOn(Target, TargetTags, AimPoint);
 
-	// 시작점: 카메라 센터에임 기준(SpellBase의 센터 계산 사용)
 	FVector CenterAim;
 	if (!GetCenterAimPoint(CenterAim, Range))
 	{
 		return false;
 	}
 
-	// CenterAimPoint는 “카메라에서 Range만큼 나간 끝점”이라 Start가 필요함.
-	// Start는 카메라 위치로 잡는 게 깔끔하지만, SpellBase는 End만 제공하므로
-	// 여기서는 End에서 역산하지 말고, Actor 위치를 Start로 잡는 간단 버전으로 간다.
-	// (다음 단계에서 Start를 카메라 위치로 반환하도록 SpellBase 확장 가능)
 	AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
 	if (!Avatar)
 	{
@@ -130,7 +340,6 @@ bool UGA_Spell_BasicAttack::BuildTraceStartEnd(const FGameplayAbilityActorInfo* 
 
 	OutStart = Avatar->GetActorLocation();
 
-	// 끝점: 타겟이 있으면 타겟 위치, 없으면 AimPoint(또는 CenterAim)
 	if (IsValid(Target))
 	{
 		OutLockTarget = Target;
@@ -181,17 +390,37 @@ void UGA_Spell_BasicAttack::FireHitScan(const FGameplayAbilityActorInfo* ActorIn
 		DrawDebugLine(World, Start, DebugEnd, bHit ? FColor::Red : FColor::Green, false, 1.0f, 0, 2.0f);
 	}
 
-	// 데미지 수치: Definition 기반
 	const float Damage = GetBaseDamage();
 
 	if (bHit && Hit.GetActor())
 	{
-		// 여기서 실제 Damage 적용 파이프라인은 “CombatComponent/ExecutionCalculation” 쪽으로 갈 예정이므로,
-		// 지금은 디버그만 찍고, 다음 단계에서 ApplyDamage GE/Execution으로 교체.
-		Debug::Print(FString::Printf(TEXT("[BasicAttack] Hit=%s Damage=%.1f"), *GetNameSafe(Hit.GetActor()), Damage));
+		Debug::Print(FString::Printf(
+			TEXT("[BasicAttack] Hit=%s Damage=%.1f"),
+			*GetNameSafe(Hit.GetActor()),
+			Damage
+		));
 	}
 	else
 	{
 		Debug::Print(TEXT("[BasicAttack] No Hit"));
 	}
+}
+
+bool UGA_Spell_BasicAttack::IsComboInputBufferedValid() const
+{
+	if (!bNextComboQueued)
+	{
+		return false;
+	}
+	
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+	
+	const float CurrentTime = World->GetTimeSeconds();
+	const float Elapsed=CurrentTime-LastComboQueuedTime;
+	
+	return Elapsed<=ComboInputBufferSeconds;
 }
