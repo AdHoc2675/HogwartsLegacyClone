@@ -50,6 +50,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "HOG|Spell|Leviosa")
 	void StartLevitation();
 
+	// 지속 시간 종료시 어빌리티를 종료
+	UFUNCTION()
+	void OnLevitationDurationEnded();
+
 protected:
 	// ====== Leviosa 옵션 ======
 
@@ -60,6 +64,10 @@ protected:
 	// 대상을 띄우는 상태이상 (이동 불가 등 태그 부여)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HOG|Spell|Leviosa|Effect")
 	TSubclassOf<UGameplayEffect> LevitationEffectClass;
+
+	// 마법 지속 시간 (초 단위)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Leviosa|Time")
+	float LevitationDuration = 5.0f;
 
 	// ====== 시각 및 사운드 효과 ======
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Visual")
@@ -79,4 +87,7 @@ protected:
 
 	// 취소/종료 시 제거할 Gameplay Effect 핸들
 	FActiveGameplayEffectHandle ActiveLevitationHandle;
+
+	// 타이머를 관리하기 위한 핸들
+	FTimerHandle LevitationTimerHandle;
 };

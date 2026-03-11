@@ -161,11 +161,31 @@ void UGA_Spell_Leviosa::StartLevitation()
 	}
 
 	Debug::Print(FString::Printf(TEXT("[Leviosa] Levitated %s!"), *LevitatedTarget->GetName()), FColor::Cyan);
+
+	// 지정된 지속 시간(LevitationDuration) 이후에 어빌리티를 종료하도록 타이머 설정
+	GetWorld()->GetTimerManager().SetTimer(
+		LevitationTimerHandle,
+		this,
+		&UGA_Spell_Leviosa::OnLevitationDurationEnded,
+		LevitationDuration,
+		false
+	);
 }
 
 void UGA_Spell_Leviosa::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
+	// 동작이 캔슬된 경우에만 어빌리티를 바로 종료시킴
+	if (bInterrupted)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LevitationTimerHandle);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	}
+}
+
+void UGA_Spell_Leviosa::OnLevitationDurationEnded()
+{
+	// 지속 시간 종료시 공중 부양 종료
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
 void UGA_Spell_Leviosa::EndAbility(
@@ -175,6 +195,12 @@ void UGA_Spell_Leviosa::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
+	// 안전을 위해 종료될 때 타이머 무력화 
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(LevitationTimerHandle);
+	}
+
 	if (IsValid(LevitatedTarget))
 	{
 		// 1. 상태이상(GE) 제거
