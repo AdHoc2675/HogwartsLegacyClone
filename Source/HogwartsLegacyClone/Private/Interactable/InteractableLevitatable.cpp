@@ -33,6 +33,28 @@ void AInteractableLevitatable::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 발판 모드일 경우: 축을 단단히 고정하여 위아래(Z축)로만 움직임
+	if (bIsPlatformMode && BaseMesh)
+	{
+		FBodyInstance* BodyInst = BaseMesh->GetBodyInstance();
+		if (BodyInst)
+		{
+			// 1. 회전 완전 잠금 (플레이어가 모서리쪽에 있어도 기울어지지 않음)
+			BodyInst->bLockXRotation = true; // Roll 잠금
+			BodyInst->bLockYRotation = true; // Pitch 잠금
+			BodyInst->bLockZRotation = true; // Yaw 잠금
+
+			// 2. 수평 이동 잠금 (위아래인 Z축 이동만 허용, 옆으로 밀리지 않음)
+			BodyInst->bLockXTranslation = true;
+			BodyInst->bLockYTranslation = true;
+			
+			BodyInst->SetDOFLock(EDOFMode::SixDOF);
+
+			// 3. 질량 증가 (선택 사항: 플레이어 몸무게에 의해 덜덜거리는 것을 방지)
+			BaseMesh->SetMassOverrideInKg(NAME_None, 5000.0f, true);
+		}
+	}
+
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Team_Object);
@@ -40,17 +62,9 @@ void AInteractableLevitatable::BeginPlay()
 	}
 }
 
-// Called every frame
-void AInteractableLevitatable::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
 bool AInteractableLevitatable::CanInteract_Implementation(AActor* Interactor)
 {
-	// 땅에 있을 때만 들어올릴 수 있게 할 경우 태그 검사 로직 추가 가능
-	return true; 
+	return AbilitySystemComponent && AbilitySystemComponent->HasMatchingGameplayTag(HOGGameplayTags::Interactable_Levitatable_Grounded);
 }
 
 void AInteractableLevitatable::Interact_Implementation(AActor* Interactor)
