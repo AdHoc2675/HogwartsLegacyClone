@@ -7,6 +7,9 @@
 #include "GA_Spell_Leviosa.generated.h"
 
 class UAnimMontage;
+class UGameplayEffect;
+class UNiagaraSystem;
+class USoundBase;
 
 /**
  *
@@ -54,7 +57,26 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Anim")
 	TObjectPtr<UAnimMontage> CastMontage;
 
+	// 대상을 띄우는 상태이상 (이동 불가 등 태그 부여)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HOG|Spell|Leviosa|Effect")
+	TSubclassOf<UGameplayEffect> LevitationEffectClass;
+
+	// ====== 시각 및 사운드 효과 ======
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Visual")
+	TObjectPtr<UNiagaraSystem> LevitateVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Sound")
+	TObjectPtr<USoundBase> CastVoiceSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Sound")
+	TObjectPtr<USoundBase> LevitateSound;
+
+	// ====== 런타임 트래킹 ======
+
 	// 현재 제어 중인 대상 (런타임 트래킹 용도)
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> LevitatedTarget;
+
+	// 취소/종료 시 제거할 Gameplay Effect 핸들
+	FActiveGameplayEffectHandle ActiveLevitationHandle;
 };

@@ -5,11 +5,14 @@
 #include "HOGDebugHelper.h"
 
 #include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/AnimInstance.h"
+#include "AbilitySystemComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
 
 UGA_Spell_Leviosa::UGA_Spell_Leviosa()
 {
-	// 타겟 상태를 기록하고 유지해야 하므로 Instanced로 설정
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
@@ -21,21 +24,53 @@ void UGA_Spell_Leviosa::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	// 자원/쿨다운 소모 처리
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	// 1. 타겟 획득 (SpellBase의 LockOn 기능 활용)
+	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+
+	// 1. 주문 시전 사운드 재생
+	if (CastVoiceSound && Character)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, Character->GetActorLocation());
+	}
+
+	// 2. 타겟 획득 (LockOn 우선)
 	FGameplayTagContainer TargetTags;
 	FVector AimPoint;
 	AActor* AcquiredTarget = nullptr;
 
 	bool bHasTarget = AcquireTargetFromLockOn(AcquiredTarget, TargetTags, AimPoint);
 
-	if (bHasTarget && IsValid(AcquiredTarget))
+	// 락온된 적(Pawn)이 없다면, 시야 정방향(AimPoint)으로 트레이스를 날려 사물 탐지
+	if (!IsValid(AcquiredTarget) && Character)
+	{
+		UWorld* World = Character->GetWorld();
+		if (World)
+		{
+			FVector StartLoc = Character->GetActorLocation();
+			// AimPoint가 0이면 정면, 아니면 AimPoint 방향으로 뻗어나감
+			FVector TargetLoc = AimPoint.IsNearlyZero() ? StartLoc + (Character->GetActorForwardVector() * GetCastRange()) : AimPoint;
+
+			FCollisionShape SphereShape = FCollisionShape::MakeSphere(100.f); // 약간 널널한 구체 판정
+			FCollisionQueryParams Params(SCENE_QUERY_STAT(LeviosaObjectTrace), false, Character);
+
+			FHitResult HitResult;
+			// ECC_Visibility 채널 검사로 물리 사물(상자, 돌 등)을 감지
+			bool bHit = World->SweepSingleByChannel(HitResult, StartLoc, TargetLoc, FQuat::Identity, ECC_Visibility, SphereShape, Params);
+
+			if (bHit && IsValid(HitResult.GetActor()))
+			{
+				AcquiredTarget = HitResult.GetActor();
+			}
+		}
+	}
+
+	// 최종 타겟 저장
+	if (IsValid(AcquiredTarget))
 	{
 		LevitatedTarget = AcquiredTarget;
 		Debug::Print(FString::Printf(TEXT("[Leviosa] Target Acquired: %s"), *LevitatedTarget->GetName()), FColor::Cyan);
@@ -45,8 +80,7 @@ void UGA_Spell_Leviosa::ActivateAbility(
 		Debug::Print(TEXT("[Leviosa] No valid Target. (Casting empty)"), FColor::Yellow);
 	}
 
-	// 2. 캐스팅 애니메이션 실행 (지팡이를 휘두르는 모션 등)
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	// 3. 캐스팅 애니메이션 실행 및 로직 발동
 	if (Character && Character->GetMesh() && CastMontage)
 	{
 		UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
@@ -59,40 +93,78 @@ void UGA_Spell_Leviosa::ActivateAbility(
 				EndDelegate.BindUObject(this, &UGA_Spell_Leviosa::OnMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
 
-				// TODO: 애니메이션의 알맞은 타이밍(AnimNotify)에서 StartLevitation() 호출하도록 변경할 수 있음.
-				// 현재는 스크립트 실행 직후 바로 부유 상태 진입
 				StartLevitation();
 				return;
 			}
 		}
 	}
 
-	// 몽타주 재생에 실패했거나 세팅되어 있지 않다면 즉시 로직 처리
 	StartLevitation();
 }
 
 void UGA_Spell_Leviosa::StartLevitation()
 {
-	// 향후 구현될 부분
-	// 1. 대상(LevitatedTarget)의 물리 시뮬레이션 On/Off 및 위치(Transform) 강제 업데이트.
-	// 2. AbilityTask_WaitInputPress / Release 등을 연결하여 F, V, Q, E 키 입력 시
-	//    거리(Distance) 조절 오프셋 처리.
-	// 또는, 간단히 위로 떠오르게만 하도록 처리
-
-	if (IsValid(LevitatedTarget))
+	if (!IsValid(LevitatedTarget))
 	{
-		Debug::Print(FString::Printf(TEXT("[Leviosa] Started Levitating %s! (Awaiting Input/Physics Logic)"), *LevitatedTarget->GetName()), FColor::Green);
-
-		// 대상이 허공에 뜨는 상태를 부여하는 GameplayEffect나 Tag (ex: State.Levitated)를 해당 액터에게 적용하는 로직 추가 가능
+		Debug::Print(TEXT("[Leviosa] No valid target to levitate."), FColor::Yellow);
+		return;
 	}
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	// 1. 시각 효과 & 사운드 재생
+	FVector TargetLoc = LevitatedTarget->GetActorLocation();
+	if (LevitateVFX)
+	{
+		// 타겟의 살짝 아래쪽에서 솟아오르는 이펙트를 연출
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, LevitateVFX, TargetLoc - FVector(0, 0, 50.f));
+	}
+	if (LevitateSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, LevitateSound, TargetLoc);
+	}
+
+	// 2. 상태이상(Gameplay Effect) 적용
+	if (LevitationEffectClass)
+	{
+		UAbilitySystemComponent* OwnerASC = GetAbilitySystemComponentFromActorInfo();
+		UAbilitySystemComponent* TargetASC = LevitatedTarget->FindComponentByClass<UAbilitySystemComponent>();
+
+		if (OwnerASC && TargetASC)
+		{
+			FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(LevitationEffectClass, GetAbilityLevel());
+			if (SpecHandle.IsValid())
+			{
+				ActiveLevitationHandle = OwnerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+			}
+		}
+	}
+
+	// 3. 물리 엔진을 이용해 강제로 위로 띄우기 (간단한 물리적 구현)
+	if (ACharacter* TargetCharacter = Cast<ACharacter>(LevitatedTarget))
+	{
+		if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
+		{
+			MoveComp->GravityScale = 0.0f;               // 중력 무시
+			MoveComp->SetMovementMode(MOVE_Flying);      // 낙하 방지
+			MoveComp->Velocity = FVector(0.f, 0.f, 250.f); // 위로 살짝 띄우기
+		}
+	}
+	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(LevitatedTarget->GetRootComponent()))
+	{
+		if (PrimComp->IsSimulatingPhysics())
+		{
+			PrimComp->SetEnableGravity(false);
+			PrimComp->SetPhysicsLinearVelocity(FVector(0.f, 0.f, 250.f));
+		}
+	}
+
+	Debug::Print(FString::Printf(TEXT("[Leviosa] Levitated %s!"), *LevitatedTarget->GetName()), FColor::Cyan);
 }
 
 void UGA_Spell_Leviosa::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	// 사용자가 마우스/버튼을 떼기 전까지 유지되는 '지속형(Sustained) 어빌리티'일 경우
-	// 여기서 EndAbility를 호출하지 않고 대기
-	// 하지만 현재는 기본 뼈대 점검을 위해 애니메이션 종료 시 안전하게 Ability를 종료
-
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
 }
 
@@ -103,12 +175,36 @@ void UGA_Spell_Leviosa::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	// 부유 해제에 따른 정리 작업
 	if (IsValid(LevitatedTarget))
 	{
-		// TODO: 대상의 중력을 복구하고 원래 물리 상태로 되돌리는 로직 등
-		Debug::Print(FString::Printf(TEXT("[Leviosa] Dropped %s"), *LevitatedTarget->GetName()), FColor::Red);
+		// 1. 상태이상(GE) 제거
+		if (ActiveLevitationHandle.IsValid())
+		{
+			if (UAbilitySystemComponent* OwnerASC = GetAbilitySystemComponentFromActorInfo())
+			{
+				OwnerASC->RemoveActiveGameplayEffect(ActiveLevitationHandle);
+			}
+			ActiveLevitationHandle.Invalidate();
+		}
 
+		// 2. 물리/중력 복구
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(LevitatedTarget))
+		{
+			if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
+			{
+				MoveComp->GravityScale = 1.0f;
+				MoveComp->SetMovementMode(MOVE_Falling);
+			}
+		}
+		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(LevitatedTarget->GetRootComponent()))
+		{
+			if (PrimComp->IsSimulatingPhysics())
+			{
+				PrimComp->SetEnableGravity(true);
+			}
+		}
+
+		Debug::Print(FString::Printf(TEXT("[Leviosa] Dropped %s"), *LevitatedTarget->GetName()), FColor::Green);
 		LevitatedTarget = nullptr;
 	}
 
