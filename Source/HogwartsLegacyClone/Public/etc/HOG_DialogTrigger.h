@@ -31,7 +31,7 @@ protected:
 protected:
 	// 트리거 영역 (에디터에서 크기 조절 가능)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	TObjectPtr<UBoxComponent> TriggerCollision;
+	TObjectPtr<UBoxComponent> TriggerCollision2;
 
 	// 재생할 대사(음성) 파일
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HOG|Dialog")

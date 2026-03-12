@@ -9,10 +9,10 @@ AHOG_DialogTrigger::AHOG_DialogTrigger()
 	PrimaryActorTick.bCanEverTick = false;
 
 	// 구체 콜리전 생성 및 초기 세팅
-	TriggerCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerCollision"));
-	RootComponent = TriggerCollision;
+	TriggerCollision2 = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerCollision"));
+	RootComponent = TriggerCollision2;
 
-	TriggerCollision->SetCollisionProfileName(TEXT("Trigger")); // Overlap만 감지하도록 설정
+	TriggerCollision2->SetCollisionProfileName(TEXT("Trigger")); // Overlap만 감지하도록 설정
 }
 
 void AHOG_DialogTrigger::BeginPlay()
@@ -20,9 +20,9 @@ void AHOG_DialogTrigger::BeginPlay()
 	Super::BeginPlay();
 
 	// 콜리전에 Overlap 이벤트 바인딩
-	if (TriggerCollision)
+	if (TriggerCollision2)
 	{
-		TriggerCollision->OnComponentBeginOverlap.AddDynamic(this, &AHOG_DialogTrigger::OnOverlapBegin);
+		TriggerCollision2->OnComponentBeginOverlap.AddDynamic(this, &AHOG_DialogTrigger::OnOverlapBegin);
 	}
 }
 
