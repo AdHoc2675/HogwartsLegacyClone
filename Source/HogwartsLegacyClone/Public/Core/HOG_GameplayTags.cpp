@@ -26,7 +26,8 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Attacking, "State.Attacking")
 	
 	//Enemy Ability 
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Attack, "Ability.Attack")
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack, "Ability.Enemy.MeleeAttack")
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack2, "Ability.Enemy.MeleeAttack2")
 	
 	UE_DEFINE_GAMEPLAY_TAG(Spell_BasicAttack, "Spell.BasicAttack")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Protego, "Spell.Protego")
@@ -40,5 +41,11 @@ namespace HOGGameplayTags
 	//Protage State
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_Active, "State.Spell.Protego.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_ParrySuccess, "State.Spell.Protego.ParrySuccess")
+	
+	//Damage
+	UE_DEFINE_GAMEPLAY_TAG(Damage_Melee, "Damage.Melee")
+	
+	//Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_Hit, "Event.Weapon.Hit")
 	
 }

@@ -20,8 +20,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector TargetDistanceKey;
 	
+	// UPROPERTY(EditAnywhere, Category = "Blackboard")
+	// FBlackboardKeySelector TargetActorKey;
+	
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector TargetActorKey;
+	FBlackboardKeySelector AttackTagKey;
 
 protected:
 	virtual bool CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const override;

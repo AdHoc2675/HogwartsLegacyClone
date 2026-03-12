@@ -50,13 +50,7 @@ float AEnemyCharacterBase::GetHealthPercent() const
 
 float AEnemyCharacterBase::GetMinAttackRange() const
 {
-	// MeleeRange
-	if (const IIMeleeAttacker* Melee = Cast<IIMeleeAttacker>(this))
-	{
-		return Melee->GetMeleeAttackRange();
-	}
-	
-	return 100.f;
+	return 120.f;
 }
 
 UBehaviorTree* AEnemyCharacterBase::GetBehaviorTree() const

@@ -20,6 +20,7 @@ public:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 	virtual void InitializeFromAsset(UBehaviorTree& Asset) override;
 	virtual FString GetStaticDescription() const override;
+	virtual void OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult) override;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
@@ -27,5 +28,8 @@ protected:
     
 	UPROPERTY(EditAnywhere, Category = "DelayTime")
 	float DelayTime = 3.0f;
+	
+	UPROPERTY()
+	FTimerHandle TimerHandle;
 	
 };

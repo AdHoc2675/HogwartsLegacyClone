@@ -10,6 +10,28 @@
 /**
  * 
  */
+
+USTRUCT()
+struct FGoblinAttackData
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere)
+	UAnimMontage* Montage = nullptr;
+	
+	UPROPERTY(EditAnywhere)
+	float Damage;
+	
+	UPROPERTY(EditAnywhere, Category = "Melee")
+	float MinRange;
+	
+	UPROPERTY(EditAnywhere, Category = "Melee")
+	float MaxRange;
+	
+	UPROPERTY(EditAnywhere)
+	FGameplayTag AbilityTag;
+	
+};
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UDA_GoblinConfig : public UDA_EnemyConfigBase
 {
@@ -20,7 +42,21 @@ public:
 	// 근접
 	UPROPERTY(EditAnywhere, Category = "Melee")
 	float MeleeAttackRange = 120.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Melee")
+	float MeleeAttackDamage = 20.f;
 
 	UPROPERTY(EditAnywhere, Category = "Melee")
 	TArray<FGameplayTag> MeleeAttackTags;
+	
+	UPROPERTY(EditAnywhere, Category = "Melee")
+	TArray<FGoblinAttackData> MeleeAttacks;
+	
+	const FGoblinAttackData* FindAttackData(FGameplayTag Tag) const
+	{
+		return MeleeAttacks.FindByPredicate([Tag](const FGoblinAttackData& Data)
+		{
+			return Data.AbilityTag == Tag;
+		});
+	}
 };

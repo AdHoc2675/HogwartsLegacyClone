@@ -21,9 +21,10 @@ EBTNodeResult::Type UBTTask_SetChaseDelay::ExecuteTask(UBehaviorTreeComponent& O
 	TWeakObjectPtr<UBlackboardComponent> WeakBlackboard = Blackboard;
 	FName KeyName = ChaseDelayKey.SelectedKeyName;
 	float Time = DelayTime;
-    
+	
+	OwnerComp.GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+	
 	// 플레이어가 적의 타격 범위를 벗아난경우 다시 쫓아가기전 기다리는 타이머
-	FTimerHandle TimerHandle;
 	OwnerComp.GetWorld()->GetTimerManager().SetTimer(
 	   TimerHandle,
 	   [WeakBlackboard, KeyName, Time]()
@@ -60,4 +61,21 @@ FString UBTTask_SetChaseDelay::GetStaticDescription() const
 	return FString::Printf(TEXT("Set Chase Delay\nDelay: %.1fs"),
 		DelayTime);
 
+}
+
+void UBTTask_SetChaseDelay::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory,
+	EBTNodeResult::Type TaskResult)
+{
+	// 적이 파괴되는 경우
+	if (TaskResult == EBTNodeResult::Aborted)
+	{
+		OwnerComp.GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+		
+		if (UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent())
+		{
+			Blackboard->SetValueAsBool(ChaseDelayKey.SelectedKeyName, false);
+		}
+	}
+	
+	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }

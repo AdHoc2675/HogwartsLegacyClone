@@ -26,6 +26,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector TargetDistanceKey;
 	
+	UPROPERTY(EditAnywhere, Category = "Blackboard")
+	FBlackboardKeySelector AbilityTagKey;
+	
 	protected:
 	UPROPERTY()
 	TWeakObjectPtr<AAIController> AIController;
@@ -43,4 +46,7 @@ public:
 	virtual void OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult) override;
 	virtual void InitializeFromAsset(UBehaviorTree& Asset) override;
 	virtual FString GetStaticDescription() const override;
+	
+private:
+	float GetAcceptanceRadius() const;
 };

@@ -29,14 +29,16 @@ bool UBTDecorator_IsInMeleeRange::CalculateRawConditionValue(UBehaviorTreeCompon
 	if (!MeleeAttacker) return false;
 
 	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
+	if (!Blackboard) return false;
 
 	float Distance = Blackboard->GetValueAsFloat(TargetDistanceKey.SelectedKeyName);
+	FName AttackTag = Blackboard->GetValueAsName(AttackTagKey.SelectedKeyName);
 
-	// 캐릭터의 근접 공격 사거리
-	float Range = MeleeAttacker->GetMeleeAttackRange();
-
-	// 타겟까지의 거리가 공격 범위 이내인지 체크
-	return Distance <= Range;
+	float MinRange, MaxRange;
+	MeleeAttacker->GetMeleeAttackRange(AttackTag, MinRange, MaxRange);
+	
+	return Distance >= MinRange && Distance <= MaxRange;
+	
 }
 
 void UBTDecorator_IsInMeleeRange::InitializeFromAsset(UBehaviorTree& Asset)
@@ -46,6 +48,7 @@ void UBTDecorator_IsInMeleeRange::InitializeFromAsset(UBehaviorTree& Asset)
 	if (UBlackboardData* BBAsset = GetBlackboardAsset())
 	{
 		TargetDistanceKey.ResolveSelectedKey(*BBAsset);
+		AttackTagKey.ResolveSelectedKey(*BBAsset);
 	}
 }
 
@@ -99,8 +102,7 @@ void UBTDecorator_IsInMeleeRange::OnCeaseRelevant(UBehaviorTreeComponent& OwnerC
 {
 	Super::OnCeaseRelevant(OwnerComp, NodeMemory);
 
-	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
-	if (Blackboard)
+	if (UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent())
 	{
 		Blackboard->UnregisterObserversFrom(this);
 	}

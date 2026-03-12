@@ -23,6 +23,8 @@ class HOGWARTSLEGACYCLONE_API IIMeleeAttacker
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	virtual float GetMeleeAttackRange() const = 0;
+	//virtual void GetMeleeAttackRange(int32 AttackTypeInt, float& OutMinRange, float& OutMaxRange) const = 0;
+	virtual void GetMeleeAttackRange(FName AttackTag, float& OutMinRange, float& OutMaxRange) const = 0;
+	
 	virtual TArray<FGameplayTag> GetMeleeAttackTags() const = 0;
 };

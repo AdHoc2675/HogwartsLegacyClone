@@ -8,6 +8,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
+#include "Character/Enemy/Interface/IMeleeAttacker.h"
 
 UBTTask_MoveToTarget::UBTTask_MoveToTarget()
 {
@@ -16,6 +17,9 @@ UBTTask_MoveToTarget::UBTTask_MoveToTarget()
     
 	// 인스턴스화 하지 않으면 Task를 공유하는 문제
 	bCreateNodeInstance = true;
+	
+	AbilityTagKey.AddNameFilter(this,
+	GET_MEMBER_NAME_CHECKED(UBTTask_MoveToTarget, AbilityTagKey));
 }
 
 EBTNodeResult::Type UBTTask_MoveToTarget::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -36,7 +40,7 @@ EBTNodeResult::Type UBTTask_MoveToTarget::ExecuteTask(UBehaviorTreeComponent& Ow
 	if (!TargetActor) return EBTNodeResult::Failed;
 	
 	// 공격범위
-	float AttackRange = Enemy->GetMinAttackRange();
+	float AttackRange = GetAcceptanceRadius();
 	
 	EPathFollowingRequestResult::Type MoveResult = AIController->MoveToActor(
 		TargetActor, AttackRange, true, true, true, nullptr, true);
@@ -70,7 +74,7 @@ void UBTTask_MoveToTarget::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* No
 	}
 	
 	float Distance = Blackboard->GetValueAsFloat(TargetDistanceKey.SelectedKeyName);
-	float AttackRange = Enemy->GetMinAttackRange();
+	float AttackRange = GetAcceptanceRadius();
 	
 	// 공격 범위 이내 인 경우 Success
 	if (Distance <= AttackRange)
@@ -111,6 +115,7 @@ void UBTTask_MoveToTarget::InitializeFromAsset(UBehaviorTree& Asset)
 	{
 		TargetActorKey.ResolveSelectedKey(*BBAsset);
 		TargetDistanceKey.ResolveSelectedKey(*BBAsset);
+		AbilityTagKey.ResolveSelectedKey(*BBAsset);
 	}
 }
 
@@ -124,4 +129,24 @@ FString UBTTask_MoveToTarget::GetStaticDescription() const
 	return FString::Printf(TEXT("Move To Target\nTarget: %s\nDistance Key: %s"),
 		*TargetActorKey.SelectedKeyName.ToString(),
 		*TargetDistanceKey.SelectedKeyName.ToString());
+}
+
+float UBTTask_MoveToTarget::GetAcceptanceRadius() const
+{
+	// BB에서 AttackType 읽고 IMeleeAttacker로 MaxRange 가져옴
+	if (Pawn.IsValid() && Blackboard.IsValid() && AbilityTagKey.SelectedKeyName.IsValid())
+	{
+		if (IIMeleeAttacker* MeleeAttacker = Cast<IIMeleeAttacker>(Pawn.Get()))
+		{
+			FName AttackTag = Blackboard->GetValueAsName(AbilityTagKey.SelectedKeyName);
+			float MinRange, MaxRange;
+			MeleeAttacker->GetMeleeAttackRange(AttackTag, MinRange, MaxRange);
+			return MaxRange;
+		}
+	}
+	
+	if (Enemy.IsValid())
+		return Enemy->GetMinAttackRange();
+
+	return 100.f;
 }

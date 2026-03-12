@@ -16,7 +16,7 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_MeleeAttack : public UGA_EnemyBase
 {
 	GENERATED_BODY()
-
+public:
 	UGA_MeleeAttack();
 
 	virtual void ActivateAbility(
@@ -24,14 +24,25 @@ class HOGWARTSLEGACYCLONE_API UGA_MeleeAttack : public UGA_EnemyBase
 		const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData) override;
+	
+	virtual int32 GetAttackTypeInt() const { return -1; }
+	virtual void GetAttackRange(float& OutMinRange, float& OutMaxRange) const
+	{
+		OutMinRange = 0.f;
+		OutMaxRange = 0.f;
+	}
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Animation")
-	UAnimMontage* AttackMontage;
+	virtual float GetMeleeAttackDamage() const { return 0.f; }
+	virtual UAnimMontage* GetAttackMontage() const {return nullptr;};
 
 	UFUNCTION()
 	void OnMontageCompleted();
 
 	UFUNCTION()
 	void OnMontageCancelled();
+
+	UFUNCTION()
+	void OnWeaponHit(FGameplayEventData Payload);
+
 };
