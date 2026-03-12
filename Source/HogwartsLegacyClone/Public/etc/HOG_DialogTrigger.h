@@ -4,7 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "HOG_DialogTrigger.generated.h"
 
-class USphereComponent;
+class UBoxComponent;
 class USoundBase;
 
 UCLASS()
@@ -31,7 +31,7 @@ protected:
 protected:
 	// 트리거 영역 (에디터에서 크기 조절 가능)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	TObjectPtr<USphereComponent> TriggerCollision;
+	TObjectPtr<UBoxComponent> TriggerCollision;
 
 	// 재생할 대사(음성) 파일
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HOG|Dialog")

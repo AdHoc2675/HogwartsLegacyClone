@@ -1,5 +1,5 @@
 ﻿#include "etc/HOG_DialogTrigger.h"
-#include "Components/SphereComponent.h"
+#include "Components/BoxComponent.h"
 #include "Character/Player/PlayerCharacterBase.h" // 플레이어 확인용
 #include "Kismet/GameplayStatics.h"
 #include "HOGDebugHelper.h"
@@ -9,11 +9,9 @@ AHOG_DialogTrigger::AHOG_DialogTrigger()
 	PrimaryActorTick.bCanEverTick = false;
 
 	// 구체 콜리전 생성 및 초기 세팅
-	TriggerCollision = CreateDefaultSubobject<USphereComponent>(TEXT("TriggerCollision"));
+	TriggerCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerCollision"));
 	RootComponent = TriggerCollision;
 
-	// 기본반경 300 (언리얼 단위 = 3미터)
-	TriggerCollision->SetSphereRadius(300.f);
 	TriggerCollision->SetCollisionProfileName(TEXT("Trigger")); // Overlap만 감지하도록 설정
 }
 
@@ -35,7 +33,10 @@ void AHOG_DialogTrigger::OnOverlapBegin(
 	int32 OtherBodyIndex,
 	bool bFromSweep,
 	const FHitResult& SweepResult)
+
 {
+	Debug::Print(TEXT("DialogTrigger: OnOverlapBegin called"), FColor::Green);
+	
 	// 1회성인데 이미 실행되었다면 무시
 	if (bTriggerOnce && bHasTriggered)
 	{
