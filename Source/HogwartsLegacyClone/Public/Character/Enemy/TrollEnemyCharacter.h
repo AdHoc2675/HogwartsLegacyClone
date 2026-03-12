@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MeleeEnemyCharacterBase.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Data/Enemy/DA_MeleeEnemyConfig.h"   
 #include "TrollEnemyCharacter.generated.h"
@@ -12,7 +13,7 @@ class UDA_TrollConfig;
  * 
  */
 UCLASS()
-class HOGWARTSLEGACYCLONE_API ATrollEnemyCharacter : public AEnemyCharacterBase
+class HOGWARTSLEGACYCLONE_API ATrollEnemyCharacter : public AMeleeEnemyCharacterBase
 {
 	GENERATED_BODY()
 	

@@ -29,6 +29,7 @@ namespace HOGGameplayTags
 	//Enemy Ability 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack, "Ability.Enemy.MeleeAttack")
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack2, "Ability.Enemy.MeleeAttack2")
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_Dash, "Ability.Enemy.Dash")
 	
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Attack, "Ability.Attack")
 
