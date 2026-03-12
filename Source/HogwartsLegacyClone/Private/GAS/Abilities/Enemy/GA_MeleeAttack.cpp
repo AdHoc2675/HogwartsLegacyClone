@@ -8,6 +8,8 @@
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Data/Enemy/DA_MeleeEnemyConfig.h"
+#include "Data/Enemy/FEnemyAttackData.h"
 
 UGA_MeleeAttack::UGA_MeleeAttack()
 {
@@ -62,6 +64,32 @@ void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	WaitEventTask->ReadyForActivation();
 }
 
+
+float UGA_MeleeAttack::GetMeleeAttackDamage() const
+{
+	const FEnemyAttackData* Data = GetAttackData();
+	return Data ? Data->Damage : 1.f;
+}
+
+UAnimMontage* UGA_MeleeAttack::GetAttackMontage() const
+{
+	const FEnemyAttackData* Data = GetAttackData();
+	return Data ? Data->AnimMontage : nullptr;
+	
+}
+
+const FEnemyAttackData* UGA_MeleeAttack::GetAttackData() const
+{
+	AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetCharacter());
+	if (!Enemy) return nullptr;
+	
+	UDA_MeleeEnemyConfig* Config = Cast<UDA_MeleeEnemyConfig>(Enemy->GetEnemyConfig());
+	if (!Config) return nullptr;
+	
+	FGameplayTag Tag = AbilityTags.First();
+	return Tag.IsValid() ? Config->FindAttackData(Tag) : nullptr;
+	
+}
 
 void UGA_MeleeAttack::OnMontageCompleted()
 {
