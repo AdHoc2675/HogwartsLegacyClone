@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GAS/Abilities/GA_EnemyBase.h"
+#include "Data/Enemy/FEnemyAttackData.h"  
+
 #include "GA_MeleeAttack.generated.h"
 
 /**
@@ -33,8 +35,8 @@ public:
 	}
 
 protected:
-	virtual float GetMeleeAttackDamage() const { return 0.f; }
-	virtual UAnimMontage* GetAttackMontage() const {return nullptr;};
+	virtual float GetMeleeAttackDamage() const;
+	virtual UAnimMontage* GetAttackMontage() const;
 
 	UFUNCTION()
 	void OnMontageCompleted();
@@ -44,5 +46,8 @@ protected:
 
 	UFUNCTION()
 	void OnWeaponHit(FGameplayEventData Payload);
-
+	
+private:
+	const FEnemyAttackData* GetAttackData() const;
 };
+

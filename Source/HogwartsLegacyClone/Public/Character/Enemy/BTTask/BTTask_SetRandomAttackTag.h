@@ -4,19 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
-#include "BTTask_SetGoblinAttackType.generated.h"
+#include "BTTask_SetRandomAttackTag.generated.h"
 
 enum class EGoblinAttackType : uint8;
 /**
  * 
  */
 UCLASS()
-class HOGWARTSLEGACYCLONE_API UBTTask_SetGoblinAttackType : public UBTTaskNode
+class HOGWARTSLEGACYCLONE_API UBTTask_SetRandomAttackTag : public UBTTaskNode
 {
 	GENERATED_BODY()
 
 public:
-	UBTTask_SetGoblinAttackType();
+	UBTTask_SetRandomAttackTag();
 
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 

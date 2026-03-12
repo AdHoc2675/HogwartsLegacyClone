@@ -33,5 +33,4 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	UBehaviorTree* BehaviorTree;
-	
 };

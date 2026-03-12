@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "DA_MeleeEnemyConfig.h"
 #include "GameplayTagContainer.h"
 #include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "DA_TrollConfig.generated.h"
@@ -11,7 +12,7 @@
  * 
  */
 UCLASS()
-class HOGWARTSLEGACYCLONE_API UDA_TrollConfig : public UDA_EnemyConfigBase
+class HOGWARTSLEGACYCLONE_API UDA_TrollConfig : public UDA_MeleeEnemyConfig
 {
 	GENERATED_BODY()
 	

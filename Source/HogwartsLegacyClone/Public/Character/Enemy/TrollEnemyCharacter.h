@@ -4,8 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
-#include "Interface/IDashable.h"
-#include "Interface/IMeleeAttacker.h"
+#include "Data/Enemy/DA_MeleeEnemyConfig.h"   
 #include "TrollEnemyCharacter.generated.h"
 
 class UDA_TrollConfig;
@@ -13,24 +12,16 @@ class UDA_TrollConfig;
  * 
  */
 UCLASS()
-class HOGWARTSLEGACYCLONE_API ATrollEnemyCharacter : public AEnemyCharacterBase, public IIMeleeAttacker, public IIDashable
+class HOGWARTSLEGACYCLONE_API ATrollEnemyCharacter : public AEnemyCharacterBase
 {
 	GENERATED_BODY()
 	
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "Config")
-	TObjectPtr<UDA_TrollConfig> TrollConfig;
+	TObjectPtr<UDA_MeleeEnemyConfig> TrollConfig;
 
 	virtual void OnHealthChanged(float OldValue, float NewValue) override;
 	
 	virtual UDA_EnemyConfigBase* GetEnemyConfig() const override;
 	
-	// IMeleeAttacker
-	virtual void GetMeleeAttackRange(FName AttackTag, float& OutMinRange, float& OutMaxRange) const override;
-	virtual TArray<FGameplayTag> GetMeleeAttackTags() const override;
-
-	// IDashable
-	virtual float GetDashMinRange() const override;
-	virtual float GetDashMaxRange() const override;
-	virtual FGameplayTag GetDashAbilityTag() const override;
 };
