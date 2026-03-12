@@ -7,9 +7,7 @@
 #include "GA_Spell_BasicAttack.generated.h"
 
 class UAnimMontage;
-/**
- * 
- */
+
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_BasicAttack : public UGA_SpellBase
 {
@@ -19,7 +17,6 @@ public:
 	UGA_Spell_BasicAttack();
 
 protected:
-	// Ability 실행
 	virtual void ActivateAbility(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
@@ -27,38 +24,81 @@ protected:
 		const FGameplayEventData* TriggerEventData
 	) override;
 
-	// 몽타주 끝나면 종료
+	virtual void InputPressed(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
+	) override;
+
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-protected:
-	// ====== BasicAttack 옵션 ======
+public:
+	UFUNCTION()
+	void TryAdvanceComboFromBranchPoint();
 
-	// 콤보 몽타주들(1~4개 등). 비어있으면 애니 없이 바로 발사.
+protected:
+	// 0 = 1타, 1 = 2타, 2 = 3타, 3 = 4타
 	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Anim")
 	TArray<TObjectPtr<UAnimMontage>> ComboMontages;
 
-	// 콤보 인덱스 (런타임)
 	UPROPERTY(Transient)
 	int32 ComboIndex = 0;
 
-	// 히트스캔 충돌 채널
+	UPROPERTY(Transient)
+	bool bComboInProgress = false;
+
+	UPROPERTY(Transient)
+	bool bNextComboQueued = false;
+
+	UPROPERTY(Transient)
+	int32 CurrentComboStep = 0;
+	
+	// 콤보 입력 버퍼 유지 시간(초)
+	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Combo")
+	float ComboInputBufferSeconds = 0.3f;
+
+	// 마지막 콤보 입력 예약 시각
+	UPROPERTY(Transient)
+	float LastComboQueuedTime = -1.f;
+
+	// 현재 타수에서 Branch Notify를 이미 소비했는지
+	UPROPERTY(Transient)
+	bool bBranchConsumed = false;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimMontage> CurrentPlayingMontage = nullptr;
+
+	// Branch Notify로 의도적으로 다음 타로 전환 중인지
+	UPROPERTY(Transient)
+	bool bAdvancingComboFromBranch = false;
+
 	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Trace")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 
-	// 자기 자신/무기 등 제외할지
 	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Trace")
 	bool bIgnoreSelf = true;
 
-	// 디버그 라인(선택)
 	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Debug")
 	bool bDrawDebugLine = false;
+	
+	
 
 private:
 	void PlayComboMontageOrFire(const FGameplayAbilityActorInfo* ActorInfo);
 
-	void FireHitScan(const FGameplayAbilityActorInfo* ActorInfo);
+	bool TryPlayCurrentComboMontage(const FGameplayAbilityActorInfo* ActorInfo);
 
-	bool BuildTraceStartEnd(const FGameplayAbilityActorInfo* ActorInfo, FVector& OutStart, FVector& OutEnd, AActor*& OutLockTarget) const;
+	void FireHitScan(const FGameplayAbilityActorInfo* ActorInfo);
 	
+	bool IsComboInputBufferedValid() const;
+
+	bool BuildTraceStartEnd(
+		const FGameplayAbilityActorInfo* ActorInfo,
+		FVector& OutStart,
+		FVector& OutEnd,
+		AActor*& OutLockTarget
+	) const;
+
+	void ResetComboState();
 };

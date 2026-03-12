@@ -21,29 +21,29 @@ void UHOG_GameInstance::BuildSpellRegistry()
 
 	for (UDA_SpellDefinition* Def : SpellDefinitions)
 	{
-		if (!IsValid(Def))
-		{
-			Debug::Print(TEXT("[SpellRegistry] Null Definition in SpellDefinitions array."), FColor::Red);
-			continue;
-		}
-
-		if (!Def->IsValidDefinition())
-		{
-			Debug::Print(FString::Printf(TEXT("[SpellRegistry] Invalid SpellDefinition: %s (SpellID invalid)"), *GetNameSafe(Def)), FColor::Red);
-			continue;
-		}
+		// if (!IsValid(Def))
+		// {
+		// 	Debug::Print(TEXT("[SpellRegistry] Null Definition in SpellDefinitions array."), FColor::Red);
+		// 	continue;
+		// }
+		//
+		// if (!Def->IsValidDefinition())
+		// {
+		// 	Debug::Print(FString::Printf(TEXT("[SpellRegistry] Invalid SpellDefinition: %s (SpellID invalid)"), *GetNameSafe(Def)), FColor::Red);
+		// 	continue;
+		// }
 
 		const FGameplayTag ID = Def->SpellID;
 
 		if (SpellRegistry.Contains(ID))
 		{
 			UDA_SpellDefinition* Existing = SpellRegistry.FindRef(ID);
-			Debug::Print(FString::Printf(
-				TEXT("[SpellRegistry] Duplicate SpellID: %s | Existing=%s | New=%s"),
-				*ID.ToString(),
-				*GetNameSafe(Existing),
-				*GetNameSafe(Def)
-			), FColor::Yellow);
+			// Debug::Print(FString::Printf(
+			// 	TEXT("[SpellRegistry] Duplicate SpellID: %s | Existing=%s | New=%s"),
+			// 	*ID.ToString(),
+			// 	*GetNameSafe(Existing),
+			// 	*GetNameSafe(Def)
+			// ), FColor::Yellow);
 
 			// 중복이면 기존 유지(정책). 필요하면 New로 덮어쓰게 바꿔도 됨.
 			continue;
@@ -53,7 +53,7 @@ void UHOG_GameInstance::BuildSpellRegistry()
 		AddedCount++;
 	}
 
-	Debug::Print(FString::Printf(TEXT("[SpellRegistry] Built. Count=%d"), AddedCount), FColor::Green);
+	// Debug::Print(FString::Printf(TEXT("[SpellRegistry] Built. Count=%d"), AddedCount), FColor::Green);
 }
 
 UDA_SpellDefinition* UHOG_GameInstance::GetSpellDefinition(FGameplayTag SpellID) const

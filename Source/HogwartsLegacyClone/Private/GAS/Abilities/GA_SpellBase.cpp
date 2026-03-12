@@ -72,7 +72,7 @@ UDA_SpellDefinition* UGA_SpellBase::GetSpellDefinitionOrWarn() const
 		*SpellID.ToString()
 	);
 
-	Debug::Print(Msg, FColor::Yellow);
+	//Debug::Print(Msg, FColor::Yellow);
 	return nullptr;
 }
 

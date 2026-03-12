@@ -55,14 +55,27 @@ void UHOGAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& Inp
 
 void UHOGAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGamePaused)
 {
-	// Pressed: 입력 눌림 -> 즉시 TryActivate
+	// Pressed:
+	// - 비활성 상태면 Activate 시도
+	// - 이미 활성 상태면 Ability 쪽으로 "입력 눌림" 이벤트 전달
 	for (const FGameplayAbilitySpecHandle& Handle : InputPressedSpecHandles)
 	{
 		FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(Handle);
-		if (!Spec) continue;
+		if (!Spec)
+		{
+			continue;
+		}
 
 		Spec->InputPressed = true;
-		TryActivateAbility(Handle);
+
+		if (Spec->IsActive())
+		{
+			AbilitySpecInputPressed(*Spec);
+		}
+		else
+		{
+			TryActivateAbility(Handle);
+		}
 	}
 
 	// Held: 누르고 있는 동안 (차지/채널링 같은 것 대비)

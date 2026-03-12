@@ -52,7 +52,7 @@ void UGA_Spell_Protego::ActivateAbility(
 			const FSpellCastRequest FailedRequest = BuildSpellCastRequest(ESpellCastContext::Normal);
 			NotifySpellCastFailedResult(FailedRequest, CheckResult);
 
-			Debug::Print(TEXT("[GA_Spell_Protego] CanCastAsNormal failed"), FColor::Red);
+			// Debug::Print(TEXT("[GA_Spell_Protego] CanCastAsNormal failed"), FColor::Red);
 			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 			return;
 		}
@@ -84,12 +84,12 @@ void UGA_Spell_Protego::ActivateAbility(
 		}
 		else
 		{
-			Debug::Print(TEXT("[GA_Spell_Protego] ProtegoEffect SpecHandle invalid"), FColor::Red);
+			// Debug::Print(TEXT("[GA_Spell_Protego] ProtegoEffect SpecHandle invalid"), FColor::Red);
 		}
 	}
 	else
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] ProtegoEffectClass is null"), FColor::Red);
+		// Debug::Print(TEXT("[GA_Spell_Protego] ProtegoEffectClass is null"), FColor::Red);
 	}
 
 	// 2) Protego Actor 스폰
@@ -118,17 +118,17 @@ void UGA_Spell_Protego::ActivateAbility(
 					FAttachmentTransformRules::SnapToTargetNotIncludingScale
 				);
 
-				Debug::Print(TEXT("[GA_Spell_Protego] ProtegoActor spawned"), FColor::Green);
+				// Debug::Print(TEXT("[GA_Spell_Protego] ProtegoActor spawned"), FColor::Green);
 			}
 			else
 			{
-				Debug::Print(TEXT("[GA_Spell_Protego] Failed to spawn ProtegoActor"), FColor::Red);
+				// Debug::Print(TEXT("[GA_Spell_Protego] Failed to spawn ProtegoActor"), FColor::Red);
 			}
 		}
 	}
 	else
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] ProtegoActorClass is null"), FColor::Yellow);
+		// Debug::Print(TEXT("[GA_Spell_Protego] ProtegoActorClass is null"), FColor::Yellow);
 	}
 
 	// 3) CombatComponent 패링 윈도우 오픈 + 이벤트 바인딩
@@ -138,14 +138,14 @@ void UGA_Spell_Protego::ActivateAbility(
 		CachedCombatComponent->OpenProtegoParryWindow(ParryWindowSeconds);
 		BindCombatDelegates();
 
-		Debug::Print(
-			FString::Printf(TEXT("[GA_Spell_Protego] Parry Window Opened | Duration=%.2f"), ParryWindowSeconds),
-			FColor::Cyan
-		);
+		// Debug::Print(
+		// 	FString::Printf(TEXT("[GA_Spell_Protego] Parry Window Opened | Duration=%.2f"), ParryWindowSeconds),
+		// 	FColor::Cyan
+		// );
 	}
 	else
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] CombatComponent not found"), FColor::Red);
+		// Debug::Print(TEXT("[GA_Spell_Protego] CombatComponent not found"), FColor::Red);
 	}
 
 	// 4) 일반 시전 성공 통지 -> 쿨타임 시작
@@ -192,10 +192,10 @@ void UGA_Spell_Protego::EndAbility(
 
 void UGA_Spell_Protego::HandleParrySuccess(AActor* AttackerActor)
 {
-	Debug::Print(
-		FString::Printf(TEXT("[GA_Spell_Protego] HandleParrySuccess | Attacker=%s"), *GetNameSafe(AttackerActor)),
-		FColor::Yellow
-	);
+	// Debug::Print(
+	// 	FString::Printf(TEXT("[GA_Spell_Protego] HandleParrySuccess | Attacker=%s"), *GetNameSafe(AttackerActor)),
+	// 	FColor::Yellow
+	// );
 
 	TryTriggerCounterStupefy(AttackerActor);
 }
@@ -215,21 +215,21 @@ bool UGA_Spell_Protego::TryTriggerCounterStupefy(AActor* AttackerActor)
 {
 	if (!IsValid(AttackerActor))
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | AttackerActor invalid"), FColor::Red);
-		return false;
+		// Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | AttackerActor invalid"), FColor::Red);
+		// return false;
 	}
 
 	if (!CounterStupefyAbilityClass)
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] CounterStupefyAbilityClass is null"), FColor::Red);
-		return false;
+		// Debug::Print(TEXT("[GA_Spell_Protego] CounterStupefyAbilityClass is null"), FColor::Red);
+		// return false;
 	}
 
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	if (!ASC)
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] ASC missing"), FColor::Red);
-		return false;
+		// Debug::Print(TEXT("[GA_Spell_Protego] ASC missing"), FColor::Red);
+		// return false;
 	}
 
 	FGameplayAbilitySpec* FoundSpec = nullptr;
@@ -250,8 +250,8 @@ bool UGA_Spell_Protego::TryTriggerCounterStupefy(AActor* AttackerActor)
 
 	if (!FoundSpec)
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] Counter Stupefy spec not found on ASC"), FColor::Red);
-		return false;
+		// Debug::Print(TEXT("[GA_Spell_Protego] Counter Stupefy spec not found on ASC"), FColor::Red);
+		// return false;
 	}
 
 	UGA_SpellStupefy* StupefyInstance = Cast<UGA_SpellStupefy>(FoundSpec->GetPrimaryInstance());

@@ -24,13 +24,13 @@ void AHOG_PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Debug::Print(FString::Printf(
-		TEXT("[PlayerState] BeginPlay | HasAuthority=%d | ASC=%s | AbilitySet=%s | SpellComponent=%s"),
-		HasAuthority() ? 1 : 0,
-		*GetNameSafe(AbilitySystemComponent),
-		*GetNameSafe(AbilitySet),
-		*GetNameSafe(SpellComponent)
-	), FColor::Yellow);
+	// Debug::Print(FString::Printf(
+	// 	TEXT("[PlayerState] BeginPlay | HasAuthority=%d | ASC=%s | AbilitySet=%s | SpellComponent=%s"),
+	// 	HasAuthority() ? 1 : 0,
+	// 	*GetNameSafe(AbilitySystemComponent),
+	// 	*GetNameSafe(AbilitySet),
+	// 	*GetNameSafe(SpellComponent)
+	// ), FColor::Yellow);
 
 	if (HasAuthority() && AbilitySet && AbilitySystemComponent)
 	{

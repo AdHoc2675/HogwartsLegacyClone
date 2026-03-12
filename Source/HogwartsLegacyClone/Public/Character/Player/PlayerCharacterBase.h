@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,11 +6,13 @@
 #include "InputActionValue.h"
 #include "PlayerCharacterBase.generated.h"
 
-
 class USpringArmComponent;
 class UCameraComponent;
 class ULockOnComponent;
 class UHOGAbilitySystemComponent;
+class UStaticMeshComponent;
+class USkeletalMeshComponent;
+class UAbilitySystemComponent;
 
 /**
  * 플레이어 캐릭터 베이스
@@ -21,8 +21,6 @@ class UHOGAbilitySystemComponent;
  *
  * EnhancedInput 바인딩은 PlayerController에서 처리.
  */
-
-
 UCLASS()
 class HOGWARTSLEGACYCLONE_API APlayerCharacterBase : public ABaseCharacter
 {
@@ -31,10 +29,8 @@ class HOGWARTSLEGACYCLONE_API APlayerCharacterBase : public ABaseCharacter
 public:
 	APlayerCharacterBase();
 
-	
 public:
-	
-	//INPUT 	
+	// INPUT
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void Input_Move(const FInputActionValue& Value);
 
@@ -52,22 +48,20 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void Input_AbilityInputReleased(FGameplayTag InputTag);
-	
+
 public:
 	UFUNCTION(BlueprintPure, Category="Components")
 	ULockOnComponent* GetLockOnComponent() const { return LockOnComponent; }
-	
-	UFUNCTION(BlueprintPure,Category="GAS")
+
+	UFUNCTION(BlueprintPure, Category="GAS")
 	UHOGAbilitySystemComponent* GetHOGAbilitySystemComponent() const;
 
 protected:
 	virtual void BeginPlay() override;
-	
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
-	
-	void InitializeAbilityActorInfo();
 
+	void InitializeAbilityActorInfo();
 
 #pragma region Camera
 protected:
@@ -76,13 +70,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UCameraComponent> FollowCamera;
-	
 #pragma endregion
-	
-#pragma region Tuning
-	
-protected:
 
+#pragma region Tuning
+protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Move")
 	float MoveForwardScale = 1.0f;
 
@@ -94,9 +85,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Look")
 	float LookPitchScale = 1.0f;
-	
 #pragma endregion
-	
 
 protected:
 	// Capsule
@@ -112,9 +101,47 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Mesh")
 	FRotator MeshRelativeRotation = FRotator(0.f, -90.f, 0.f);
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<ULockOnComponent> LockOnComponent;
-	
 
+#pragma region Wand
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="HOG|Combat", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UStaticMeshComponent> WandMesh;
+
+protected:
+	bool bCombatActive = false;
+	bool bCastingActive = false;
+
+	UFUNCTION()
+	void HandleCombatActiveTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	UFUNCTION()
+	void HandleCombatInactiveTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	UFUNCTION()
+	void HandleCastingActiveTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	UFUNCTION()
+	void HandleCastingInactiveTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	void RefreshWandVisibilityFromCombatState();
+	void SetWandVisible(bool bVisible);
+#pragma endregion
+	
+#pragma region Combo
+
+protected:
+	UPROPERTY(Transient, BlueprintReadOnly, Category="HOG|Combat")
+	bool bCanQueueNextCombo = false;
+
+public:
+	UFUNCTION(BlueprintCallable, Category="HOG|Combat")
+	void SetCanQueueNextCombo(bool bInCanQueue);
+
+	UFUNCTION(BlueprintPure, Category="HOG|Combat")
+	bool CanQueueNextCombo() const { return bCanQueueNextCombo; }
+
+#pragma endregion
 };

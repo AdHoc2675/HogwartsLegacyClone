@@ -12,6 +12,7 @@
 #include "DrawDebugHelpers.h"
 #include "AbilitySystemComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Interactable/InteractableInterface.h"
 
 UGA_Spell_Incendio::UGA_Spell_Incendio()
 {
@@ -172,6 +173,13 @@ void UGA_Spell_Incendio::FireIncendio()
 
 		HitActors.Add(TargetActor);
 
+		// 타겟이 상호작용 가능한 객체라면 Interact 호출
+		if (TargetActor->Implements<UInteractableInterface>())
+		{
+			// IInteractableInterface에 정의된 함수명에 맞게 호출
+			IInteractableInterface::Execute_Interact(TargetActor, Avatar);
+		}
+
 		// 태그 기반 방어막/면역 등 공통 타겟 유효성 검사
 		if (!DoesTargetMeetRequirements(TargetActor)) continue;
 
@@ -199,7 +207,7 @@ void UGA_Spell_Incendio::FireIncendio()
 				}
 			}
 
-			Debug::Print(FString::Printf(TEXT("[Incendio] Hit -> %s, Dmg: %.1f"), *TargetActor->GetName(), BaseDmg));
+			// Debug::Print(FString::Printf(TEXT("[Incendio] Hit -> %s, Dmg: %.1f"), *TargetActor->GetName(), BaseDmg));
 		}
 	}
 }
