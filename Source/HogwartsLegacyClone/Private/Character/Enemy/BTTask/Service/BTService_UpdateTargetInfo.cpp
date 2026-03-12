@@ -27,12 +27,6 @@ UBTService_UpdateTargetInfo::UBTService_UpdateTargetInfo()
 		GET_MEMBER_NAME_CHECKED(UBTService_UpdateTargetInfo, TargetDistanceKey));
 }
 
-void UBTService_UpdateTargetInfo::OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
-{
-	Super::OnBecomeRelevant(OwnerComp, NodeMemory);
-	Debug::Print("Check");
-}
-
 void UBTService_UpdateTargetInfo::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);

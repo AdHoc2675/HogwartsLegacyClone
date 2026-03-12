@@ -26,7 +26,7 @@ public:
 	virtual UDA_EnemyConfigBase* GetEnemyConfig() const override;
 	
 	// IMeleeAttacker
-	virtual float GetMeleeAttackRange() const override;
+	virtual void GetMeleeAttackRange(FName AttackTag, float& OutMinRange, float& OutMaxRange) const override;
 	virtual TArray<FGameplayTag> GetMeleeAttackTags() const override;
 
 	// IDashable

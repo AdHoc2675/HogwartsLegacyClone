@@ -15,14 +15,13 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API AGoblinEnemyCharacter : public AEnemyCharacterBase, public IIMeleeAttacker
 {
 	GENERATED_BODY()
-	
+public:
 	virtual void OnHealthChanged(float OldValue, float NewValue) override;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Config")
 	TObjectPtr<UDA_GoblinConfig> GoblinConfig;
 	
 	virtual UDA_EnemyConfigBase* GetEnemyConfig() const override;
-	// IMeleeAttacker
-	virtual float GetMeleeAttackRange() const override;
+	virtual void GetMeleeAttackRange(FName AttackTag, float& OutMinRange, float& OutMaxRange) const override;
 	virtual TArray<FGameplayTag> GetMeleeAttackTags() const override;
 };

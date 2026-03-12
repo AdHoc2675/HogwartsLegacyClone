@@ -15,9 +15,8 @@ UDA_EnemyConfigBase* ATrollEnemyCharacter::GetEnemyConfig() const
 	return TrollConfig;
 }
 
-float ATrollEnemyCharacter::GetMeleeAttackRange() const
+void ATrollEnemyCharacter::GetMeleeAttackRange(FName AttackTag, float& OutMinRange, float& OutMaxRange) const
 {
-	return TrollConfig ? TrollConfig->MeleeAttackRange : 300.f;
 }
 
 TArray<FGameplayTag> ATrollEnemyCharacter::GetMeleeAttackTags() const

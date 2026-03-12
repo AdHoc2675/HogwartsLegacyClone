@@ -46,11 +46,18 @@ void UBTDecorator_GameplayTagCondition::OnBecomeRelevant(UBehaviorTreeComponent&
 	if (!AbilityComponent.IsValid()) return;
 
 	// 태그 변경 감지
+	// 적이 파괴되는 경우를 방지 WeakPtr
+	TWeakObjectPtr<UBehaviorTreeComponent> WeakBehaviourTree = &OwnerComp;
+	TWeakObjectPtr<UBTDecorator_GameplayTagCondition> WeakThis = this;
 	TagChangedHandle = AbilityComponent->RegisterGameplayTagEvent(TagToCheck, EGameplayTagEventType::NewOrRemoved)
-		.AddLambda([this, &OwnerComp](const FGameplayTag& Tag, int32 NewCount)
+		.AddLambda([WeakThis, WeakBehaviourTree](const FGameplayTag& Tag, int32 NewCount)
 		{
-			OwnerComp.RequestExecution(this);
+			if (WeakThis.IsValid() && WeakBehaviourTree.IsValid())
+			{
+				WeakBehaviourTree->RequestExecution(WeakThis.Get());
+			}
 		});
+	
 }
 
 void UBTDecorator_GameplayTagCondition::OnCeaseRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
