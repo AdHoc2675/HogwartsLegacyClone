@@ -62,7 +62,7 @@ EBTNodeResult::Type UBTTask_ActivateAbility::ExecuteTask(UBehaviorTreeComponent&
 	bool bSuccess = AbilitySystem->TryActivateAbilitiesByTag(TagContainer);
 	if (!bSuccess) return EBTNodeResult::Failed;
 	
-	return EBTNodeResult::InProgress;
+	return EBTNodeResult::Succeeded;
 }
 
 void UBTTask_ActivateAbility::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory,
