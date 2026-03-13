@@ -72,10 +72,14 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_Burnable_Lit, "Interactable.Burnable.Lit")
 
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_Levitatable_Grounded, "Interactable.Levitatable.Grounded")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Interactable_AccioPlatform, "Interactable.AccioPlatform")
+	UE_DEFINE_GAMEPLAY_TAG(Interactable_AccioTarget, "Interactable.AccioTarget")
 
 	//Unit Tags
 	UE_DEFINE_GAMEPLAY_TAG(Unit_Player, "Unit.Player")
 	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Goblin, "Unit.Enemy.Goblin")
 	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Troll, "Unit.Enemy.Troll")
 	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Dementor, "Unit.Enemy.Dementor")
+
 }
