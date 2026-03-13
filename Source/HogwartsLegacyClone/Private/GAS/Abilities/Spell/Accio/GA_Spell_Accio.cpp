@@ -105,17 +105,41 @@ bool UGA_Spell_Accio::FireAccio()
 			FCollisionShape SphereShape = FCollisionShape::MakeSphere(100.f);
 			FCollisionQueryParams Params(SCENE_QUERY_STAT(AccioTrace), false, Avatar);
 
-			FHitResult HitResult;
-			bool bHit = World->SweepSingleByChannel(HitResult, StartLoc, TargetLoc, FQuat::Identity, ECC_Visibility, SphereShape, Params);
+			// 👉 바닥 등에 막히는 현상 방지를 위해 MultiSweep으로 변경
+			TArray<FHitResult> HitResults;
+			bool bHit = World->SweepMultiByChannel(HitResults, StartLoc, TargetLoc, FQuat::Identity, ECC_Visibility, SphereShape, Params);
 
-			if (bHit && IsValid(HitResult.GetActor()))
+			if (bHit)
 			{
-				AcquiredTarget = HitResult.GetActor();
+				for (const FHitResult& Hit : HitResults)
+				{
+					AActor* HitActor = Hit.GetActor();
+					if (!IsValid(HitActor) || HitActor == Avatar) continue;
+
+					// 검사 1. 퍼즐 타겟인가?
+					UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(HitActor);
+					bool bIsTargetNode = TargetASC && TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
+
+					// 검사 2. 당겨올 수 있는 무언가인가? (살아있는 캐릭터 혹은 물리 시뮬레이션 동작 중인 개체)
+					UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(HitActor->GetRootComponent());
+					bool bIsMovable = HitActor->IsA<ACharacter>() || (RootPrim && RootPrim->IsSimulatingPhysics());
+
+					// 바닥 같은 StaticMesh는 두 조건 다 만족하지 못하므로 패스됨.
+					if (bIsTargetNode || bIsMovable)
+					{
+						AcquiredTarget = HitActor;
+						break; // 유효한 첫 대상을 찾았으므로 탈출
+					}
+				}
 			}
 		}
 	}
 
-	if (!IsValid(AcquiredTarget)) return false;
+	if (!IsValid(AcquiredTarget)) 
+	{
+		Debug::Print(TEXT("[Accio] No Pullable Target Found."), FColor::Yellow);
+		return false;
+	}
 
 	OriginalTarget = AcquiredTarget;
 	TargetToMove = nullptr;
@@ -167,15 +191,14 @@ bool UGA_Spell_Accio::FireAccio()
 	{
 		TargetCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 	}
-	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
+	else if (UPrimitiveComponent* MovePrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 	{
-		// 플랫폼 여부 검사
 		UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
 		bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
 
-		if (!bIsPlatform && PrimComp->IsSimulatingPhysics())
+		if (!bIsPlatform && MovePrimComp->IsSimulatingPhysics())
 		{
-			PrimComp->SetEnableGravity(false);
+			MovePrimComp->SetEnableGravity(false);
 		}
 	}
 
@@ -205,11 +228,11 @@ void UGA_Spell_Accio::UpdatePulling()
 		{
 			TargetCharacter->GetCharacterMovement()->Velocity = FVector::ZeroVector;
 		}
-		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
+		else if (UPrimitiveComponent* MovePrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 		{
-			if (PrimComp->IsSimulatingPhysics())
+			if (MovePrimComp->IsSimulatingPhysics())
 			{
-				PrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+				MovePrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 			}
 		}
 		return; 
@@ -225,15 +248,12 @@ void UGA_Spell_Accio::UpdatePulling()
 	{
 		TargetCharacter->GetCharacterMovement()->Velocity = PullDirection * PullSpeed;
 	}
-	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
+	else if (UPrimitiveComponent* MovePrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 	{
-		if (PrimComp->IsSimulatingPhysics())
+		// 👉 기존에 존재하던 SetActorLocation(강제 워프 이동) 로직을 아예 삭제하여 고정 물체의 이동을 차단함
+		if (MovePrimComp->IsSimulatingPhysics())
 		{
-			PrimComp->SetPhysicsLinearVelocity(PullDirection * PullSpeed);
-		}
-		else
-		{
-			TargetToMove->SetActorLocation(MoveLoc + (PullDirection * PullSpeed * 0.02f));
+			MovePrimComp->SetPhysicsLinearVelocity(PullDirection * PullSpeed);
 		}
 	}
 }
@@ -261,20 +281,19 @@ void UGA_Spell_Accio::EndAbility(
 		{
 			TargetCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 		}
-		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
+		else if (UPrimitiveComponent* MovePrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 		{
-			// ASC 기반 태그 검사로 변경됨
 			UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
 			bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
 			
-			if (!bIsPlatform && PrimComp->IsSimulatingPhysics())
+			if (!bIsPlatform && MovePrimComp->IsSimulatingPhysics())
 			{
-				PrimComp->SetEnableGravity(true);
+				MovePrimComp->SetEnableGravity(true);
 			}
 			
-			if (PrimComp->IsSimulatingPhysics())
+			if (MovePrimComp->IsSimulatingPhysics())
 			{
-				PrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+				MovePrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 			}
 		}
 
