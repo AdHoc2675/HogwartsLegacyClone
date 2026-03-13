@@ -86,6 +86,20 @@ public:
 	bool AcquireTargetFromLockOn(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags, FVector& OutAimPoint) const;
 
 protected:
+	virtual void ActivateAbility(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData) override;
+
+	virtual void EndAbility(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		bool bReplicateEndAbility,
+		bool bWasCancelled) override;
+
+protected:
 	/**
 	 * SpellComponent 접근
 	 * - CurrentActorInfo -> PlayerState -> SpellComponent
@@ -115,7 +129,8 @@ protected:
 	 * 시전 실패 알림
 	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
-	void NotifySpellCastFailedResult(const FSpellCastRequest& CastRequest, const FSpellCastCheckResult& CheckResult) const;
+	void NotifySpellCastFailedResult(const FSpellCastRequest& CastRequest,
+	                                 const FSpellCastCheckResult& CheckResult) const;
 
 	/**
 	 * 시전 성공 알림

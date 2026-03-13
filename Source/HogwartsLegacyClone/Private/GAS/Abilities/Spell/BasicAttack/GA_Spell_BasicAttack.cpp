@@ -1,8 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.h"
 
-#include "HOGDebugHelper.h"
 #include "Data/DA_SpellDefinition.h"
 #include "Character/Player/PlayerCharacterBase.h"
 
@@ -12,9 +9,11 @@
 #include "Animation/AnimMontage.h"
 
 #include "Engine/World.h"
-#include "DrawDebugHelpers.h"
 #include "CollisionQueryParams.h"
 #include "AbilitySystemComponent.h"
+#include "HOGDebugHelper.h"
+
+#include "GAS/Abilities/Spell/BasicAttack/BasicAttackActor.h"
 
 UGA_Spell_BasicAttack::UGA_Spell_BasicAttack()
 {
@@ -27,7 +26,10 @@ UGA_Spell_BasicAttack::UGA_Spell_BasicAttack()
 	bBranchConsumed = false;
 	CurrentPlayingMontage = nullptr;
 	bAdvancingComboFromBranch = false;
-	LastComboQueuedTime=-1.f;
+	LastComboQueuedTime = -1.f;
+	ProjectileDamage = 10.f;
+	ProjectileSpawnForwardOffset = 100.f;
+	ProjectileSpawnUpOffset = 20.f;
 }
 
 void UGA_Spell_BasicAttack::ActivateAbility(
@@ -57,26 +59,18 @@ void UGA_Spell_BasicAttack::InputPressed(
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 
 	APlayerCharacterBase* PlayerCharacter = ActorInfo
-		? Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get())
-		: nullptr;
+		                                        ? Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get())
+		                                        : nullptr;
 
 	if (!bComboInProgress)
 	{
-		Debug::Print(TEXT("[BasicAttack] InputPressed Ignored: Combo not in progress"), FColor::Orange);
 		return;
 	}
 
 	if (!PlayerCharacter)
 	{
-		Debug::Print(TEXT("[BasicAttack] InputPressed Ignored: PlayerCharacter is null"), FColor::Red);
 		return;
 	}
-
-	Debug::Print(FString::Printf(
-		TEXT("[BasicAttack] InputPressed While Combo | CanQueue=%s | CurrentStep=%d"),
-		PlayerCharacter->CanQueueNextCombo() ? TEXT("true") : TEXT("false"),
-		CurrentComboStep
-	), FColor::Yellow);
 
 	if (PlayerCharacter->CanQueueNextCombo())
 	{
@@ -86,16 +80,6 @@ void UGA_Spell_BasicAttack::InputPressed(
 		{
 			LastComboQueuedTime = World->GetTimeSeconds();
 		}
-
-		Debug::Print(FString::Printf(
-			TEXT("[BasicAttack] Next Combo Queued | CurrentStep=%d | Buffer=%.2f"),
-			CurrentComboStep,
-			ComboInputBufferSeconds
-		), FColor::Yellow);
-	}
-	else
-	{
-		Debug::Print(TEXT("[BasicAttack] Combo Input Ignored: ComboWindow Closed"), FColor::Orange);
 	}
 }
 
@@ -151,12 +135,6 @@ bool UGA_Spell_BasicAttack::TryPlayCurrentComboMontage(const FGameplayAbilityAct
 
 	const float Duration = AnimInstance->Montage_Play(MontageToPlay, 1.f);
 
-	Debug::Print(FString::Printf(
-		TEXT("[BasicAttack] Montage_Play Result | Step=%d | Duration=%.3f"),
-		CurrentComboStep,
-		Duration
-	), Duration > 0.f ? FColor::Green : FColor::Red);
-
 	if (Duration <= 0.f)
 	{
 		return false;
@@ -175,19 +153,16 @@ void UGA_Spell_BasicAttack::TryAdvanceComboFromBranchPoint()
 {
 	if (!bComboInProgress)
 	{
-		Debug::Print(TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: Combo not in progress"), FColor::Orange);
 		return;
 	}
 
 	if (bBranchConsumed)
 	{
-		Debug::Print(TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: Branch already consumed"), FColor::Orange);
 		return;
 	}
 
 	if (!IsComboInputBufferedValid())
 	{
-		Debug::Print(TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: No valid buffered combo"), FColor::Orange);
 		return;
 	}
 
@@ -196,27 +171,17 @@ void UGA_Spell_BasicAttack::TryAdvanceComboFromBranchPoint()
 
 	if (!bHasNextStep)
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[BasicAttack] TryAdvanceComboFromBranchPoint Ignored: No next step | CurrentStep=%d"),
-			CurrentComboStep
-		), FColor::Orange);
 		return;
 	}
 
 	bBranchConsumed = true;
 	bNextComboQueued = false;
-	LastComboQueuedTime=-1.f;
+	LastComboQueuedTime = -1.f;
 	bAdvancingComboFromBranch = true;
 	CurrentComboStep = NextStep;
 
-	Debug::Print(FString::Printf(
-		TEXT("[BasicAttack] Branch Advance Combo | NextStep=%d"),
-		CurrentComboStep
-	), FColor::Yellow);
-
 	if (!TryPlayCurrentComboMontage(CurrentActorInfo))
 	{
-		Debug::Print(TEXT("[BasicAttack] Branch Advance Failed: TryPlayCurrentComboMontage failed"), FColor::Red);
 		ResetComboState();
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
@@ -227,31 +192,16 @@ void UGA_Spell_BasicAttack::TryAdvanceComboFromBranchPoint()
 
 void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	Debug::Print(FString::Printf(
-		TEXT("[BasicAttack] OnMontageEnded | Montage=%s | CurrentPlaying=%s | Step=%d | Queued=%s | Interrupted=%s | BranchAdvancing=%s"),
-		*GetNameSafe(Montage),
-		*GetNameSafe(CurrentPlayingMontage),
-		CurrentComboStep,
-		bNextComboQueued ? TEXT("true") : TEXT("false"),
-		bInterrupted ? TEXT("true") : TEXT("false"),
-		bAdvancingComboFromBranch ? TEXT("true") : TEXT("false")
-	), bInterrupted ? FColor::Orange : FColor::Green);
-
-	// 현재 추적 중인 몽타주와 다르면 무시
 	if (Montage != CurrentPlayingMontage)
 	{
-		Debug::Print(TEXT("[BasicAttack] OnMontageEnded Ignored: Not current playing montage"), FColor::Orange);
 		return;
 	}
 
-	// 브랜치 전환으로 이전 타가 끊긴 경우는 정상
 	if (bInterrupted && bAdvancingComboFromBranch)
 	{
-		Debug::Print(TEXT("[BasicAttack] OnMontageEnded Ignored: Interrupted by combo branch advance"), FColor::Orange);
 		return;
 	}
 
-	// 진짜 인터럽트면 종료
 	if (bInterrupted)
 	{
 		ResetComboState();
@@ -259,7 +209,6 @@ void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrup
 		return;
 	}
 
-	// 브랜치 노티파이를 놓쳤을 때 fallback
 	const int32 NextStep = CurrentComboStep + 1;
 	const bool bHasNextStep = ComboMontages.IsValidIndex(NextStep);
 
@@ -267,12 +216,7 @@ void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrup
 	{
 		CurrentComboStep = NextStep;
 		bNextComboQueued = false;
-		LastComboQueuedTime=-1.f;
-
-		Debug::Print(FString::Printf(
-			TEXT("[BasicAttack] Advance Combo From MontageEnd | NextStep=%d"),
-			CurrentComboStep
-		), FColor::Yellow);
+		LastComboQueuedTime = -1.f;
 
 		if (!TryPlayCurrentComboMontage(CurrentActorInfo))
 		{
@@ -284,8 +228,6 @@ void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrup
 		FireHitScan(CurrentActorInfo);
 		return;
 	}
-
-	Debug::Print(TEXT("[BasicAttack] Combo End"), FColor::Silver);
 
 	ResetComboState();
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
@@ -300,9 +242,124 @@ void UGA_Spell_BasicAttack::ResetComboState()
 	bBranchConsumed = false;
 	CurrentPlayingMontage = nullptr;
 	bAdvancingComboFromBranch = false;
-	LastComboQueuedTime=-1.f;
+	LastComboQueuedTime = -1.f;
+}
 
-	Debug::Print(TEXT("[BasicAttack] ResetComboState"), FColor::Silver);
+void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
+{
+	if (!BasicAttackActorClass)
+	{
+		return;
+	}
+
+	ACharacter* AvatarCharacter = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (!IsValid(AvatarCharacter))
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	if (!AvatarCharacter->GetMesh())
+	{
+		return;
+	}
+
+	/* =========================
+	   Spawn 위치 계산
+	========================= */
+
+	const FName WandSocketName(TEXT("RightHandWandSocket"));
+
+	const FVector SpawnLocation =
+		AvatarCharacter->GetMesh()->GetSocketLocation(WandSocketName);
+
+
+	FVector ShootDirection = AvatarCharacter->GetActorForwardVector();
+
+	/* =========================
+	   LockOn 타겟 획득
+	========================= */
+
+	AActor* TargetActor = nullptr;
+	FGameplayTagContainer TargetTags;
+	FVector AimPoint = FVector::ZeroVector;
+
+	const bool bHasTarget =
+		AcquireTargetFromLockOn(TargetActor, TargetTags, AimPoint);
+
+
+	/* =========================
+	   방향 계산
+	========================= */
+
+	if (bHasTarget)
+	{
+		const FVector ToTarget = (AimPoint - SpawnLocation).GetSafeNormal();
+
+		if (!ToTarget.IsNearlyZero())
+		{
+			ShootDirection = ToTarget;
+		}
+	}
+	else
+	{
+		FVector CenterAimPoint = FVector::ZeroVector;
+
+		if (GetCenterAimPoint(CenterAimPoint))
+		{
+			const FVector ToAim = (CenterAimPoint - SpawnLocation).GetSafeNormal();
+
+			if (!ToAim.IsNearlyZero())
+			{
+				ShootDirection = ToAim;
+			}
+		}
+	}
+
+	/* =========================
+	   Actor Spawn
+	========================= */
+
+	FTransform SpawnTransform(
+		ShootDirection.Rotation(),
+		SpawnLocation
+	);
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = AvatarCharacter;
+	SpawnParams.Instigator = AvatarCharacter;
+	SpawnParams.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ABasicAttackActor* Projectile =
+		World->SpawnActor<ABasicAttackActor>(
+			BasicAttackActorClass,
+			SpawnTransform,
+			SpawnParams
+		);
+
+	if (!Projectile)
+	{
+		return;
+	}
+
+
+	/* =========================
+	   Projectile 초기화
+	========================= */
+
+	Projectile->InitProjectile(
+		AvatarCharacter,
+		TargetActor,
+		ProjectileDamage
+	);
+
+	Projectile->FireToDirection(ShootDirection);
 }
 
 bool UGA_Spell_BasicAttack::BuildTraceStartEnd(
@@ -320,11 +377,12 @@ bool UGA_Spell_BasicAttack::BuildTraceStartEnd(
 		return false;
 	}
 
+	AActor* TargetActor = nullptr;
 	FGameplayTagContainer TargetTags;
-	FVector AimPoint;
-	AActor* Target = nullptr;
+	FVector AimPoint = FVector::ZeroVector;
 
-	AcquireTargetFromLockOn(Target, TargetTags, AimPoint);
+	const bool bHasTarget =
+		AcquireTargetFromLockOn(TargetActor, TargetTags, AimPoint);
 
 	FVector CenterAim;
 	if (!GetCenterAimPoint(CenterAim, Range))
@@ -340,10 +398,10 @@ bool UGA_Spell_BasicAttack::BuildTraceStartEnd(
 
 	OutStart = Avatar->GetActorLocation();
 
-	if (IsValid(Target))
+	if (bHasTarget && IsValid(TargetActor))
 	{
-		OutLockTarget = Target;
-		OutEnd = Target->GetActorLocation();
+		OutLockTarget = TargetActor;
+		OutEnd = TargetActor->GetActorLocation();
 	}
 	else
 	{
@@ -384,25 +442,10 @@ void UGA_Spell_BasicAttack::FireHitScan(const FGameplayAbilityActorInfo* ActorIn
 	FHitResult Hit;
 	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, TraceChannel, Params);
 
-	if (bDrawDebugLine)
-	{
-		const FVector DebugEnd = bHit ? Hit.ImpactPoint : End;
-		DrawDebugLine(World, Start, DebugEnd, bHit ? FColor::Red : FColor::Green, false, 1.0f, 0, 2.0f);
-	}
-
 	const float Damage = GetBaseDamage();
 
 	if (bHit && Hit.GetActor())
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[BasicAttack] Hit=%s Damage=%.1f"),
-			*GetNameSafe(Hit.GetActor()),
-			Damage
-		));
-	}
-	else
-	{
-		Debug::Print(TEXT("[BasicAttack] No Hit"));
 	}
 }
 
@@ -412,15 +455,15 @@ bool UGA_Spell_BasicAttack::IsComboInputBufferedValid() const
 	{
 		return false;
 	}
-	
+
 	const UWorld* World = GetWorld();
 	if (!World)
 	{
 		return false;
 	}
-	
+
 	const float CurrentTime = World->GetTimeSeconds();
-	const float Elapsed=CurrentTime-LastComboQueuedTime;
-	
-	return Elapsed<=ComboInputBufferSeconds;
+	const float Elapsed = CurrentTime - LastComboQueuedTime;
+
+	return Elapsed <= ComboInputBufferSeconds;
 }

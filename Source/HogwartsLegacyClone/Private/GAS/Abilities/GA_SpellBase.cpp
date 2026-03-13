@@ -194,10 +194,40 @@ bool UGA_SpellBase::AcquireTargetFromLockOn(
 	OutTarget = Result.TargetActor;
 	OutTargetTags = Result.TargetTags;
 	OutAimPoint = Result.AimPoint.IsNearlyZero()
-		? Result.TargetActor->GetActorLocation()
-		: Result.AimPoint;
+		              ? Result.TargetActor->GetActorLocation()
+		              : Result.AimPoint;
 
 	return true;
+}
+
+void UGA_SpellBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+                                    const FGameplayAbilityActivationInfo ActivationInfo,
+                                    const FGameplayEventData* TriggerEventData)
+{
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->AddLooseGameplayTag(
+			FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
+		);
+	}
+}
+
+void UGA_SpellBase::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+                               const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
+                               bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(
+			FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
+		);
+	}
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 USpellComponent* UGA_SpellBase::GetSpellComponent() const

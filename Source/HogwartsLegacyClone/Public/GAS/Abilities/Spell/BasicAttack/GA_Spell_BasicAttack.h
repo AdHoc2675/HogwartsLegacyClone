@@ -82,6 +82,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Debug")
 	bool bDrawDebugLine = false;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	TSubclassOf<class ABasicAttackActor> BasicAttackActorClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	float ProjectileDamage = 10.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	float ProjectileSpawnForwardOffset = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	float ProjectileSpawnUpOffset = 20.f;
+	
 	
 
 private:
@@ -101,4 +113,7 @@ private:
 	) const;
 
 	void ResetComboState();
+	
+public:
+	void SpawnBasicAttackActor();
 };
