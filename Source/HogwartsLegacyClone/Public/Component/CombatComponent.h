@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -14,12 +12,11 @@ class UAbilitySystemComponent;
 class UGameplayEffect;
 class UHOGAttributeSet;
 
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDamageAppliedSignature, const FDamageResult&, DamageResult);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnParrySuccessSignature, AActor*, AttackerActor);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
-
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class HOGWARTSLEGACYCLONE_API UCombatComponent : public UActorComponent
@@ -33,13 +30,12 @@ protected:
 	virtual void BeginPlay() override;
 
 protected:
-	
 	UPROPERTY(Transient, BlueprintReadOnly, Category="Combat")
 	TWeakObjectPtr<ABaseCharacter> OwnerCharacter;
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category="Combat")
 	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat|Protego")
 	float ProtegoParryWindowEndTime = -1.0f;
 
@@ -47,7 +43,6 @@ protected:
 	bool bConsumeParryWindowOnSuccess = true;
 
 protected:
-	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|State")
 	bool bCanBeDamaged = true;
 
@@ -64,7 +59,6 @@ protected:
 	TWeakObjectPtr<AActor> LastHitCauser;
 
 protected:
-	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Settings")
 	bool bAllowFriendlyFire = false;
 
@@ -75,7 +69,6 @@ protected:
 	bool bEnableDebug = true;
 
 public:
-	
 	UPROPERTY(BlueprintAssignable, Category="Combat|Event")
 	FOnDamageAppliedSignature OnDamageApplied;
 
@@ -83,7 +76,6 @@ public:
 	FOnDeathSignature OnDeath;
 
 public:
-	
 	UFUNCTION(BlueprintCallable, Category="Combat")
 	void InitializeCombatComponent();
 
@@ -103,26 +95,30 @@ public:
 	bool IsFriendlyTo(AActor* OtherActor) const;
 
 public:
-	
 	UFUNCTION(BlueprintCallable, Category="Combat")
 	FDamageResult ApplyDamageRequest(const FDamageRequest& InRequest);
-	
+
 	UPROPERTY(BlueprintAssignable, Category="Combat|Event")
 	FOnParrySuccessSignature OnParrySuccess;
 
 protected:
-	
 	bool ValidateDamageRequest(const FDamageRequest& InRequest) const;
 	bool ShouldIgnoreDamage(const FDamageRequest& InRequest) const;
 
-	FGameplayEffectContextHandle BuildEffectContext(const FDamageRequest& InRequest) const;
+	FGameplayEffectContextHandle BuildEffectContext(
+		const FDamageRequest& InRequest,
+		UAbilitySystemComponent* EffectSourceASC
+	) const;
 	bool ApplyDamageEffect(const FDamageRequest& InRequest, FDamageResult& OutResult);
 
 	void HandleDamageResult(const FDamageRequest& InRequest, FDamageResult& OutResult);
 	void HandleDeath();
 
 	void DebugPrint(const FString& Message) const;
-	
+
+	/* 현재 공식 기준으로 CombatComponent 쪽에서도 최종 피해량을 계산 */
+	float CalculateExpectedFinalDamage(const FDamageRequest& InRequest) const;
+
 public:
 	UFUNCTION(BlueprintCallable, Category="Combat|Protego")
 	void OpenProtegoParryWindow(float DurationSeconds);

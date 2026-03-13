@@ -30,8 +30,7 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack, "Ability.Enemy.MeleeAttack")
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack2, "Ability.Enemy.MeleeAttack2")
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_Dash, "Ability.Enemy.Dash")
-	
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Attack, "Ability.Attack")
+
 
 	UE_DEFINE_GAMEPLAY_TAG(Spell_BasicAttack, "Spell.BasicAttack")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Protego, "Spell.Protego")
@@ -52,13 +51,14 @@ namespace HOGGameplayTags
 	//Protage State
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_Active, "State.Spell.Protego.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_ParrySuccess, "State.Spell.Protego.ParrySuccess")
-	
+
 	//Damage
 	UE_DEFINE_GAMEPLAY_TAG(Damage_Melee, "Damage.Melee")
-	
+	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
+
 	//Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_Hit, "Event.Weapon.Hit")
-	
+
 
 	// Leviosa State	
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Leviosa_Levitated, "State.Spell.Leviosa.Levitated")
@@ -75,4 +75,11 @@ namespace HOGGameplayTags
 	
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_AccioPlatform, "Interactable.AccioPlatform")
 	UE_DEFINE_GAMEPLAY_TAG(Interactable_AccioTarget, "Interactable.AccioTarget")
+
+	//Unit Tags
+	UE_DEFINE_GAMEPLAY_TAG(Unit_Player, "Unit.Player")
+	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Goblin, "Unit.Enemy.Goblin")
+	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Troll, "Unit.Enemy.Troll")
+	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Dementor, "Unit.Enemy.Dementor")
+
 }

@@ -7,7 +7,7 @@
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
 #include "Components/CapsuleComponent.h"
 #include "Data/Enemy/DA_EnemyConfigBase.h"
-#include "GAS/Attributes/EnemyAttributeSet.h"
+#include "GAS/Attributes/HOGAttributeSet.h"
 #include "Core/HOG_GameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -20,7 +20,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 
 	// GAS
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("EnemyAbilitySystemComp"));
-	AttributeSet = CreateDefaultSubobject<UEnemyAttributeSet>(TEXT("EnemyAttributeSet"));
+	AttributeSet = CreateDefaultSubobject<UHOGAttributeSet>(TEXT("EnemyAttributeSet"));
 
 	// AI
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -120,9 +120,30 @@ void AEnemyCharacterBase::HandleDeath_Implementation()
 // GAS 초기화
 void AEnemyCharacterBase::InitializeAbilitySystem()
 {
-	if (!AbilitySystemComponent) return;
+	if (!AbilitySystemComponent)
+	{
+		// Debug::Print(TEXT("[EnemyCharacterBase] InitializeAbilitySystem failed | ASC is null"), FColor::Red);
+		return;
+	}
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+	if (AbilitySystemComponent->AbilityActorInfo.IsValid())
+	{
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[EnemyCharacterBase] ASC Init Success | ASC=%s | Owner=%s | Avatar=%s"),
+		// 	*GetNameSafe(AbilitySystemComponent),
+		// 	*GetNameSafe(AbilitySystemComponent->AbilityActorInfo->OwnerActor.Get()),
+		// 	*GetNameSafe(AbilitySystemComponent->AbilityActorInfo->AvatarActor.Get())
+		// ), FColor::Green);
+	}
+	else
+	{
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[EnemyCharacterBase] ASC Init FAILED | ASC=%s | ActorInfo invalid"),
+		// 	*GetNameSafe(AbilitySystemComponent)
+		// ), FColor::Red);
+	}
 
 	InitializeAttributes();
 	GiveStartupAbilities();

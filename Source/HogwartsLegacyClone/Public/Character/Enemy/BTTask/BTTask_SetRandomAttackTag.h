@@ -28,4 +28,7 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector AbilityTagKey;
+	
+	UPROPERTY(EditAnywhere, Category = "Filter")
+	FGameplayTagContainer ExcludeTags;
 };
