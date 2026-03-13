@@ -252,7 +252,8 @@ bool UCombatComponent::ValidateDamageRequest(const FDamageRequest& InRequest) co
 	if (InRequest.TargetActor != OwnerCharacter.Get())
 	{
 		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ValidateDamageRequest failed | Target mismatch | Owner=%s | RequestTarget=%s | Source=%s"),
+			TEXT(
+				"[CombatComponent] ValidateDamageRequest failed | Target mismatch | Owner=%s | RequestTarget=%s | Source=%s"),
 			*GetNameSafe(OwnerCharacter.Get()),
 			*GetNameSafe(InRequest.TargetActor.Get()),
 			*GetNameSafe(InRequest.SourceActor.Get())
@@ -315,24 +316,27 @@ bool UCombatComponent::ShouldIgnoreDamage(const FDamageRequest& InRequest) const
 	return false;
 }
 
-FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(const FDamageRequest& InRequest) const
+FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(
+	const FDamageRequest& InRequest,
+	UAbilitySystemComponent* EffectSourceASC
+) const
 {
 	FGameplayEffectContextHandle ContextHandle;
 
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	if (!ASC)
+	if (!EffectSourceASC)
 	{
+		DebugPrint(TEXT("[CombatComponent] BuildEffectContext failed | EffectSourceASC is null"));
 		return ContextHandle;
 	}
 
-	ContextHandle = ASC->MakeEffectContext();
+	ContextHandle = EffectSourceASC->MakeEffectContext();
 
-	AActor* InstigatorActor = InRequest.InstigatorActor.Get();
+	AActor* InstigatorActor = InRequest.SourceActor.Get();
 	if (!InstigatorActor)
 	{
-		InstigatorActor = InRequest.SourceActor.Get();
+		InstigatorActor = InRequest.InstigatorActor.Get();
 	}
-
+	
 	ContextHandle.AddInstigator(InstigatorActor, InRequest.DamageCauser.Get());
 
 	if (InRequest.HitResult.bBlockingHit)
@@ -344,6 +348,13 @@ FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(const FDamageR
 	{
 		ContextHandle.AddSourceObject(InRequest.DamageCauser.Get());
 	}
+
+	DebugPrint(FString::Printf(
+		TEXT("[CombatComponent] BuildEffectContext | SourceASCOwner=%s | Instigator=%s | Causer=%s"),
+		*GetNameSafe(EffectSourceASC->GetOwner()),
+		*GetNameSafe(InstigatorActor),
+		*GetNameSafe(InRequest.DamageCauser.Get())
+	));
 
 	return ContextHandle;
 }
@@ -365,7 +376,8 @@ float UCombatComponent::CalculateExpectedFinalDamage(const FDamageRequest& InReq
 		{
 			if (APlayerState* SourcePS = SourcePawn->GetPlayerState())
 			{
-				if (UAbilitySystemComponent* SourceASCFromPS = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SourcePS))
+				if (UAbilitySystemComponent* SourceASCFromPS =
+					UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SourcePS))
 				{
 					if (const UHOGAttributeSet* SourceAttributeSet = SourceASCFromPS->GetSet<UHOGAttributeSet>())
 					{
@@ -381,22 +393,135 @@ float UCombatComponent::CalculateExpectedFinalDamage(const FDamageRequest& InReq
 
 bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamageResult& OutResult)
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	if (!ASC)
+	UAbilitySystemComponent* TargetASC = GetAbilitySystemComponent();
+	if (!TargetASC)
 	{
+		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | TargetASC is null"));
 		return false;
 	}
 
 	if (!DefaultDamageEffectClass)
 	{
+		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | DefaultDamageEffectClass is null"));
 		return false;
+	}
+
+	AActor* SourceActor = InRequest.SourceActor.Get();
+	if (!SourceActor)
+	{
+		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | SourceActor is null"));
+		return false;
+	}
+
+	UAbilitySystemComponent* SourceASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SourceActor);
+
+	// SourceActor가 Pawn이고 ASC가 PlayerState에 붙어있는 경우 재시도
+	if (!SourceASC)
+	{
+		if (const APawn* SourcePawn = Cast<APawn>(SourceActor))
+		{
+			if (APlayerState* SourcePS = SourcePawn->GetPlayerState())
+			{
+				SourceASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SourcePS);
+			}
+		}
+	}
+
+	if (!SourceASC)
+	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ApplyDamageEffect failed | SourceASC is null | Source=%s"),
+			*GetNameSafe(SourceActor)
+		));
+		return false;
+	}
+	
+	if (SourceASC->AbilityActorInfo.IsValid())
+	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] SourceASC ActorInfo | ASC=%s | Owner=%s | Avatar=%s"),
+			*GetNameSafe(SourceASC->GetOwner()),
+			*GetNameSafe(SourceASC->AbilityActorInfo->OwnerActor.Get()),
+			*GetNameSafe(SourceASC->AbilityActorInfo->AvatarActor.Get())
+		));
+	}
+	else
+	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] SourceASC ActorInfo INVALID | ASC=%s"),
+			*GetNameSafe(SourceASC->GetOwner())
+		));
+	}
+
+	if (TargetASC->AbilityActorInfo.IsValid())
+	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] TargetASC ActorInfo | ASC=%s | Owner=%s | Avatar=%s"),
+			*GetNameSafe(TargetASC->GetOwner()),
+			*GetNameSafe(TargetASC->AbilityActorInfo->OwnerActor.Get()),
+			*GetNameSafe(TargetASC->AbilityActorInfo->AvatarActor.Get())
+		));
+	}
+	else
+	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] TargetASC ActorInfo INVALID | ASC=%s"),
+			*GetNameSafe(TargetASC->GetOwner())
+		));
+	}
+
+	const UHOGAttributeSet* SourceAttributeSet = SourceASC->GetSet<UHOGAttributeSet>();
+	const UHOGAttributeSet* TargetAttributeSet = TargetASC->GetSet<UHOGAttributeSet>();
+
+	DebugPrint(FString::Printf(
+		TEXT(
+			"[CombatComponent] ApplyDamageEffect ASC Check | SourceActor=%s | SourceASC=%s | TargetOwner=%s | TargetASC=%s"),
+		*GetNameSafe(SourceActor),
+		*GetNameSafe(SourceASC->GetOwner()),
+		*GetNameSafe(InRequest.TargetActor.Get()),
+		*GetNameSafe(TargetASC->GetOwner())
+	));
+
+	DebugPrint(FString::Printf(
+		TEXT("[CombatComponent] ApplyDamageEffect AttributeSet Check | SourceAttr=%s | TargetAttr=%s"),
+		SourceAttributeSet ? TEXT("Valid") : TEXT("Null"),
+		TargetAttributeSet ? TEXT("Valid") : TEXT("Null")
+	));
+
+	if (SourceAttributeSet)
+	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ApplyDamageEffect Source AttackPower = %.2f"),
+			SourceAttributeSet->GetAttackPower()
+		));
+	}
+	else
+	{
+		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect SourceAttributeSet is null"));
+	}
+
+	if (TargetAttributeSet)
+	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ApplyDamageEffect Target Health = %.2f | MaxHealth = %.2f"),
+			TargetAttributeSet->GetHealth(),
+			TargetAttributeSet->GetMaxHealth()
+		));
+	}
+	else
+	{
+		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect TargetAttributeSet is null"));
 	}
 
 	const float ExpectedFinalDamage = CalculateExpectedFinalDamage(InRequest);
 
-	const FGameplayEffectContextHandle ContextHandle = BuildEffectContext(InRequest);
+	const FGameplayEffectContextHandle ContextHandle = BuildEffectContext(InRequest, SourceASC);
+
+	// 핵심:
+	// Spec은 공격자(Source) ASC에서 만들고,
+	// 적용은 피격자(Target) ASC에 한다.
 	FGameplayEffectSpecHandle SpecHandle =
-		ASC->MakeOutgoingSpec(DefaultDamageEffectClass, 1.0f, ContextHandle);
+		SourceASC->MakeOutgoingSpec(DefaultDamageEffectClass, 1.0f, ContextHandle);
 
 	if (!SpecHandle.IsValid() || !SpecHandle.Data.IsValid())
 	{
@@ -405,7 +530,6 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 	}
 
 	const FGameplayTag DamageDataTag = HOGGameplayTags::Data_Damage;
-
 	SpecHandle.Data->SetSetByCallerMagnitude(DamageDataTag, InRequest.BaseDamage);
 
 	if (InRequest.DamageTypeTag.IsValid())
@@ -413,9 +537,8 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 		SpecHandle.Data->AddDynamicAssetTag(InRequest.DamageTypeTag);
 	}
 
-	// Instant GE는 유효한 ActiveHandle이 안 돌아올 수 있으므로
-	// Handle validity로 성공/실패를 판단하지 않는다.
-	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	// 적용은 공격자 SourceASC가 TargetASC에게 수행
+	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 
 	OutResult.bWasApplied = true;
 	OutResult.FinalDamage = ExpectedFinalDamage;
@@ -499,7 +622,7 @@ void UCombatComponent::DebugPrint(const FString& Message) const
 		return;
 	}
 
-	Debug::Print(Message);
+	// Debug::Print(Message);
 }
 
 void UCombatComponent::OpenProtegoParryWindow(float DurationSeconds)

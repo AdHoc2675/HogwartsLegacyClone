@@ -13,7 +13,9 @@ class UGameplayEffect;
 class UHOGAttributeSet;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDamageAppliedSignature, const FDamageResult&, DamageResult);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnParrySuccessSignature, AActor*, AttackerActor);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -103,7 +105,10 @@ protected:
 	bool ValidateDamageRequest(const FDamageRequest& InRequest) const;
 	bool ShouldIgnoreDamage(const FDamageRequest& InRequest) const;
 
-	FGameplayEffectContextHandle BuildEffectContext(const FDamageRequest& InRequest) const;
+	FGameplayEffectContextHandle BuildEffectContext(
+		const FDamageRequest& InRequest,
+		UAbilitySystemComponent* EffectSourceASC
+	) const;
 	bool ApplyDamageEffect(const FDamageRequest& InRequest, FDamageResult& OutResult);
 
 	void HandleDamageResult(const FDamageRequest& InRequest, FDamageResult& OutResult);

@@ -1,16 +1,17 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "GAS/Abilities/Enemy/GA_MeleeAttack.h"
 
-#include "AbilitySystemBlueprintLibrary.h"
-#include "AIController.h"
-#include "Core/HOG_GameplayTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
-#include "Character/Enemy/EnemyCharacterBase.h"
-#include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Character/BaseCharacter.h"
+#include "Character/Enemy/EnemyCharacterBase.h"
+#include "Component/CombatComponent.h"
+#include "Core/HOG_GameplayTags.h"
+#include "Core/HOG_Struct.h"
+#include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "Data/Enemy/DA_MeleeEnemyConfig.h"
 #include "Data/Enemy/FEnemyAttackData.h"
+#include "GameFramework/Controller.h"
+#include "HOGDebugHelper.h"
 
 UGA_MeleeAttack::UGA_MeleeAttack()
 {
@@ -28,15 +29,16 @@ UGA_MeleeAttack::UGA_MeleeAttack()
 }
 
 void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
-                                      const FGameplayAbilityActorInfo* ActorInfo,
-                                      const FGameplayAbilityActivationInfo ActivationInfo,
-                                      const FGameplayEventData* TriggerEventData)
+									  const FGameplayAbilityActorInfo* ActorInfo,
+									  const FGameplayAbilityActivationInfo ActivationInfo,
+									  const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
 	UAnimMontage* AttackMontage = GetAttackMontage();
 	if (!AttackMontage)
 	{
+		// Debug::Print(TEXT("[GA_MeleeAttack] ActivateAbility failed | AttackMontage is null"), FColor::Red);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -45,6 +47,13 @@ void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		this,
 		NAME_None,
 		AttackMontage);
+
+	if (!MontageTask)
+	{
+		// Debug::Print(TEXT("[GA_MeleeAttack] ActivateAbility failed | MontageTask is null"), FColor::Red);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
 	// 몽타주가 끝날 때
 	MontageTask->OnCompleted.AddDynamic(this, &UGA_MeleeAttack::OnMontageCompleted);
@@ -59,11 +68,21 @@ void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 
 	// 히트 이벤트 대기
 	UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this, HOGGameplayTags::Event_Weapon_Hit);
+		this,
+		HOGGameplayTags::Event_Weapon_Hit);
+
+	if (!WaitEventTask)
+	{
+		// Debug::Print(TEXT("[GA_MeleeAttack] ActivateAbility failed | WaitEventTask is null"), FColor::Red);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
 	WaitEventTask->EventReceived.AddDynamic(this, &UGA_MeleeAttack::OnWeaponHit);
 	WaitEventTask->ReadyForActivation();
-}
 
+	// Debug::Print(TEXT("[GA_MeleeAttack] ActivateAbility success | Montage + WaitGameplayEvent started"), FColor::Green);
+}
 
 float UGA_MeleeAttack::GetMeleeAttackDamage() const
 {
@@ -75,76 +94,109 @@ UAnimMontage* UGA_MeleeAttack::GetAttackMontage() const
 {
 	const FEnemyAttackData* Data = GetAttackData();
 	return Data ? Data->AnimMontage : nullptr;
-	
 }
 
 const FEnemyAttackData* UGA_MeleeAttack::GetAttackData() const
 {
 	AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetCharacter());
 	if (!Enemy) return nullptr;
-	
+
 	UDA_MeleeEnemyConfig* Config = Cast<UDA_MeleeEnemyConfig>(Enemy->GetEnemyConfig());
 	if (!Config) return nullptr;
-	
+
 	FGameplayTag Tag = AbilityTags.First();
 	return Tag.IsValid() ? Config->FindAttackData(Tag) : nullptr;
-	
 }
 
 void UGA_MeleeAttack::OnMontageCompleted()
 {
 	// 정상적으로 몽타주가 끝나는 경우
+	// Debug::Print(TEXT("[GA_MeleeAttack] Montage completed"), FColor::Green);
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
 void UGA_MeleeAttack::OnMontageCancelled()
 {
 	// 피격 등, 몽타주가 중간에 실행을 멈추는 경우
+	// Debug::Print(TEXT("[GA_MeleeAttack] Montage cancelled/interrupted"), FColor::Yellow);
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
 
 void UGA_MeleeAttack::OnWeaponHit(FGameplayEventData Payload)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Hit"));
+	// Debug::Print(TEXT("[GA_MeleeAttack] OnWeaponHit called"), FColor::Orange);
 
 	// 맞은 대상 꺼냄(플레이어)
-	AActor* Target = const_cast<AActor*>(Payload.Target.Get());
-	if (!Target)
+	AActor* TargetActor = const_cast<AActor*>(Payload.Target.Get());
+	if (!TargetActor)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Target"));
+		// Debug::Print(TEXT("[GA_MeleeAttack] OnWeaponHit failed | TargetActor is null"), FColor::Red);
 		return;
 	}
 
 	AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetCharacter());
 	if (!Enemy)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("no Enemy"));
+		// Debug::Print(TEXT("[GA_MeleeAttack] OnWeaponHit failed | Enemy is null"), FColor::Red);
 		return;
 	}
 
-	UDA_EnemyConfigBase* Config = Enemy->GetEnemyConfig();
-	if (!Config || !Config->DamageEffect)
+	ABaseCharacter* TargetCharacter = Cast<ABaseCharacter>(TargetActor);
+	if (!TargetCharacter)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("no Config"));
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[GA_MeleeAttack] OnWeaponHit failed | Target is not BaseCharacter | Target=%s"),
+		// 	*GetNameSafe(TargetActor)
+		// ), FColor::Red);
+		return;
+	}
+
+	UCombatComponent* TargetCombatComponent = TargetCharacter->GetCombatComponent();
+	if (!TargetCombatComponent)
+	{
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[GA_MeleeAttack] OnWeaponHit failed | TargetCombatComponent is null | Target=%s"),
+		// 	*GetNameSafe(TargetCharacter)
+		// ), FColor::Red);
 		return;
 	}
 
 	float Damage = GetMeleeAttackDamage();
 	if (Damage <= 0.f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("no Damage"));
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[GA_MeleeAttack] OnWeaponHit failed | Damage <= 0 | Damage=%.2f"),
+		// 	Damage
+		// ), FColor::Red);
 		return;
 	}
 
-	// 로그용
-	// UE_LOG(LogTemp, Warning, TEXT("Hit Target: %s | Damage: %.1f"), 
-	// *Target->GetName(), Damage);
+	FDamageRequest DamageRequest;
+	DamageRequest.SourceActor = Enemy;
+	DamageRequest.TargetActor = TargetCharacter;
+	DamageRequest.InstigatorActor = Enemy;
+	DamageRequest.DamageCauser = Enemy;
+	DamageRequest.BaseDamage = Damage;
+	DamageRequest.HitResult = Payload.ContextHandle.GetHitResult() ? *Payload.ContextHandle.GetHitResult() : FHitResult();
 
-	// // GE_Damage 명령서 생성
-	// FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(Config->DamageEffect);
-	//
-	// // 데미지 주입
-	// SpecHandle.Data->SetSetByCallerMagnitude(HOGGameplayTags::Damage_Melee, Damage);
-	//
-	// TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	// 필요 시 후속 확장
+	// DamageRequest.DamageTypeTag = HOGGameplayTags::DamageType_Melee;
+
+	// Debug::Print(FString::Printf(
+	// 	TEXT("[GA_MeleeAttack] ApplyDamageRequest | Source=%s | Target=%s | BaseDamage=%.2f"),
+	// 	*GetNameSafe(DamageRequest.SourceActor),
+	// 	*GetNameSafe(DamageRequest.TargetActor),
+	// 	DamageRequest.BaseDamage
+	// ), FColor::Cyan);
+
+	const FDamageResult DamageResult = TargetCombatComponent->ApplyDamageRequest(DamageRequest);
+
+	// Debug::Print(FString::Printf(
+	// 	TEXT("[GA_MeleeAttack] DamageResult | Applied=%d | Blocked=%d | Parried=%d | Killed=%d | FinalDamage=%.2f"),
+	// 	DamageResult.bWasApplied ? 1 : 0,
+	// 	DamageResult.bWasBlocked ? 1 : 0,
+	// 	DamageResult.bWasParried ? 1 : 0,
+	// 	DamageResult.bKilledTarget ? 1 : 0,
+	// 	DamageResult.FinalDamage
+	// ), FColor::Green);
 }

@@ -10,7 +10,7 @@
 #include "EnemyCharacterBase.generated.h"
 
 class UDA_EnemyConfigBase;
-class UEnemyAttributeSet;
+class UHOGAttributeSet;
 class AController;
 class UBehaviorTree;
 /**
@@ -68,7 +68,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "GAS")
 	UAbilitySystemComponent* AbilitySystemComponent;
 	UPROPERTY(VisibleAnywhere, Category = "GAS")
-	UEnemyAttributeSet* AttributeSet;
+	UHOGAttributeSet* AttributeSet;
 	
 	virtual void HandleDeath_Implementation() override;
 	virtual void OnHealthChanged(float OldValue, float NewValue);
