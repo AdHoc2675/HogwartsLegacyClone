@@ -10,6 +10,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "Interactable/InteractableAccioPlatform.h"
+#include "Interactable/InteractableAccioTarget.h"
 
 UGA_Spell_Accio::UGA_Spell_Accio()
 {
@@ -66,15 +68,15 @@ void UGA_Spell_Accio::ActivateAbility(
 	}
 }
 
-// 👉 [추가] 마법 시전 중 다시 Accio 키를 눌렀을 때의 (토글 오프) 로직
+// 마법 시전 중 다시 Accio 키를 눌렀을 때의 (토글 오프) 로직
 void UGA_Spell_Accio::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 
-	// 끌어당기고 있는 대상이 있다면 유저의 판단으로 강제 종료시킵니다.
-	if (IsValid(PulledTarget))
+	// 끌어당기고 있는 대상이 있다면 유저의 판단으로 강제 종료
+	if (IsValid(TargetToMove))
 	{
-		Debug::Print(TEXT("[Accio] Canceled by Toggle Input. Dropping Target."), FColor::Yellow);
+		Debug::Print(TEXT("[Accio] Canceled by Toggle Input."), FColor::Yellow);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 	}
 }
@@ -112,101 +114,109 @@ bool UGA_Spell_Accio::FireAccio()
 		}
 	}
 
-	// 2. 대상을 찾았으면 끌어오기 시작
-	if (IsValid(AcquiredTarget))
+	if (!IsValid(AcquiredTarget)) return false;
+
+	// 목적지와 이동 대상을 분석
+	OriginalTarget = AcquiredTarget;
+	TargetToMove = nullptr;
+	PullDestination = nullptr;
+
+	// 플레이어가 현재 어떤 바닥을 밟고 있는지 확인
+	ACharacter* AvatarChar = Cast<ACharacter>(Avatar);
+	UPrimitiveComponent* MovementBase = AvatarChar ? AvatarChar->GetCharacterMovement()->GetMovementBase() : nullptr;
+	AActor* CurrentFloorActor = MovementBase ? MovementBase->GetOwner() : nullptr;
+
+	// [규칙 2] 타겟(Target)에 Accio 사용 + 플레이어가 발판(Platform) 위일 때
+	AInteractableAccioTarget* HitAccioTarget = Cast<AInteractableAccioTarget>(AcquiredTarget);
+	AInteractableAccioPlatform* StandingPlatform = Cast<AInteractableAccioPlatform>(CurrentFloorActor);
+
+	if (HitAccioTarget)
 	{
-		PulledTarget = AcquiredTarget;
-		Debug::Print(FString::Printf(TEXT("[Accio] Target Acquired: %s"), *PulledTarget->GetName()), FColor::Cyan);
-
-		if (AccioVFX)
+		if (StandingPlatform)
 		{
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, PulledTarget->GetActorLocation());
+			// 플레이어가 밟고 있는 발판이 타겟을 향해 이동
+			TargetToMove = StandingPlatform;
+			PullDestination = HitAccioTarget;
+			Debug::Print(TEXT("[Accio] Platform -> Target Pulling!"), FColor::Magenta);
 		}
-
-		// 마찰력과 중력 무력화 (공중에 살짝 띄운 상태로 끌려오게 연출)
-		if (ACharacter* TargetCharacter = Cast<ACharacter>(PulledTarget))
+		else
 		{
-			if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
-			{
-				MoveComp->SetMovementMode(MOVE_Flying); // 하늘을 나는 모드로 전환
-			}
+			Debug::Print(TEXT("[Accio] Cannot pull Accio Target directly. Get on a platform first!"), FColor::Red);
+			return false;
 		}
-		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(PulledTarget->GetRootComponent()))
-		{
-			if (PrimComp->IsSimulatingPhysics())
-			{
-				PrimComp->SetEnableGravity(false);
-			}
-		}
-
-		// 3. 타이머 등록 (0.02초, 50fps 속도로 지속해서 목표를 당긴다)
-		GetWorld()->GetTimerManager().SetTimer(PullTimerHandle, this, &UGA_Spell_Accio::UpdatePulling, 0.02f, true);
-		return true; // 성공
 	}
 	else
 	{
-		Debug::Print(TEXT("[Accio] No Target."), FColor::Yellow);
-		return false; // 실패
+		// [규칙 1 & Default] 발판이든 적군이든 타겟을 나(플레이어)를 향해 당김
+		TargetToMove = AcquiredTarget;
+		PullDestination = Avatar;
+		Debug::Print(FString::Printf(TEXT("[Accio] Pulling %s to Avatar"), *TargetToMove->GetName()), FColor::Cyan);
 	}
+
+	// ----------------------------------------------------
+	
+	if (AccioVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, OriginalTarget->GetActorLocation());
+
+	// 플랫폼이 아니며 물리/중력 무력화가 필요한 경우만 (플랫폼은 Z축 이미 락걸려 있음)
+	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
+	{
+		TargetCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+	}
+	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
+	{
+		if (!TargetToMove->IsA(AInteractableAccioPlatform::StaticClass()) && PrimComp->IsSimulatingPhysics())
+		{
+			PrimComp->SetEnableGravity(false);
+		}
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(PullTimerHandle, this, &UGA_Spell_Accio::UpdatePulling, 0.02f, true);
+	return true;
 }
 
 void UGA_Spell_Accio::UpdatePulling()
 {
-	// 👉 대상이 죽었거나 파괴되면 자동으로 어빌리티 종료
-	if (!IsValid(PulledTarget))
+	if (!IsValid(TargetToMove) || !IsValid(PullDestination))
 	{
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
-	AActor* Avatar = GetAvatarActorFromActorInfo();
-	if (!Avatar) return;
+	FVector DestLoc = PullDestination->GetActorLocation();
+	FVector MoveLoc = TargetToMove->GetActorLocation();
 
-	FVector AvatarLoc = Avatar->GetActorLocation();
-	FVector TargetLoc = PulledTarget->GetActorLocation();
-
-	// 거리를 계산 (내 앞에 도달하면 정지)
-	float Distance = FVector::Dist2D(AvatarLoc, TargetLoc);
+	float Distance = FVector::Dist2D(DestLoc, MoveLoc);
 
 	if (Distance <= StopDistance)
 	{
-		// 유저 앞까지 왔을 땐 당기는 힘만 0으로 만들고 어빌리티는 유지(공중에 띄움)
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
 
-		if (ACharacter* TargetCharacter = Cast<ACharacter>(PulledTarget))
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 		{
-			if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
-			{
-				MoveComp->Velocity = FVector::ZeroVector;
-			}
+			TargetCharacter->GetCharacterMovement()->Velocity = FVector::ZeroVector;
 		}
-		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(PulledTarget->GetRootComponent()))
+		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 		{
 			if (PrimComp->IsSimulatingPhysics())
 			{
 				PrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 			}
 		}
-
-		return; // 아직 중력 회복(EndAbility)은 시키지 않음 (콤보나 공격 대기 상태로 공중에 머물도록)
+		return; 
 	}
 
-	// 플레이어 방향 향하는 벡터 구하기
-	// 높이(Z)는 대상 원본 높이나 내 가슴(chest) 높이 정도로 보정하면 예쁘게 당겨짐
-	FVector Direction = (AvatarLoc - TargetLoc);
-	Direction.Z = 0.f; // Z축 보정을 위해 수평 당김만 할지 설정. 약간 띄우려면 Z 조작 추가 가능.
+	// 높낮이 방지 (로테이션/높이 불변)
+	FVector Direction = (DestLoc - MoveLoc);
+	Direction.Z = 0.f; // Z축으로 당기는 힘 제거 (서로 동일선상에서 당김)
 	FVector PullDirection = Direction.GetSafeNormal();
 
-	// 매 프레임 플레이어 방향으로 속도값 덮어씌움
-	if (ACharacter* TargetCharacter = Cast<ACharacter>(PulledTarget))
+	// 속도 적용
+	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 	{
-		if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
-		{
-			MoveComp->Velocity = PullDirection * PullSpeed;
-		}
+		TargetCharacter->GetCharacterMovement()->Velocity = PullDirection * PullSpeed;
 	}
-	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(PulledTarget->GetRootComponent()))
+	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 	{
 		if (PrimComp->IsSimulatingPhysics())
 		{
@@ -214,17 +224,14 @@ void UGA_Spell_Accio::UpdatePulling()
 		}
 		else
 		{
-			// 물리가 꺼진 오브젝트(예: 퍼즐 블록)의 경우 강제 위치 이동
-			PulledTarget->SetActorLocation(TargetLoc + (PullDirection * PullSpeed * 0.02f));
+			TargetToMove->SetActorLocation(MoveLoc + (PullDirection * PullSpeed * 0.02f));
 		}
 	}
 }
 
 void UGA_Spell_Accio::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	// 👉 몽타주가 끝났어도 마법 대상이 있다면 종료하지 않음. 
-	// 도중에 맞아서 취소되거나 타겟이 사라졌을 때만 종료
-	if (bInterrupted || !IsValid(PulledTarget))
+	if (bInterrupted || !IsValid(TargetToMove))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
 	}
@@ -237,30 +244,27 @@ void UGA_Spell_Accio::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	// 4. 어빌리티 종료 시점 -> 다시 물리 및 중력값 정상화
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().ClearTimer(PullTimerHandle);
-	}
+	if (UWorld* World = GetWorld()) World->GetTimerManager().ClearTimer(PullTimerHandle);
 
-	if (IsValid(PulledTarget))
+	if (IsValid(TargetToMove))
 	{
-		if (ACharacter* TargetCharacter = Cast<ACharacter>(PulledTarget))
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 		{
-			if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
-			{
-				MoveComp->SetMovementMode(MOVE_Falling); // 다시 바닥으로 떨어지게 함
-			}
+			TargetCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 		}
-		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(PulledTarget->GetRootComponent()))
+		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 		{
-			if (PrimComp->IsSimulatingPhysics())
+			// 플랫폼이 아닌 일반물체인 경우에만 중력 다시 복구
+			if (!TargetToMove->IsA(AInteractableAccioPlatform::StaticClass()) && PrimComp->IsSimulatingPhysics())
 			{
 				PrimComp->SetEnableGravity(true);
 			}
+            PrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 		}
 
-		PulledTarget = nullptr;
+		TargetToMove = nullptr;
+		PullDestination = nullptr;
+		OriginalTarget = nullptr;
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

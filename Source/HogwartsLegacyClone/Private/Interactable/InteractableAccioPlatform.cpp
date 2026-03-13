@@ -51,13 +51,6 @@ void AInteractableAccioPlatform::BeginPlay()
 	}
 }
 
-// Called every frame
-void AInteractableAccioPlatform::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
 bool AInteractableAccioPlatform::CanInteract_Implementation(AActor* Interactor)
 {
     return true;

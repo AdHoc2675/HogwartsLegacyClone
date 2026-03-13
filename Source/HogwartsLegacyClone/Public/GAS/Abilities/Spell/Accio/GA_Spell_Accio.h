@@ -62,17 +62,21 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
 	TObjectPtr<UNiagaraSystem> AccioVFX;
 
-	// 끌어당기는 속도
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
 	float PullSpeed = 1000.f;
 
-	// 플레이어와의 최소 거리
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
 	float StopDistance = 150.f;
 
 	// ====== 런타임 상태 ======
 	UPROPERTY(Transient)
-	TObjectPtr<AActor> PulledTarget;
+	TObjectPtr<AActor> OriginalTarget; // 마법을 맞춘 대상(이펙트 스폰용)
+
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> TargetToMove; // 실제로 이동할 대상 (적재물, 발판 등)
+
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> PullDestination; // 도착 지점 (보통 플레이어지만, 타겟 지점일 수 있음)
 
 	FTimerHandle PullTimerHandle;
 };
