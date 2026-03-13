@@ -156,6 +156,11 @@ UHOGAbilitySystemComponent* APlayerCharacterBase::GetHOGAbilitySystemComponent()
 
 void APlayerCharacterBase::Input_Move(const FInputActionValue& Value)
 {
+	if (bCastingActive)
+	{
+		return;
+	}
+	
 	FVector2D MoveAxis = Value.Get<FVector2D>();
 
 	if (!Controller)
