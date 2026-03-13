@@ -147,7 +147,7 @@ void UGA_Spell_Accio::UpdatePulling()
 
 	if (Distance <= StopDistance)
 	{
-		// 충분히 당겨졌으면 정지!
+		// 충분히 당겨졌으면 정지
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(PulledTarget))
