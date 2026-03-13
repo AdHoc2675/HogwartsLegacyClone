@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,7 +6,8 @@
 
 /**
  * 데미지 실행 계산기
- * - SetByCaller(Data.Damage) 값을 읽어서
+ * - SetByCaller(Data.Damage) 값을 읽고
+ * - Source AttackPower를 더해서
  * - Target의 Health를 감소시키는 OutputModifier를 생성
  */
 
@@ -16,7 +15,7 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API UExecCalc_Damage : public UGameplayEffectExecutionCalculation
 {
 	GENERATED_BODY()
-	
+
 public:
 	UExecCalc_Damage();
 
@@ -24,5 +23,4 @@ public:
 		const FGameplayEffectCustomExecutionParameters& ExecutionParams,
 		FGameplayEffectCustomExecutionOutput& OutExecutionOutput
 	) const override;
-	
 };

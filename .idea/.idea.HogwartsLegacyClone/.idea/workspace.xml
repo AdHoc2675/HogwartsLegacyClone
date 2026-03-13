@@ -13,12 +13,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="">
-      <change afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Data/DT_AttributeRow.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Data/DT_AttributeRow.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/ABP_Player.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/ABP_Player.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack1.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack1.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack4.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack4.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Dementor/BP_Dementor.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Dementor/BP_Dementor.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Goblin/BP_Goblin.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Goblin/BP_Goblin.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Troll/BP_Troll.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Troll/BP_Troll.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/BaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/BaseCharacter.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Component/CombatComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Component/CombatComponent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GE/ExecCalc_Damage.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GE/ExecCalc_Damage.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/BaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/BaseCharacter.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Component/CombatComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Component/CombatComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GE/ExecCalc_Damage.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GE/ExecCalc_Damage.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,6 +37,7 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Data/DT_AttributeRow.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Editor/WorldBrowser/Private/LevelModel.h" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="McpProjectServerCommands">
     <commands />
@@ -179,7 +187,7 @@
       <workItem from="1773045952064" duration="1000" />
       <workItem from="1773045984344" duration="663000" />
       <workItem from="1773103732131" duration="1206000" />
-      <workItem from="1773361550140" duration="2200000" />
+      <workItem from="1773361550140" duration="7442000" />
     </task>
     <servers />
   </component>
