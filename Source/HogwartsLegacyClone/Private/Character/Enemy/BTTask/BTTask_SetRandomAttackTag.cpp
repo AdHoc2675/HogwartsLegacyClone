@@ -22,22 +22,36 @@ EBTNodeResult::Type UBTTask_SetRandomAttackTag::ExecuteTask(UBehaviorTreeCompone
 	if (!Blackboard) return EBTNodeResult::Failed;
 
 	AAIController* AIC = OwnerComp.GetAIOwner();
-	if (!AIC) return EBTNodeResult::Failed;
-
+	if (!AIC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no AIC"));
+		return EBTNodeResult::Failed;
+	}
+	
 	IIMeleeAttacker* Attacker = Cast<IIMeleeAttacker>(AIC->GetPawn());
-	if (!Attacker) return EBTNodeResult::Failed;
-
-	// UDA_MeleeEnemyConfig* Config = Cast<UDA_MeleeEnemyConfig>(Goblin->GetEnemyConfig());
-	// if (!Config || Config->MeleeAttacks.IsEmpty()) return EBTNodeResult::Failed;
+	if (!Attacker)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no Attacker"));
+		return EBTNodeResult::Failed;
+	}
 	
 	TArray<FGameplayTag> Tags = Attacker->GetMeleeAttackTags();
+	if (Tags.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no Tags"));
+		return EBTNodeResult::Failed;
+	}
+	
+	Tags.RemoveAll([this](const FGameplayTag& Tag)
+	{
+		return ExcludeTags.HasTag(Tag);
+	});
+	
 	if (Tags.IsEmpty()) return EBTNodeResult::Failed;
 	
 	// Config의 MeleeAttacks에서 랜덤 선택
 	int32 RandomIndex = FMath::RandRange(0, Tags.Num() - 1);
-	
-	//const FGoblinAttackData& Selected = Config->MeleeAttacks[RandomIndex];
-	
+
 	Blackboard->SetValueAsName(AbilityTagKey.SelectedKeyName, Tags[RandomIndex].GetTagName());
 
 	return EBTNodeResult::Succeeded;

@@ -3,6 +3,7 @@
 #include "GAS/Abilities/Enemy/GA_MeleeAttack.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AIController.h"
 #include "Core/HOG_GameplayTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
@@ -32,14 +33,13 @@ void UGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                       const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
+
 	UAnimMontage* AttackMontage = GetAttackMontage();
 	if (!AttackMontage)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
 	// 몽타주 실행 이벤트
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
@@ -114,13 +114,6 @@ void UGA_MeleeAttack::OnWeaponHit(FGameplayEventData Payload)
 		UE_LOG(LogTemp, Warning, TEXT("Target"));
 		return;
 	}
-
-	// UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target);
-	// if (!TargetASC)
-	// {
-	// 	UE_LOG(LogTemp, Warning, TEXT("no ASC"));
-	// 	return;
-	// }
 
 	AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetCharacter());
 	if (!Enemy)

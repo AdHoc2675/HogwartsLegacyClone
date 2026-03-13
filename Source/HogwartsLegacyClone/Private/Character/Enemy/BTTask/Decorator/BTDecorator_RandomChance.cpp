@@ -10,8 +10,7 @@ UBTDecorator_RandomChance::UBTDecorator_RandomChance()
 
 bool UBTDecorator_RandomChance::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
 {
-	
-	return FMath::FRand() < Chance;
+	return FMath::FRand() <= Chance;
 }
 
 FString UBTDecorator_RandomChance::GetStaticDescription() const
