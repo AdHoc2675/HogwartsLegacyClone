@@ -116,29 +116,29 @@ void ABaseCharacter::InitializeAttributesIfReady()
 
 	if (!AttributeInitDataTable)
 	{
-		Debug::Print(
-			TEXT("[BaseCharacter] InitializeAttributesIfReady failed | AttributeInitDataTable is null"),
-			FColor::Red
-		);
+		// Debug::Print(
+		// 	TEXT("[BaseCharacter] InitializeAttributesIfReady failed | AttributeInitDataTable is null"),
+		// 	FColor::Red
+		// );
 		return;
 	}
 
 	if (!UnitTag.IsValid())
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[BaseCharacter] InitializeAttributesIfReady failed | UnitTag invalid | Owner=%s"),
-			*GetNameSafe(this)
-		), FColor::Red);
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[BaseCharacter] InitializeAttributesIfReady failed | UnitTag invalid | Owner=%s"),
+		// 	*GetNameSafe(this)
+		// ), FColor::Red);
 		return;
 	}
 
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC)
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[BaseCharacter] InitializeAttributesIfReady pending | ASC not ready | Owner=%s"),
-			*GetNameSafe(this)
-		), FColor::Yellow);
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[BaseCharacter] InitializeAttributesIfReady pending | ASC not ready | Owner=%s"),
+		// 	*GetNameSafe(this)
+		// ), FColor::Yellow);
 		return;
 	}
 
@@ -146,11 +146,11 @@ void ABaseCharacter::InitializeAttributesIfReady()
 	{
 		bAttributesInitialized = true;
 
-		Debug::Print(FString::Printf(
-			TEXT("[BaseCharacter] Attributes initialized | Owner=%s | UnitTag=%s"),
-			*GetNameSafe(this),
-			*UnitTag.ToString()
-		), FColor::Green);
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[BaseCharacter] Attributes initialized | Owner=%s | UnitTag=%s"),
+		// 	*GetNameSafe(this),
+		// 	*UnitTag.ToString()
+		// ), FColor::Green);
 	}
 }
 
@@ -170,10 +170,10 @@ bool ABaseCharacter::ApplyInitialAttributesFromDataTable()
 	UHOGAttributeSet* AttributeSet = const_cast<UHOGAttributeSet*>(ASC->GetSet<UHOGAttributeSet>());
 	if (!AttributeSet)
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[BaseCharacter] ApplyInitialAttributesFromDataTable failed | AttributeSet null | Owner=%s"),
-			*GetNameSafe(this)
-		), FColor::Red);
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[BaseCharacter] ApplyInitialAttributesFromDataTable failed | AttributeSet null | Owner=%s"),
+		// 	*GetNameSafe(this)
+		// ), FColor::Red);
 		return false;
 	}
 
@@ -194,27 +194,27 @@ bool ABaseCharacter::ApplyInitialAttributesFromDataTable()
 			continue;
 		}
 
-		AttributeSet->SetMaxHealth(Row->MaxHealth);
-		AttributeSet->SetHealth(FMath::Clamp(Row->Health, 0.0f, Row->MaxHealth));
-		AttributeSet->SetAttackPower(Row->AttackPower);
+		ASC->SetNumericAttributeBase(UHOGAttributeSet::GetMaxHealthAttribute(), Row->MaxHealth);
+		ASC->SetNumericAttributeBase(UHOGAttributeSet::GetHealthAttribute(), FMath::Clamp(Row->Health, 0.0f, Row->MaxHealth));
+		ASC->SetNumericAttributeBase(UHOGAttributeSet::GetAttackPowerAttribute(), Row->AttackPower);
 
-		Debug::Print(FString::Printf(
-			TEXT("[BaseCharacter] ApplyInitialAttributesFromDataTable success | Owner=%s | Row=%s | HP=%.1f | MaxHP=%.1f | AP=%.1f"),
-			*GetNameSafe(this),
-			*RowName.ToString(),
-			Row->Health,
-			Row->MaxHealth,
-			Row->AttackPower
-		), FColor::Cyan);
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[BaseCharacter] ApplyInitialAttributesFromDataTable success | Owner=%s | Row=%s | HP=%.1f | MaxHP=%.1f | AP=%.1f"),
+		// 	*GetNameSafe(this),
+		// 	*RowName.ToString(),
+		// 	Row->Health,
+		// 	Row->MaxHealth,
+		// 	Row->AttackPower
+		// ), FColor::Cyan);
 
 		return true;
 	}
 
-	Debug::Print(FString::Printf(
-		TEXT("[BaseCharacter] ApplyInitialAttributesFromDataTable failed | Matching UnitTag row not found | Owner=%s | UnitTag=%s"),
-		*GetNameSafe(this),
-		*UnitTag.ToString()
-	), FColor::Red);
+	// Debug::Print(FString::Printf(
+	// 	TEXT("[BaseCharacter] ApplyInitialAttributesFromDataTable failed | Matching UnitTag row not found | Owner=%s | UnitTag=%s"),
+	// 	*GetNameSafe(this),
+	// 	*UnitTag.ToString()
+	// ), FColor::Red);
 
 	return false;
 }

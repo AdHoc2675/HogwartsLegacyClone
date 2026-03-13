@@ -17,15 +17,17 @@
       <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Dementor/BP_Dementor.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Dementor/BP_Dementor.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Goblin/BP_Goblin.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Goblin/BP_Goblin.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Troll/BP_Troll.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Enemy/Troll/BP_Troll.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/GE/BP_ExecCalc_Damage.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/GE/BP_ExecCalc_Damage.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/GE/BP_GE_Damage.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/GE/BP_GE_Damage.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/GE/GE_Enemy_Damage.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/GE/GE_Enemy_Damage.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/GameFramework/BP_HOG_PlayerState.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/GameFramework/BP_HOG_PlayerState.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/BaseCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/BaseCharacter.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/Enemy/EnemyCharacterBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/Enemy/EnemyCharacterBase.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Component/CombatComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Component/CombatComponent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Enemy/GA_MeleeAttack.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Enemy/GA_MeleeAttack.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GE/ExecCalc_Damage.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GE/ExecCalc_Damage.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/BaseCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/BaseCharacter.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/Enemy/EnemyCharacterBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/Enemy/EnemyCharacterBase.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Component/CombatComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Component/CombatComponent.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GE/ExecCalc_Damage.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GE/ExecCalc_Damage.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,7 +39,31 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Data/DT_AttributeRow.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/Android/AndroidTargetPlatformControls/Private/AndroidTargetDeviceOutput.inl" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/AssetTools/Public/IAssetTools.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderCompilerCommon/Private/HlslLexer.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderCompilerCommon/Private/HlslUtils.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderCompilerCommon/Private/ShaderCompilerCommon.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderCompilerCommon/Private/ShaderSymbolExport.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderCompilerCommon/Private/SpirvCommon.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderFormatVectorVM/Private/VectorVMBackend.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderFormatVectorVM/Private/VectorVMShaderCompiler.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderFormatVectorVM/Private/ir_vm_propagate_non_expressions_visitor.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderFormatVectorVM/Private/ir_vm_scalarize_visitor.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderPreprocessor/Private/ShaderPreprocessor.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderPreprocessor/Private/stb_preprocess/cond_expr.c" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderPreprocessor/Private/stb_preprocess/stb_ds.c" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/ShaderPreprocessor/Private/stb_preprocess/stb_ds.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/SharedSettingsWidgets/Public/SSettingsEditorCheckoutNotice.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/SkeletalMeshUtilitiesCommon/Private/LODUtilities.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Developer/SkeletalMeshUtilitiesCommon/Private/StaticToSkeletalMeshConverter.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Editor/Persona/Private/SAnimationEditorViewport.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Editor/Sequencer/Private/SSequencerTransformBox.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Editor/WorldBrowser/Private/LevelModel.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Runtime/AIModule/Private/Navigation/CrowdManager.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Runtime/Engine/Private/GameFramework/RootMotionSource.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Runtime/PhysicsCore/Public/Chaos/ChaosScene.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../UE_5.4/Engine/Source/Runtime/Renderer/Private/GPUFastFourierTransform.cpp" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="McpProjectServerCommands">
     <commands />
@@ -51,22 +77,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "EnemyAttackToPlayer",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="C/C++ 프로젝트.HogwartsLegacyClone">
     <configuration name="HogwartsLegacyClone" type="CppProject" factoryName="C++ Project">
       <configuration_1 setup="1">
@@ -188,6 +214,7 @@
       <workItem from="1773045984344" duration="663000" />
       <workItem from="1773103732131" duration="1206000" />
       <workItem from="1773361550140" duration="7442000" />
+      <workItem from="1773378697160" duration="9597000" />
     </task>
     <servers />
   </component>
