@@ -2,6 +2,9 @@
 
 #include "GAS/Abilities/Spell/Accio/GA_Spell_Accio.h"
 #include "HOGDebugHelper.h"
+#include "Core/HOG_GameplayTags.h"
+#include "AbilitySystemGlobals.h"
+#include "AbilitySystemComponent.h"
 
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -10,8 +13,6 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
-#include "Interactable/InteractableAccioPlatform.h"
-#include "Interactable/InteractableAccioTarget.h"
 
 UGA_Spell_Accio::UGA_Spell_Accio()
 {
@@ -116,7 +117,6 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (!IsValid(AcquiredTarget)) return false;
 
-	// 목적지와 이동 대상을 분석
 	OriginalTarget = AcquiredTarget;
 	TargetToMove = nullptr;
 	PullDestination = nullptr;
@@ -126,17 +126,21 @@ bool UGA_Spell_Accio::FireAccio()
 	UPrimitiveComponent* MovementBase = AvatarChar ? AvatarChar->GetCharacterMovement()->GetMovementBase() : nullptr;
 	AActor* CurrentFloorActor = MovementBase ? MovementBase->GetOwner() : nullptr;
 
-	// [규칙 2] 타겟(Target)에 Accio 사용 + 플레이어가 발판(Platform) 위일 때
-	AInteractableAccioTarget* HitAccioTarget = Cast<AInteractableAccioTarget>(AcquiredTarget);
-	AInteractableAccioPlatform* StandingPlatform = Cast<AInteractableAccioPlatform>(CurrentFloorActor);
+	// ASC를 가져와서 태그 검사
+	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(AcquiredTarget);
+	bool bIsHitTarget = TargetASC && TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
 
-	if (HitAccioTarget)
+	UAbilitySystemComponent* FloorASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CurrentFloorActor);
+	bool bIsStandingOnPlatform = FloorASC && FloorASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
+
+	// [규칙 2] 맞춘 대상이 'AccioTarget' 이고, 밟고 있는 바닥이 'AccioPlatform' 일 때
+	if (bIsHitTarget)
 	{
-		if (StandingPlatform)
+		if (bIsStandingOnPlatform)
 		{
 			// 플레이어가 밟고 있는 발판이 타겟을 향해 이동
-			TargetToMove = StandingPlatform;
-			PullDestination = HitAccioTarget;
+			TargetToMove = CurrentFloorActor;
+			PullDestination = AcquiredTarget;
 			Debug::Print(TEXT("[Accio] Platform -> Target Pulling!"), FColor::Magenta);
 		}
 		else
@@ -147,24 +151,29 @@ bool UGA_Spell_Accio::FireAccio()
 	}
 	else
 	{
-		// [규칙 1 & Default] 발판이든 적군이든 타겟을 나(플레이어)를 향해 당김
+		// [규칙 1 & Default] 발판이든 적군이든 어떤 물체든 나(플레이어)를 향해 당김
 		TargetToMove = AcquiredTarget;
 		PullDestination = Avatar;
 		Debug::Print(FString::Printf(TEXT("[Accio] Pulling %s to Avatar"), *TargetToMove->GetName()), FColor::Cyan);
 	}
 
-	// ----------------------------------------------------
-	
-	if (AccioVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, OriginalTarget->GetActorLocation());
+	if (AccioVFX && IsValid(OriginalTarget))
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, OriginalTarget->GetActorLocation());
+	}
 
-	// 플랫폼이 아니며 물리/중력 무력화가 필요한 경우만 (플랫폼은 Z축 이미 락걸려 있음)
+	// 물체의 성질에 따라 중력 무시 처리 세팅
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 	{
 		TargetCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 	}
 	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 	{
-		if (!TargetToMove->IsA(AInteractableAccioPlatform::StaticClass()) && PrimComp->IsSimulatingPhysics())
+		// 플랫폼 여부 검사
+		UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
+		bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
+
+		if (!bIsPlatform && PrimComp->IsSimulatingPhysics())
 		{
 			PrimComp->SetEnableGravity(false);
 		}
@@ -206,9 +215,9 @@ void UGA_Spell_Accio::UpdatePulling()
 		return; 
 	}
 
-	// 높낮이 방지 (로테이션/높이 불변)
+	// 높낮이 방지 (Z축 제외)
 	FVector Direction = (DestLoc - MoveLoc);
-	Direction.Z = 0.f; // Z축으로 당기는 힘 제거 (서로 동일선상에서 당김)
+	Direction.Z = 0.f; 
 	FVector PullDirection = Direction.GetSafeNormal();
 
 	// 속도 적용
@@ -254,12 +263,19 @@ void UGA_Spell_Accio::EndAbility(
 		}
 		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 		{
-			// 플랫폼이 아닌 일반물체인 경우에만 중력 다시 복구
-			if (!TargetToMove->IsA(AInteractableAccioPlatform::StaticClass()) && PrimComp->IsSimulatingPhysics())
+			// ASC 기반 태그 검사로 변경됨
+			UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
+			bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
+			
+			if (!bIsPlatform && PrimComp->IsSimulatingPhysics())
 			{
 				PrimComp->SetEnableGravity(true);
 			}
-            PrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+			
+			if (PrimComp->IsSimulatingPhysics())
+			{
+				PrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+			}
 		}
 
 		TargetToMove = nullptr;

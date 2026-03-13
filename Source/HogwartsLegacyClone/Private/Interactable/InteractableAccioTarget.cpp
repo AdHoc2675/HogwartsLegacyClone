@@ -26,6 +26,7 @@ void AInteractableAccioTarget::BeginPlay()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Team_Object);
+		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
 	}
 }
 
