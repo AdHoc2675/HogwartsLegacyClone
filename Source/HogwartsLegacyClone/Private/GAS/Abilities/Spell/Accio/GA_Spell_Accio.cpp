@@ -13,6 +13,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "DrawDebugHelpers.h"
 
 UGA_Spell_Accio::UGA_Spell_Accio()
 {
@@ -102,10 +103,18 @@ bool UGA_Spell_Accio::FireAccio()
 			FVector StartLoc = Avatar->GetActorLocation();
 			FVector TargetLoc = AimPoint.IsNearlyZero() ? StartLoc + (Avatar->GetActorForwardVector() * GetCastRange()) : AimPoint;
 
-			FCollisionShape SphereShape = FCollisionShape::MakeSphere(100.f);
+			// 탐지 반경
+			float SweepRadius = 50.f; 
+			FCollisionShape SphereShape = FCollisionShape::MakeSphere(SweepRadius);
 			FCollisionQueryParams Params(SCENE_QUERY_STAT(AccioTrace), false, Avatar);
 
-			// 👉 바닥 등에 막히는 현상 방지를 위해 MultiSweep으로 변경
+			// ======== [디버그 드로우: 트레이스 출발선과 도착구형] ========
+			DrawDebugLine(World, StartLoc, TargetLoc, FColor::Green, false, 2.0f, 0, 2.0f);
+			DrawDebugSphere(World, StartLoc, SweepRadius, 16, FColor::Green, false, 2.0f);
+			DrawDebugSphere(World, TargetLoc, SweepRadius, 16, FColor::Green, false, 2.0f);
+			// =========================================================
+
+			// 바닥 등에 막히는 현상 방지를 위해 MultiSweep으로 변경
 			TArray<FHitResult> HitResults;
 			bool bHit = World->SweepMultiByChannel(HitResults, StartLoc, TargetLoc, FQuat::Identity, ECC_Visibility, SphereShape, Params);
 
@@ -113,6 +122,10 @@ bool UGA_Spell_Accio::FireAccio()
 			{
 				for (const FHitResult& Hit : HitResults)
 				{
+					// ======== [디버그 드로우: 스캔에 걸린 모든 지점 빨간 점] ========
+					DrawDebugPoint(World, Hit.ImpactPoint, 15.f, FColor::Red, false, 2.0f);
+					// =============================================================
+
 					AActor* HitActor = Hit.GetActor();
 					if (!IsValid(HitActor) || HitActor == Avatar) continue;
 
@@ -128,6 +141,10 @@ bool UGA_Spell_Accio::FireAccio()
 					if (bIsTargetNode || bIsMovable)
 					{
 						AcquiredTarget = HitActor;
+						
+						// ======== [디버그 드로우: 최종 채택된 타겟 박스 표시] ========
+						DrawDebugBox(World, AcquiredTarget->GetActorLocation(), FVector(60.f), FColor::Cyan, false, 2.0f);
+						// ==========================================================
 						break; // 유효한 첫 대상을 찾았으므로 탈출
 					}
 				}
@@ -250,7 +267,6 @@ void UGA_Spell_Accio::UpdatePulling()
 	}
 	else if (UPrimitiveComponent* MovePrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 	{
-		// 👉 기존에 존재하던 SetActorLocation(강제 워프 이동) 로직을 아예 삭제하여 고정 물체의 이동을 차단함
 		if (MovePrimComp->IsSimulatingPhysics())
 		{
 			MovePrimComp->SetPhysicsLinearVelocity(PullDirection * PullSpeed);
