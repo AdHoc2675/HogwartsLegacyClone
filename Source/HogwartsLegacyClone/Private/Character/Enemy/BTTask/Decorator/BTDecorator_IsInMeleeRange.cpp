@@ -12,6 +12,7 @@ UBTDecorator_IsInMeleeRange::UBTDecorator_IsInMeleeRange()
 	bNotifyBecomeRelevant = true;
 	bNotifyCeaseRelevant = true;
 	FlowAbortMode = EBTFlowAbortMode::Both;
+	bCreateNodeInstance = true;
 
 	TargetDistanceKey.AddFloatFilter(this,
 	                                 GET_MEMBER_NAME_CHECKED(UBTDecorator_IsInMeleeRange, TargetDistanceKey));
@@ -20,19 +21,45 @@ UBTDecorator_IsInMeleeRange::UBTDecorator_IsInMeleeRange()
 bool UBTDecorator_IsInMeleeRange::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
 {
 	AAIController* AIC = OwnerComp.GetAIOwner();
-	if (!AIC) return false;
+	if (!AIC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no AIC"));
+	}
 
 	APawn* Pawn = AIC->GetPawn();
-	if (!Pawn) return false;
+	if (!Pawn)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no Pawn"));
+		return false;
+	}
 
 	IIMeleeAttacker* MeleeAttacker = Cast<IIMeleeAttacker>(Pawn);
-	if (!MeleeAttacker) return false;
+	if (!MeleeAttacker)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no MeleeAttacker"));
+		return false;
+	}
 
 	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
-	if (!Blackboard) return false;
+	if (!Blackboard)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no Blackboard"));
+		return false;
+	}
 
 	float Distance = Blackboard->GetValueAsFloat(TargetDistanceKey.SelectedKeyName);
-	FName AttackTag = Blackboard->GetValueAsName(AttackTagKey.SelectedKeyName);
+	
+	// 직접 태그가 있으면 그걸 사용, 없으면 BB에서 읽기
+	FName AttackTag;
+	if (DirectAttackTag.IsValid())
+	{
+		AttackTag = DirectAttackTag.GetTagName();
+		UE_LOG(LogTemp, Warning, TEXT("Check Point : %s"), *AttackTag.ToString());
+	}
+	else
+	{
+		AttackTag = Blackboard->GetValueAsName(AttackTagKey.SelectedKeyName);
+	}
 
 	float MinRange, MaxRange;
 	MeleeAttacker->GetMeleeAttackRange(AttackTag, MinRange, MaxRange);
