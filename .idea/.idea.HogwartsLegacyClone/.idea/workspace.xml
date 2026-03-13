@@ -12,7 +12,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="" />
+    <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="">
+      <change afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Data/DT_AttributeRow.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Data/DT_AttributeRow.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/ABP_Player.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/ABP_Player.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack1.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack1.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack4.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/Animation/AnimMontage/BasicAttack/AM_BasicAttack4.uasset" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -20,6 +27,9 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Data/DT_AttributeRow.h" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="McpProjectServerCommands">
     <commands />
@@ -33,22 +43,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "main",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="C/C++ 프로젝트.HogwartsLegacyClone">
     <configuration name="HogwartsLegacyClone" type="CppProject" factoryName="C++ Project">
       <configuration_1 setup="1">
@@ -169,6 +179,7 @@
       <workItem from="1773045952064" duration="1000" />
       <workItem from="1773045984344" duration="663000" />
       <workItem from="1773103732131" duration="1206000" />
+      <workItem from="1773361550140" duration="2200000" />
     </task>
     <servers />
   </component>
