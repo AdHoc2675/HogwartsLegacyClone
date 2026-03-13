@@ -9,6 +9,10 @@
 #include "BaseCharacter.generated.h"
 
 class UCombatComponent;
+class UDataTable;
+class UHOGAttributeSet;
+class UAbilitySystemComponent;
+
 
 /**
  * 공통 캐릭터 베이스
@@ -33,31 +37,28 @@ public:
 	// Tag
 	// -------------------------
 	UFUNCTION(BlueprintCallable, Category="Tag|Team")
-	FGameplayTag GetTeamTag() const {return TeamTag;}
-	
+	FGameplayTag GetTeamTag() const { return TeamTag; }
+
 	UFUNCTION(BlueprintCallable, Category="Tag|Team")
 	void SetTeamTag(FGameplayTag NewTeamTag);
 
 	UFUNCTION(BlueprintCallable, Category="Tag|Team")
 	bool HasTeamTag(FGameplayTag QueryTag) const;
 
-	
 	// -------------------------
 	// State
 	// -------------------------
-		
 	UFUNCTION(BlueprintCallable, Category="State")
 	bool IsDead() const { return bIsDead; }
 
 	UFUNCTION(BlueprintCallable, Category="State")
 	virtual void Die();
-	
+
 	// -------------------------
 	// Component
 	// -------------------------
 	UFUNCTION(BlueprintPure, Category="Component")
 	UCombatComponent* GetCombatComponent() const { return CombatComponent; }
-
 
 protected:
 	virtual void BeginPlay() override;
@@ -77,11 +78,36 @@ protected:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UCombatComponent> CombatComponent;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Tag|Team")
 	FGameplayTag TeamTag;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="State")
 	bool bIsDead = false;
 
+protected:
+	/* Attribute 초기값 DT */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Attributes")
+	TObjectPtr<UDataTable> AttributeInitDataTable = nullptr;
+
+	/* 이 캐릭터를 식별하는 유닛 태그 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="HOG|Attributes")
+	FGameplayTag UnitTag;
+
+	/* 초기 Attribute 적용 완료 여부 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="HOG|Attributes")
+	bool bAttributesInitialized = false;
+
+protected:
+	/* ASC / DT / UnitTag 준비가 되었을 때 초기 Attribute 적용 시도 */
+	UFUNCTION(BlueprintCallable, Category="HOG|Attributes")
+	void InitializeAttributesIfReady();
+
+	/* DT에서 UnitTag에 맞는 Row를 찾아 AttributeSet에 실제 값 반영 */
+	UFUNCTION(BlueprintCallable, Category="HOG|Attributes")
+	bool ApplyInitialAttributesFromDataTable();
+
+	/* Player는 PlayerState, Enemy는 자기 자신 등 ASC 위치 차이를 흡수 */
+	UFUNCTION(BlueprintPure, Category="HOG|Attributes")
+	UAbilitySystemComponent* GetCharacterAbilitySystemComponent() const;
 };

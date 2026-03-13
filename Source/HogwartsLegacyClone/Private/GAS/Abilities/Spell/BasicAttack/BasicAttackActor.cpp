@@ -126,7 +126,7 @@ void ABasicAttackActor::HandleHitActor(AActor* HitActor, const FHitResult& HitRe
 
 	if (SourceCharacter && HitCharacter)
 	{
-		if (UCombatComponent* CombatComp = SourceCharacter->GetCombatComponent())
+		if (UCombatComponent* CombatComp = HitCharacter->GetCombatComponent())
 		{
 			FDamageRequest DamageRequest;
 

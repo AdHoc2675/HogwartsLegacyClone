@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Component/CombatComponent.h"
 
 #include "AbilitySystemComponent.h"
@@ -10,10 +7,9 @@
 #include "HOGDebugHelper.h"
 #include "Core/HOG_GameplayTags.h"
 #include "GameplayEffect.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
 #include "GameplayEffectExtension.h"
-
-
 
 UCombatComponent::UCombatComponent()
 {
@@ -75,17 +71,43 @@ void UCombatComponent::InitializeCombatComponent()
 
 UAbilitySystemComponent* UCombatComponent::GetAbilitySystemComponent() const
 {
-	return AbilitySystemComponent.Get();
-}
+	if (AbilitySystemComponent.IsValid())
+	{
+		return AbilitySystemComponent.Get();
+	}
 
-const UHOGAttributeSet* UCombatComponent::GetAttributeSet() const
-{
-	if (!AbilitySystemComponent.IsValid())
+	AActor* MyOwner = GetOwner();
+	if (!MyOwner)
 	{
 		return nullptr;
 	}
 
-	return AbilitySystemComponent->GetSet<UHOGAttributeSet>();
+	UAbilitySystemComponent* FoundASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MyOwner);
+	if (FoundASC)
+	{
+		return FoundASC;
+	}
+
+	if (const APawn* OwnerPawn = Cast<APawn>(MyOwner))
+	{
+		if (APlayerState* PS = OwnerPawn->GetPlayerState())
+		{
+			return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PS);
+		}
+	}
+
+	return nullptr;
+}
+
+const UHOGAttributeSet* UCombatComponent::GetAttributeSet() const
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return nullptr;
+	}
+
+	return ASC->GetSet<UHOGAttributeSet>();
 }
 
 bool UCombatComponent::CanReceiveDamage() const
@@ -110,7 +132,7 @@ bool UCombatComponent::CanReceiveDamage() const
 		return false;
 	}
 
-	if (!AbilitySystemComponent.IsValid())
+	if (!GetAbilitySystemComponent())
 	{
 		return false;
 	}
@@ -195,38 +217,75 @@ bool UCombatComponent::ValidateDamageRequest(const FDamageRequest& InRequest) co
 {
 	if (!OwnerCharacter.IsValid())
 	{
+		DebugPrint(TEXT("[CombatComponent] ValidateDamageRequest failed | OwnerCharacter invalid"));
 		return false;
 	}
 
-	if (!AbilitySystemComponent.IsValid())
+	if (!GetAbilitySystemComponent())
 	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ValidateDamageRequest failed | ASC missing | Owner=%s"),
+			*GetNameSafe(OwnerCharacter.Get())
+		));
 		return false;
 	}
 
 	if (!InRequest.SourceActor)
 	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ValidateDamageRequest failed | SourceActor null | Owner=%s"),
+			*GetNameSafe(OwnerCharacter.Get())
+		));
 		return false;
 	}
 
 	if (!InRequest.TargetActor)
 	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ValidateDamageRequest failed | TargetActor null | Owner=%s | Source=%s"),
+			*GetNameSafe(OwnerCharacter.Get()),
+			*GetNameSafe(InRequest.SourceActor.Get())
+		));
 		return false;
 	}
 
 	if (InRequest.TargetActor != OwnerCharacter.Get())
 	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ValidateDamageRequest failed | Target mismatch | Owner=%s | RequestTarget=%s | Source=%s"),
+			*GetNameSafe(OwnerCharacter.Get()),
+			*GetNameSafe(InRequest.TargetActor.Get()),
+			*GetNameSafe(InRequest.SourceActor.Get())
+		));
 		return false;
 	}
 
 	if (InRequest.BaseDamage < 0.0f)
 	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ValidateDamageRequest failed | BaseDamage negative | Owner=%s | BaseDamage=%.2f"),
+			*GetNameSafe(OwnerCharacter.Get()),
+			InRequest.BaseDamage
+		));
 		return false;
 	}
 
 	if (!DefaultDamageEffectClass)
 	{
+		DebugPrint(FString::Printf(
+			TEXT("[CombatComponent] ValidateDamageRequest failed | DefaultDamageEffectClass null | Owner=%s"),
+			*GetNameSafe(OwnerCharacter.Get())
+		));
 		return false;
 	}
+
+	DebugPrint(FString::Printf(
+		TEXT("[CombatComponent] ValidateDamageRequest success | Owner=%s | Source=%s | Target=%s | BaseDamage=%.2f"),
+		*GetNameSafe(OwnerCharacter.Get()),
+		*GetNameSafe(InRequest.SourceActor.Get()),
+		*GetNameSafe(InRequest.TargetActor.Get()),
+		InRequest.BaseDamage
+	));
 
 	return true;
 }
@@ -260,12 +319,13 @@ FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(const FDamageR
 {
 	FGameplayEffectContextHandle ContextHandle;
 
-	if (!AbilitySystemComponent.IsValid())
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
 	{
 		return ContextHandle;
 	}
 
-	ContextHandle = AbilitySystemComponent->MakeEffectContext();
+	ContextHandle = ASC->MakeEffectContext();
 
 	AActor* InstigatorActor = InRequest.InstigatorActor.Get();
 	if (!InstigatorActor)
@@ -288,9 +348,41 @@ FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(const FDamageR
 	return ContextHandle;
 }
 
+float UCombatComponent::CalculateExpectedFinalDamage(const FDamageRequest& InRequest) const
+{
+	float SourceAttackPower = 0.0f;
+
+	if (AActor* SourceActor = InRequest.SourceActor.Get())
+	{
+		if (UAbilitySystemComponent* SourceASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SourceActor))
+		{
+			if (const UHOGAttributeSet* SourceAttributeSet = SourceASC->GetSet<UHOGAttributeSet>())
+			{
+				SourceAttackPower = SourceAttributeSet->GetAttackPower();
+			}
+		}
+		else if (const APawn* SourcePawn = Cast<APawn>(SourceActor))
+		{
+			if (APlayerState* SourcePS = SourcePawn->GetPlayerState())
+			{
+				if (UAbilitySystemComponent* SourceASCFromPS = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SourcePS))
+				{
+					if (const UHOGAttributeSet* SourceAttributeSet = SourceASCFromPS->GetSet<UHOGAttributeSet>())
+					{
+						SourceAttackPower = SourceAttributeSet->GetAttackPower();
+					}
+				}
+			}
+		}
+	}
+
+	return FMath::Max(InRequest.BaseDamage + SourceAttackPower, 0.0f);
+}
+
 bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamageResult& OutResult)
 {
-	if (!AbilitySystemComponent.IsValid())
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
 	{
 		return false;
 	}
@@ -300,9 +392,11 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 		return false;
 	}
 
+	const float ExpectedFinalDamage = CalculateExpectedFinalDamage(InRequest);
+
 	const FGameplayEffectContextHandle ContextHandle = BuildEffectContext(InRequest);
 	FGameplayEffectSpecHandle SpecHandle =
-		AbilitySystemComponent->MakeOutgoingSpec(DefaultDamageEffectClass, 1.0f, ContextHandle);
+		ASC->MakeOutgoingSpec(DefaultDamageEffectClass, 1.0f, ContextHandle);
 
 	if (!SpecHandle.IsValid() || !SpecHandle.Data.IsValid())
 	{
@@ -310,7 +404,7 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 		return false;
 	}
 
-	static const FGameplayTag DamageDataTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Damage"));
+	const FGameplayTag DamageDataTag = HOGGameplayTags::Data_Damage;
 
 	SpecHandle.Data->SetSetByCallerMagnitude(DamageDataTag, InRequest.BaseDamage);
 
@@ -319,23 +413,19 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 		SpecHandle.Data->AddDynamicAssetTag(InRequest.DamageTypeTag);
 	}
 
-	const FActiveGameplayEffectHandle ActiveHandle =
-		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-
-	if (!ActiveHandle.IsValid())
-	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | ApplyGameplayEffectSpecToSelf failed"));
-		return false;
-	}
+	// Instant GE는 유효한 ActiveHandle이 안 돌아올 수 있으므로
+	// Handle validity로 성공/실패를 판단하지 않는다.
+	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
 	OutResult.bWasApplied = true;
-	OutResult.FinalDamage = InRequest.BaseDamage;
+	OutResult.FinalDamage = ExpectedFinalDamage;
 
 	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] DamageApplied | Target=%s | Source=%s | BaseDamage=%.2f"),
+		TEXT("[CombatComponent] DamageApplied | Target=%s | Source=%s | BaseDamage=%.2f | FinalDamage=%.2f"),
 		*GetNameSafe(InRequest.TargetActor),
 		*GetNameSafe(InRequest.SourceActor),
-		InRequest.BaseDamage
+		InRequest.BaseDamage,
+		ExpectedFinalDamage
 	));
 
 	return true;
@@ -409,7 +499,7 @@ void UCombatComponent::DebugPrint(const FString& Message) const
 		return;
 	}
 
-	// Debug::Print(Message);
+	Debug::Print(Message);
 }
 
 void UCombatComponent::OpenProtegoParryWindow(float DurationSeconds)
@@ -466,12 +556,13 @@ bool UCombatComponent::HasOwnerGameplayTag(const FGameplayTag& Tag) const
 		return false;
 	}
 
-	if (!AbilitySystemComponent.IsValid())
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
 	{
 		return false;
 	}
 
-	return AbilitySystemComponent->HasMatchingGameplayTag(Tag);
+	return ASC->HasMatchingGameplayTag(Tag);
 }
 
 bool UCombatComponent::TryHandleProtegoDefense(const FDamageRequest& InRequest, FDamageResult& OutResult)

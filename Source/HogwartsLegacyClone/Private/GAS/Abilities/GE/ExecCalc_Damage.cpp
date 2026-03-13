@@ -1,12 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "GAS/Abilities/GE/ExecCalc_Damage.h"
 
 #include "GAS/Attributes/HOGAttributeSet.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectExtension.h"
+#include "Core/HOG_GameplayTags.h"
 #include "GameplayTagContainer.h"
+#include "HOGDebugHelper.h"
 
 struct FDamageStatics
 {
@@ -43,7 +42,7 @@ void UExecCalc_Damage::Execute_Implementation(
 	EvaluationParameters.SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	EvaluationParameters.TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
 
-	static const FGameplayTag DamageDataTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Damage"));
+	const FGameplayTag DamageDataTag = HOGGameplayTags::Data_Damage;
 
 	const float BaseDamage = Spec.GetSetByCallerMagnitude(DamageDataTag, false, 0.0f);
 
@@ -54,15 +53,18 @@ void UExecCalc_Damage::Execute_Implementation(
 		SourceAttackPower
 	);
 
-	// 1차 버전:
-	// 현재는 CombatComponent가 넘긴 BaseDamage만 그대로 사용.
-	// AttackPower는 캡처만 해두고 아직 계산에는 넣지 않음.
-	// 나중에 필요하면 여기서:
-	// FinalDamage = BaseDamage + SourceAttackPower;
-	const float FinalDamage = FMath::Max(BaseDamage, 0.0f);
+	const float FinalDamage = FMath::Max(BaseDamage + SourceAttackPower, 0.0f);
+
+	Debug::Print(FString::Printf(
+		TEXT("[ExecCalc_Damage] Execute | BaseDamage=%.2f | SourceAttackPower=%.2f | FinalDamage=%.2f"),
+		BaseDamage,
+		SourceAttackPower,
+		FinalDamage
+	), FColor::Orange);
 
 	if (FinalDamage <= 0.0f)
 	{
+		Debug::Print(TEXT("[ExecCalc_Damage] FinalDamage <= 0, return"), FColor::Red);
 		return;
 	}
 
@@ -73,4 +75,6 @@ void UExecCalc_Damage::Execute_Implementation(
 			-FinalDamage
 		)
 	);
+
+	Debug::Print(TEXT("[ExecCalc_Damage] Health modifier applied"), FColor::Green);
 }
