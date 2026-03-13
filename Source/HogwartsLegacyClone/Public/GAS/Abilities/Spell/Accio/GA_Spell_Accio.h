@@ -14,7 +14,7 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Accio : public UGA_SpellBase
 {
 	GENERATED_BODY()
-
+	
 public:
 	UGA_Spell_Accio();
 
@@ -34,12 +34,19 @@ protected:
 		bool bWasCancelled
 	) override;
 
+	// 토글 오프를 위해 입력 감지 함수 오버라이드
+	virtual void InputPressed(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
+	) override;
+
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	// 마법 시전 핵심 로직
+	// 마법 시전 핵심 로직 (대상을 성공적으로 당기기 시작하면 true 반환)
 	UFUNCTION(BlueprintCallable, Category = "HOG|Spell|Accio")
-	void FireAccio();
+	bool FireAccio();
 
 	// 타이머 루프: 지속적으로 끌어당기기 연산
 	void UpdatePulling();

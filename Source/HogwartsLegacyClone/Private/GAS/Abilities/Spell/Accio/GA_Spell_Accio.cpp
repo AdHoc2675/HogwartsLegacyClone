@@ -49,20 +49,40 @@ void UGA_Spell_Accio::ActivateAbility(
 				EndDelegate.BindUObject(this, &UGA_Spell_Accio::OnMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
 
-				FireAccio();
+				// 타겟이 없으면 즉시 어빌리티 종료
+				if (!FireAccio())
+				{
+					EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+				}
+				// 성공했다면 EndAbility를 부르지 않음 -> 어빌리티(마법)가 계속 켜져있음!
 				return;
 			}
 		}
 	}
 
-	FireAccio();
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+	if (!FireAccio())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+	}
 }
 
-void UGA_Spell_Accio::FireAccio()
+// 👉 [추가] 마법 시전 중 다시 Accio 키를 눌렀을 때의 (토글 오프) 로직
+void UGA_Spell_Accio::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
+
+	// 끌어당기고 있는 대상이 있다면 유저의 판단으로 강제 종료시킵니다.
+	if (IsValid(PulledTarget))
+	{
+		Debug::Print(TEXT("[Accio] Canceled by Toggle Input. Dropping Target."), FColor::Yellow);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+	}
+}
+
+bool UGA_Spell_Accio::FireAccio()
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
-	if (!Avatar) return;
+	if (!Avatar) return false;
 
 	FGameplayTagContainer TargetTags;
 	FVector AimPoint;
@@ -121,18 +141,22 @@ void UGA_Spell_Accio::FireAccio()
 
 		// 3. 타이머 등록 (0.02초, 50fps 속도로 지속해서 목표를 당긴다)
 		GetWorld()->GetTimerManager().SetTimer(PullTimerHandle, this, &UGA_Spell_Accio::UpdatePulling, 0.02f, true);
+		return true; // 성공
 	}
 	else
 	{
 		Debug::Print(TEXT("[Accio] No Target."), FColor::Yellow);
+		return false; // 실패
 	}
 }
 
 void UGA_Spell_Accio::UpdatePulling()
 {
+	// 👉 대상이 죽었거나 파괴되면 자동으로 어빌리티 종료
 	if (!IsValid(PulledTarget))
 	{
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -147,7 +171,7 @@ void UGA_Spell_Accio::UpdatePulling()
 
 	if (Distance <= StopDistance)
 	{
-		// 충분히 당겨졌으면 정지
+		// 유저 앞까지 왔을 땐 당기는 힘만 0으로 만들고 어빌리티는 유지(공중에 띄움)
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(PulledTarget))
@@ -198,7 +222,12 @@ void UGA_Spell_Accio::UpdatePulling()
 
 void UGA_Spell_Accio::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
+	// 👉 몽타주가 끝났어도 마법 대상이 있다면 종료하지 않음. 
+	// 도중에 맞아서 취소되거나 타겟이 사라졌을 때만 종료
+	if (bInterrupted || !IsValid(PulledTarget))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
+	}
 }
 
 void UGA_Spell_Accio::EndAbility(
