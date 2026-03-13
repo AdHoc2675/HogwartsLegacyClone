@@ -37,17 +37,7 @@ EBTNodeResult::Type UBTTask_ActivateAbility::ExecuteTask(UBehaviorTreeComponent&
 	if (!AbilitySystem.IsValid()) return EBTNodeResult::Failed;
 
 	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
-
-	// 공격 전 타겟 방향으로 회전
-	if (Blackboard && TargetActorKey.SelectedKeyName.IsValid())
-	{
-		AActor* Target = Cast<AActor>(Blackboard->GetValueAsObject(TargetActorKey.SelectedKeyName));
-		if (Target)
-		{
-			AIC->SetFocus(Target);
-		}
-	}
-
+	
 	// 태그를 직접 설정했으면 설정된 태그로 어빌리티 실행
 	ActiveAbilityTag = AbilityTag;
 
@@ -78,13 +68,7 @@ EBTNodeResult::Type UBTTask_ActivateAbility::ExecuteTask(UBehaviorTreeComponent&
 void UBTTask_ActivateAbility::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory,
                                              EBTNodeResult::Type TaskResult)
 {
-	// 포커스 해제
-	AAIController* AIC = OwnerComp.GetAIOwner();
-	if (AIC)
-	{
-		AIC->ClearFocus(EAIFocusPriority::Gameplay);
-	}
-
+	
 	if (AbilitySystem.IsValid())
 	{
 		AbilitySystem->OnAbilityEnded.Remove(AbilityEndedHandle);

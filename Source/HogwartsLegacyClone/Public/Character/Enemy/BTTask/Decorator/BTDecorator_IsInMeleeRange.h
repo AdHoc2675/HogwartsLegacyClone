@@ -23,6 +23,9 @@ public:
 	// UPROPERTY(EditAnywhere, Category = "Blackboard")
 	// FBlackboardKeySelector TargetActorKey;
 	
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	FGameplayTag DirectAttackTag;
+	
 	UPROPERTY(EditAnywhere, Category = "Blackboard")
 	FBlackboardKeySelector AttackTagKey;
 
