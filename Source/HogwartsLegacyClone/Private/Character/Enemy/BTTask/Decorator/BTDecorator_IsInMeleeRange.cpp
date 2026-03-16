@@ -54,7 +54,7 @@ bool UBTDecorator_IsInMeleeRange::CalculateRawConditionValue(UBehaviorTreeCompon
 	if (DirectAttackTag.IsValid())
 	{
 		AttackTag = DirectAttackTag.GetTagName();
-		UE_LOG(LogTemp, Warning, TEXT("Check Point : %s"), *AttackTag.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("Check Point : %s"), *AttackTag.ToString());
 	}
 	else
 	{

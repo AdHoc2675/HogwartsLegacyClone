@@ -587,7 +587,18 @@ void UCombatComponent::HandleDamageResult(const FDamageRequest& InRequest, FDama
 
 		HandleDeath();
 	}
-
+	// 데미지 적용이 되었고, 블록이 되지 않는 경우
+	else if (OutResult.bWasApplied && !OutResult.bWasBlocked)
+	{
+		UAbilitySystemComponent* TargetASC = GetAbilitySystemComponent();
+		if (TargetASC)
+		{
+			FGameplayTagContainer HitReactTag;
+			HitReactTag.AddTag(HOGGameplayTags::State_Hit);
+			TargetASC->TryActivateAbilitiesByTag(HitReactTag);
+		}
+	}
+	
 	OnDamageApplied.Broadcast(OutResult);
 }
 

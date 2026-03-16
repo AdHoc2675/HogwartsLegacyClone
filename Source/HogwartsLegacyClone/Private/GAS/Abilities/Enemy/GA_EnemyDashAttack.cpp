@@ -49,17 +49,6 @@ void UGA_EnemyDashAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	
 	FVector Direction = Character->GetActorForwardVector();
 	
-	// AAIController* AIC = Cast<AAIController>(Character->GetController());
-	// if (AIC)
-	// {
-	// 	AActor* Target = AIC->GetFocusActor();
-	// 	if (Target)
-	// 	{
-	// 		Direction = (Target->GetActorLocation() - Character->GetActorLocation()).GetSafeNormal2D();
-	// 		Character->SetActorRotation(Direction.Rotation());
-	// 	}
-	// }
-	
 	if (UWorld* World = Character->GetWorld())
 	{
 		APawn* PlayerPawn = World->GetFirstPlayerController()->GetPawn();
