@@ -22,8 +22,7 @@ bool UBTDecorator_GameplayTagCondition::CalculateRawConditionValue(UBehaviorTree
 {
 	if (!AbilityComponent.IsValid()) return false;
 
-	const bool bHasTag = AbilityComponent->HasMatchingGameplayTag(TagToCheck);
-	return IsInversed() ? !bHasTag : bHasTag;
+	return AbilityComponent->HasMatchingGameplayTag(TagToCheck);
 }
 
 FString UBTDecorator_GameplayTagCondition::GetStaticDescription() const
@@ -57,19 +56,4 @@ void UBTDecorator_GameplayTagCondition::OnBecomeRelevant(UBehaviorTreeComponent&
 				WeakBehaviourTree->RequestExecution(WeakThis.Get());
 			}
 		});
-	
-}
-
-void UBTDecorator_GameplayTagCondition::OnCeaseRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
-{
-	Super::OnCeaseRelevant(OwnerComp, NodeMemory);
-	
-	if (AbilityComponent.IsValid())
-	{
-		AbilityComponent->RegisterGameplayTagEvent(TagToCheck, EGameplayTagEventType::NewOrRemoved)
-			.Remove(TagChangedHandle);
-	}
-
-	TagChangedHandle.Reset();
-	AbilityComponent.Reset();
 }
