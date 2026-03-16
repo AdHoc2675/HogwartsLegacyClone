@@ -64,9 +64,13 @@ protected:
 	virtual void GiveStartupAbilities();
 	virtual void BindAttributeCallbacks();
 	
+	//팀태그 ->ASC 동기화
+	virtual void SyncTeamTagToAbilitySystem();
+	
 	// ===== GAS =====
 	UPROPERTY(VisibleAnywhere, Category = "GAS")
 	UAbilitySystemComponent* AbilitySystemComponent;
+	
 	UPROPERTY(VisibleAnywhere, Category = "GAS")
 	UHOGAttributeSet* AttributeSet;
 	

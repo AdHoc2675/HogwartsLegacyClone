@@ -129,11 +129,8 @@ bool UGA_SpellBase::DoesTargetMeetRequirements(AActor* Target) const
 	return true;
 }
 
-bool UGA_SpellBase::AcquireTargetFromLockOn(
-	AActor*& OutTarget,
-	FGameplayTagContainer& OutTargetTags,
-	FVector& OutAimPoint
-) const
+bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags,
+                                           FVector& OutAimPoint) const
 {
 	OutTarget = nullptr;
 	OutTargetTags.Reset();
@@ -142,13 +139,13 @@ bool UGA_SpellBase::AcquireTargetFromLockOn(
 	UDA_SpellDefinition* Def = GetSpellDefinitionOrWarn();
 	if (!Def)
 	{
-		GetCenterAimPoint(OutAimPoint, 2000.f);
+		BuildFallbackAimPoint(OutAimPoint, 2000.f);
 		return false;
 	}
 
 	if (!CurrentActorInfo)
 	{
-		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
@@ -156,49 +153,76 @@ bool UGA_SpellBase::AcquireTargetFromLockOn(
 	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
 	if (!PlayerCharacter)
 	{
-		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
 	ULockOnComponent* LockOn = PlayerCharacter->GetLockOnComponent();
 	if (!LockOn)
 	{
-		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
-	LockOn->MaxRange = Def->CastRange;
+	FLockOnTargetResult LockedResult;
+	const bool bHasLockedTarget = LockOn->TryGetLockedTargetResult(LockedResult);
 
-	FLockOnTargetResult Result;
-	const bool bFound = LockOn->FindBestTarget(Def->TargetRequiredTags, Result);
-
-	if (!bFound || !IsValid(Result.TargetActor))
+	if (!bHasLockedTarget || !IsValid(LockedResult.TargetActor))
 	{
-		if (!Result.AimPoint.IsNearlyZero())
-		{
-			OutAimPoint = Result.AimPoint;
-		}
-		else
-		{
-			GetCenterAimPoint(OutAimPoint, Def->CastRange);
-		}
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
-	if (!DoesTargetMeetRequirements(Result.TargetActor))
+	if (!DoesTargetMeetRequirements(LockedResult.TargetActor))
 	{
-		OutAimPoint = Result.TargetActor->GetActorLocation();
+		OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
+			? LockedResult.TargetActor->GetActorLocation()
+			: LockedResult.AimPoint;
 		return false;
 	}
 
-	OutTarget = Result.TargetActor;
-	OutTargetTags = Result.TargetTags;
-	OutAimPoint = Result.AimPoint.IsNearlyZero()
-		              ? Result.TargetActor->GetActorLocation()
-		              : Result.AimPoint;
+	OutTarget = LockedResult.TargetActor;
+	OutTargetTags = LockedResult.TargetTags;
+	OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
+		? LockedResult.TargetActor->GetActorLocation()
+		: LockedResult.AimPoint;
 
 	return true;
 }
+
+bool UGA_SpellBase::BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverride) const
+{
+	if (!CurrentActorInfo)
+	{
+		return false;
+	}
+
+	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
+	if (!Avatar)
+	{
+		return false;
+	}
+
+	APawn* Pawn = Cast<APawn>(Avatar);
+	if (!Pawn)
+	{
+		return false;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+	if (!PC || !PC->PlayerCameraManager)
+	{
+		return false;
+	}
+
+	const float UseRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
+	const FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
+	const FVector CamForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
+
+	OutAimPoint = CamLoc + (CamForward * UseRange);
+	return true;
+}
+
 
 void UGA_SpellBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
                                     const FGameplayAbilityActivationInfo ActivationInfo,
@@ -218,8 +242,6 @@ void UGA_SpellBase::EndAbility(const FGameplayAbilitySpecHandle Handle, const FG
                                const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
                                bool bWasCancelled)
 {
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-
 	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{
 		ASC->RemoveLooseGameplayTag(
@@ -329,38 +351,6 @@ bool UGA_SpellBase::CanCastAsSpecialFreeCast(FSpellCastCheckResult& OutCheckResu
 	return OutCheckResult.bCanCast;
 }
 
-bool UGA_SpellBase::GetCenterAimPoint(FVector& OutAimPoint, float RangeOverride) const
-{
-	if (!CurrentActorInfo)
-	{
-		return false;
-	}
-
-	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
-	if (!Avatar)
-	{
-		return false;
-	}
-
-	APawn* Pawn = Cast<APawn>(Avatar);
-	if (!Pawn)
-	{
-		return false;
-	}
-
-	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-	if (!PC || !PC->PlayerCameraManager)
-	{
-		return false;
-	}
-
-	const float UseRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
-	const FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
-	const FVector CamForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
-
-	OutAimPoint = CamLoc + (CamForward * UseRange);
-	return true;
-}
 
 bool UGA_SpellBase::IsTargetBlocked(AActor* Target, const FGameplayTagContainer& Blocked) const
 {

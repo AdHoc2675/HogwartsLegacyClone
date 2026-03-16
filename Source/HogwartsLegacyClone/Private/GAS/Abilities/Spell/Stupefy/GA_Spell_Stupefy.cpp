@@ -164,7 +164,7 @@ bool UGA_SpellStupefy::ResolveTargetForCast(
 	}
 
 	// 일반 시전 / fallback
-	return AcquireTargetFromLockOn(OutTarget, OutTargetTags, OutAimPoint);
+	return TryConsumeLockedTarget(OutTarget, OutTargetTags, OutAimPoint);
 }
 
 bool UGA_SpellStupefy::ApplyStupefyToTarget(
