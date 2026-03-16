@@ -46,7 +46,7 @@ void UGA_Spell_Accio::ActivateAbility(
 		UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
 		if (AnimInstance)
 		{
-			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.f);
+			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.5f);
 			if (Duration > 0.f)
 			{
 				FOnMontageEnded EndDelegate;
