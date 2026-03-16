@@ -43,7 +43,7 @@ void UGA_Spell_Leviosa::ActivateAbility(
 	FVector AimPoint;
 	AActor* AcquiredTarget = nullptr;
 
-	bool bHasTarget = AcquireTargetFromLockOn(AcquiredTarget, TargetTags, AimPoint);
+	bool bHasTarget = TryConsumeLockedTarget(AcquiredTarget, TargetTags, AimPoint);
 
 	// 락온된 적(Pawn)이 없다면, 시야 정방향(AimPoint)으로 트레이스를 날려 사물 탐지
 	if (!IsValid(AcquiredTarget) && Character)

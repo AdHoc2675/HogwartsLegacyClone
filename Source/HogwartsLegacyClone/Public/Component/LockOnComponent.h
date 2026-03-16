@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include  "GameplayTagContainer.h"
+#include "GameplayTagContainer.h"
 #include "LockOnComponent.generated.h"
 
 class UAbilitySystemComponent;
+class UPrimitiveComponent;
 
 USTRUCT(BlueprintType)
 struct FLockOnTargetResult
@@ -16,12 +17,12 @@ struct FLockOnTargetResult
 
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<AActor> TargetActor = nullptr;
-	
+
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayTagContainer TargetTags;
 
 	UPROPERTY(BlueprintReadOnly)
-	FVector AimPoint = FVector::ZeroVector; 
+	FVector AimPoint = FVector::ZeroVector;
 
 	UPROPERTY(BlueprintReadOnly)
 	float Distance = 0.f;
@@ -34,65 +35,172 @@ struct FLockOnTargetResult
 };
 
 
-
-
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class HOGWARTSLEGACYCLONE_API ULockOnComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
+public:
 	ULockOnComponent();
 
-	// RequiredTargetTags: 타겟이 반드시 가지고 있어야 하는 태그(ASC Owned Tags 기준)
-	// OutResult: 최종 타겟/태그/점수 등 결과
+protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+public:
+	virtual void TickComponent(
+		float DeltaTime,
+		ELevelTick TickType,
+		FActorComponentTickFunction* ThisTickFunction
+	) override;
+
+public:
+	// ===== 기존 API =====
+	// 외부에서 즉시 "최적 타겟 계산"이 필요할 때 사용 가능
 	UFUNCTION(BlueprintCallable, Category="HOG|LockOn")
 	bool FindBestTarget(
 		const FGameplayTagContainer& RequiredTargetTags,
 		FLockOnTargetResult& OutResult
 	) const;
 
-	// 타겟이 없을 때도 AimPoint는 필요해서 분리 제공(히트스캔 fallback에 사용)
+	// 타겟이 없을 때도 AimPoint는 필요해서 분리 제공(히트스캔 fallback용)
 	UFUNCTION(BlueprintCallable, Category="HOG|LockOn")
 	bool GetCenterAimPoint(FVector& OutAimPoint) const;
 
 public:
+	// ===== 현재 타겟 상태 API =====
+	UFUNCTION(BlueprintPure, Category="HOG|LockOn")
+	bool HasValidCurrentTarget() const;
+	
+	UFUNCTION(BlueprintCallable, Category="HOG|LockOn")
+	bool TryGetLockedTargetResult(FLockOnTargetResult& OutResult) const;
+
+	UFUNCTION(BlueprintPure, Category="HOG|LockOn")
+	AActor* GetCurrentTarget() const { return CurrentTargetActor.Get(); }
+
+	UFUNCTION(BlueprintPure, Category="HOG|LockOn")
+	const FLockOnTargetResult& GetCurrentTargetResult() const { return CurrentTargetResult; }
+
+	UFUNCTION(BlueprintCallable, Category="HOG|LockOn")
+	void ForceRefreshTarget();
+
+	UFUNCTION(BlueprintCallable, Category="HOG|LockOn")
+	void ClearCurrentTarget();
+
+public:
 	// ===== 튜닝 값 =====
-	// 탐색 반경
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Tuning")
-	float MaxRange = 2000.f;
+	float MaxRange = 4000.f;
 
-	// 시야 중심 허용 각도(도). 이 각도 밖은 후보에서 제외
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Tuning")
-	float MaxAngleDegrees = 12.f;
+	float MaxAngleDegrees = 30.f;
 
-	// 후보 점수 가중치
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Tuning")
 	float AngleWeight = 0.7f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Tuning")
 	float DistanceWeight = 0.3f;
 
-	// 라인오브사이트(LOS) 체크 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Tuning")
 	bool bRequireLineOfSight = true;
 
-	// Overlap 쿼리에서 제외할 오브젝트 타입(기본: Pawn만 찾는 방식으로 cpp에서 설정)
-	// 필요하면 확장
+public:
+	// ===== 실시간 갱신 =====
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Realtime")
+	bool bEnableRealtimeTargeting = true;
 
-	// 디버그 로그
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Realtime")
+	bool bRealtimeOnlyWhenLocallyControlled = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Realtime", meta=(ClampMin="0.01"))
+	float RealtimeUpdateInterval = 0.05f;
+
+public:
+	// ===== 후보 수집 =====
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Filter")
+	bool bIncludePawnTargets = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Filter")
+	bool bIncludeWorldDynamicTargets = true;
+
+	// 기본 후보 허용 태그
+	// 예: Team_Enemy, Team_Object
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Filter")
+	FGameplayTagContainer AllowedTargetTags;
+
+public:
+	// ===== 외곽선 =====
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Outline")
+	bool bUseTargetOutline = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Outline", meta=(ClampMin="0", ClampMax="255"))
+	int32 EnemyOutlineStencilValue = 111;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Outline", meta=(ClampMin="0", ClampMax="255"))
+	int32 ObjectOutlineStencilValue = 112;
+
+public:
+	// ===== 디버그 =====
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Debug")
 	bool bDebugPrint = false;
 
 private:
-	bool GetCameraView(FVector& OutCamLoc, FVector& OutCamForward) const;
+	bool ShouldRunRealtimeTargeting() const;
 
-	bool PassRequiredTags(AActor* Candidate, const FGameplayTagContainer& RequiredTargetTags, FGameplayTagContainer& OutCandidateTags) const;
+	bool GetCameraView(FVector& OutCamLoc, FVector& OutCamForward) const;
 
 	bool HasLineOfSight(const FVector& CamLoc, AActor* Candidate) const;
 
 	float ComputeScore(float AngleDeg, float Dist) const;
 
-		
+private:
+	// ===== 실시간 갱신 내부 =====
+	void RefreshCurrentTarget();
+
+	bool FindBestTargetInternal(
+		const FGameplayTagContainer& RequiredTargetTags,
+		FLockOnTargetResult& OutResult
+	) const;
+
+	void GatherCandidateActors(TArray<AActor*>& OutCandidates) const;
+
+	bool EvaluateCandidate(
+		AActor* Candidate,
+		const FVector& CamLoc,
+		const FVector& CamForward,
+		const FGameplayTagContainer& RequiredTargetTags,
+		FLockOnTargetResult& OutCandidateResult
+	) const;
+
+	bool IsTargetCandidate(
+		AActor* Candidate,
+		const FGameplayTagContainer& RequiredTargetTags,
+		FGameplayTagContainer& OutCandidateTags
+	) const;
+
+private:
+	// ===== 현재 상태 =====
+	void SetCurrentTarget(AActor* NewTarget, const FLockOnTargetResult& NewResult);
+
+	void ApplyTargetOutline(AActor* TargetActor, const FGameplayTagContainer& TargetTags, bool bEnable) const;
+
+	void ResolveTargetPrimitiveComponents(
+		AActor* TargetActor,
+		TArray<UPrimitiveComponent*>& OutComponents
+	) const;
+
+	int32 GetOutlineStencilValueForTarget(const FGameplayTagContainer& TargetTags) const;
+
+private:
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> CurrentTargetActor = nullptr;
+
+	UPROPERTY(Transient)
+	FLockOnTargetResult CurrentTargetResult;
+
+	UPROPERTY(Transient)
+	bool bHasValidTarget = false;
+
+	UPROPERTY(Transient)
+	float TimeSinceLastRefresh = 0.f;
 };

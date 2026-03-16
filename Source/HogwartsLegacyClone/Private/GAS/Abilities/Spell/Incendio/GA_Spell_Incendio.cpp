@@ -5,6 +5,7 @@
 #include "Data/DA_SpellDefinition.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
+#include "Engine/OverlapResult.h"
 
 #include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
@@ -95,7 +96,7 @@ void UGA_Spell_Incendio::FireIncendio()
 	FVector AimPoint;
 	AActor* Target = nullptr;
 
-	AcquireTargetFromLockOn(Target, TargetTags, AimPoint);
+	TryConsumeLockedTarget(Target, TargetTags, AimPoint);
 
 	FVector StartLoc = Avatar->GetActorLocation();
 	// 타겟이 있으면 타겟 위치, 없으면 카메라 에임 포인트

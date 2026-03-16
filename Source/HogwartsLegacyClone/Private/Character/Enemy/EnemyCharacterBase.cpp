@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "Character/Enemy/EnemyCharacterBase.h"
 
@@ -128,6 +126,9 @@ void AEnemyCharacterBase::InitializeAbilitySystem()
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 
+	// BaseCharacter의 TeamTag를 ASC Loose Tag로 동기화
+	SyncTeamTagToAbilitySystem();
+
 	if (AbilitySystemComponent->AbilityActorInfo.IsValid())
 	{
 		// Debug::Print(FString::Printf(
@@ -196,6 +197,19 @@ void AEnemyCharacterBase::BindAttributeCallbacks()
 	// 현재 체력이 변경되었을때 호출되는 콜백
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetHealthAttribute())
 	                      .AddUObject(this, &AEnemyCharacterBase::OnHealthChangedInternal);
+}
+
+void AEnemyCharacterBase::SyncTeamTagToAbilitySystem()
+{
+	if (!AbilitySystemComponent || !TeamTag.IsValid())
+	{
+		return;
+	}
+
+	if (!AbilitySystemComponent->HasMatchingGameplayTag(TeamTag))
+	{
+		AbilitySystemComponent->AddLooseGameplayTag(TeamTag);
+	}
 }
 
 // 각 Enemy가 체력이 변경될 시에 Specific한 로직 실행
