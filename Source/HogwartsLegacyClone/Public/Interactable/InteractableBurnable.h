@@ -17,9 +17,11 @@ public:
 
 public:
 	virtual bool CanInteract_Implementation(AActor* Interactor) override;
+	virtual bool CanReceiveInteractionTag_Implementation(AActor* Interactor, FGameplayTag InteractionTag) override;
 
 protected:
 	virtual void HandleInteract(AActor* Interactor) override;
+	virtual void HandleReceiveInteractionTag(AActor* Interactor, FGameplayTag InteractionTag) override;
 
 public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Interaction")

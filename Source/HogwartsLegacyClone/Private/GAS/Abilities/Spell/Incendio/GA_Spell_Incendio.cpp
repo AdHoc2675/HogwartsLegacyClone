@@ -1,6 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GAS/Abilities/Spell/Incendio/GA_Spell_Incendio.h"
+
 #include "HOGDebugHelper.h"
 #include "Data/DA_SpellDefinition.h"
 #include "Kismet/GameplayStatics.h"
@@ -12,7 +13,9 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Core/HOG_GameplayTags.h"
 #include "Interactable/InteractableInterface.h"
 
 UGA_Spell_Incendio::UGA_Spell_Incendio()
@@ -50,22 +53,26 @@ void UGA_Spell_Incendio::ActivateAbility(
 	}
 
 	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
-	if (AnimInstance)
+	if (!AnimInstance)
 	{
-		const float Duration = AnimInstance->Montage_Play(CastMontage, 1.f);
-		if (Duration > 0.f)
-		{
-			FOnMontageEnded EndDelegate;
-			EndDelegate.BindUObject(this, &UGA_Spell_Incendio::OnMontageEnded);
-			AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
+		FireIncendio();
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
 
-			// 지금은 몽타주 시작과 동시에 타격을 판정
-			FireIncendio();
-		}
-		else
-		{
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		}
+	const float Duration = AnimInstance->Montage_Play(CastMontage, 1.f);
+	if (Duration > 0.f)
+	{
+		FOnMontageEnded EndDelegate;
+		EndDelegate.BindUObject(this, &UGA_Spell_Incendio::OnMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
+
+		// 현재 구조 유지: 몽타주 시작과 동시에 판정
+		FireIncendio();
+	}
+	else
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 	}
 }
 
@@ -76,7 +83,11 @@ void UGA_Spell_Incendio::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted
 
 void UGA_Spell_Incendio::FireIncendio()
 {
-	if (!CurrentActorInfo || !CurrentActorInfo->AvatarActor.IsValid()) return;
+	if (!CurrentActorInfo || !CurrentActorInfo->AvatarActor.IsValid())
+	{
+		return;
+	}
+
 	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
 	UWorld* World = Avatar->GetWorld();
 	if (!World) return;
@@ -91,16 +102,32 @@ void UGA_Spell_Incendio::FireIncendio()
 		return;
 	}
 
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+	if (!SourceASC)
+	{
+		Debug::Print(TEXT("[Incendio] SourceASC is null."), FColor::Red);
+		return;
+	}
+
 	// 1. 락온 및 조준점 획득
 	FGameplayTagContainer TargetTags;
-	FVector AimPoint;
+	FVector AimPoint = FVector::ZeroVector;
 	AActor* Target = nullptr;
 
 	TryConsumeLockedTarget(Target, TargetTags, AimPoint);
 
-	FVector StartLoc = Avatar->GetActorLocation();
-	// 타겟이 있으면 타겟 위치, 없으면 카메라 에임 포인트
-	FVector TargetLoc = IsValid(Target) ? Target->GetActorLocation() : AimPoint;
+	const FVector StartLoc = Avatar->GetActorLocation();
+
+	// 타겟이 있으면 타겟 위치, 없으면 SpellBase fallback aim point 사용
+	FVector TargetLoc = IsValid(Target)
+		? Target->GetActorLocation()
+		: AimPoint;
+
+	// fallback도 실패해서 AimPoint가 비어 있으면 마지막 안전장치
+	if (TargetLoc.IsNearlyZero())
+	{
+		TargetLoc = StartLoc + (Avatar->GetActorForwardVector() * Range);
+	}
 
 	// 방향 벡터 계산 (VFX 회전용 및 최대 사거리 제한용)
 	FVector Direction = (TargetLoc - StartLoc).GetSafeNormal();
@@ -128,7 +155,7 @@ void UGA_Spell_Incendio::FireIncendio()
 	}
 
 	TArray<FOverlapResult> OverlapResults;
-	bool bHit = World->OverlapMultiByChannel(
+	const bool bHit = World->OverlapMultiByChannel(
 		OverlapResults,
 		ExplosionCenter,
 		FQuat::Identity,
@@ -152,17 +179,16 @@ void UGA_Spell_Incendio::FireIncendio()
 	// 디버그 드로우 (어떻게 판정되는지 '구' 형태로 시각화)
 	if (bDrawDebugLine)
 	{
-		FColor DebugColor = bHit ? FColor::Red : FColor::Green;
+		const FColor DebugColor = bHit ? FColor::Red : FColor::Green;
 		DrawDebugSphere(World, ExplosionCenter, AttackRadius, 32, DebugColor, false, 2.0f);
+		DrawDebugLine(World, StartLoc, ExplosionCenter, FColor::Orange, false, 2.0f, 0, 2.0f);
 	}
 
-	if (!bHit) {
+	if (!bHit)
+	{
 		Debug::Print(TEXT("[Incendio] No hit detected in explosion area."), FColor::Yellow);
 		return;
 	}
-
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC) return;
 
 	// 중복 타격 방지용 액터 세트
 	TSet<AActor*> HitActors;
@@ -177,15 +203,33 @@ void UGA_Spell_Incendio::FireIncendio()
 		// 타겟이 상호작용 가능한 객체라면 Interact 호출
 		if (TargetActor->Implements<UInteractableInterface>())
 		{
-			// IInteractableInterface에 정의된 함수명에 맞게 호출
-			IInteractableInterface::Execute_Interact(TargetActor, Avatar);
+			const FGameplayTag BurnInteractionTag = HOGGameplayTags::Interaction_Burn;
+
+			if (IInteractableInterface::Execute_CanReceiveInteractionTag(TargetActor, Avatar, BurnInteractionTag))
+			{
+				IInteractableInterface::Execute_ReceiveInteractionTag(TargetActor, Avatar, BurnInteractionTag);
+			}
 		}
 
 		// 태그 기반 방어막/면역 등 공통 타겟 유효성 검사
 		if (!DoesTargetMeetRequirements(TargetActor)) continue;
 
 		// 타겟의 ASC 가져와서 효과 적용
-		UAbilitySystemComponent* TargetASC = TargetActor->FindComponentByClass<UAbilitySystemComponent>();
+		UAbilitySystemComponent* TargetASC = nullptr;
+
+		if (TargetActor->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
+		{
+			if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(TargetActor))
+			{
+				TargetASC = ASI->GetAbilitySystemComponent();
+			}
+		}
+
+		if (!TargetASC)
+		{
+			TargetASC = TargetActor->FindComponentByClass<UAbilitySystemComponent>();
+		}
+
 		if (TargetASC)
 		{
 			// 즉발 데미지
@@ -194,7 +238,7 @@ void UGA_Spell_Incendio::FireIncendio()
 				FGameplayEffectSpecHandle InstantSpec = MakeOutgoingGameplayEffectSpec(InstantDamageEffectClass, 1.0f);
 				if (InstantSpec.IsValid())
 				{
-					ASC->ApplyGameplayEffectSpecToTarget(*InstantSpec.Data.Get(), TargetASC);
+					SourceASC->ApplyGameplayEffectSpecToTarget(*InstantSpec.Data.Get(), TargetASC);
 				}
 			}
 
@@ -204,7 +248,7 @@ void UGA_Spell_Incendio::FireIncendio()
 				FGameplayEffectSpecHandle DotSpec = MakeOutgoingGameplayEffectSpec(DotDamageEffectClass, 1.0f);
 				if (DotSpec.IsValid())
 				{
-					ASC->ApplyGameplayEffectSpecToTarget(*DotSpec.Data.Get(), TargetASC);
+					SourceASC->ApplyGameplayEffectSpecToTarget(*DotSpec.Data.Get(), TargetASC);
 				}
 			}
 
