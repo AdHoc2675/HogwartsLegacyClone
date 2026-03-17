@@ -252,8 +252,7 @@ bool UCombatComponent::ValidateDamageRequest(const FDamageRequest& InRequest) co
 	if (InRequest.TargetActor != OwnerCharacter.Get())
 	{
 		DebugPrint(FString::Printf(
-			TEXT(
-				"[CombatComponent] ValidateDamageRequest failed | Target mismatch | Owner=%s | RequestTarget=%s | Source=%s"),
+			TEXT("[CombatComponent] ValidateDamageRequest failed | Target mismatch | Owner=%s | RequestTarget=%s | Source=%s"),
 			*GetNameSafe(OwnerCharacter.Get()),
 			*GetNameSafe(InRequest.TargetActor.Get()),
 			*GetNameSafe(InRequest.SourceActor.Get())
@@ -336,7 +335,7 @@ FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(
 	{
 		InstigatorActor = InRequest.InstigatorActor.Get();
 	}
-	
+
 	ContextHandle.AddInstigator(InstigatorActor, InRequest.DamageCauser.Get());
 
 	if (InRequest.HitResult.bBlockingHit)
@@ -435,7 +434,7 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 		));
 		return false;
 	}
-	
+
 	if (SourceASC->AbilityActorInfo.IsValid())
 	{
 		DebugPrint(FString::Printf(
@@ -474,8 +473,7 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 	const UHOGAttributeSet* TargetAttributeSet = TargetASC->GetSet<UHOGAttributeSet>();
 
 	DebugPrint(FString::Printf(
-		TEXT(
-			"[CombatComponent] ApplyDamageEffect ASC Check | SourceActor=%s | SourceASC=%s | TargetOwner=%s | TargetASC=%s"),
+		TEXT("[CombatComponent] ApplyDamageEffect ASC Check | SourceActor=%s | SourceASC=%s | TargetOwner=%s | TargetASC=%s"),
 		*GetNameSafe(SourceActor),
 		*GetNameSafe(SourceASC->GetOwner()),
 		*GetNameSafe(InRequest.TargetActor.Get()),
@@ -514,10 +512,8 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 	}
 
 	const float ExpectedFinalDamage = CalculateExpectedFinalDamage(InRequest);
-
 	const FGameplayEffectContextHandle ContextHandle = BuildEffectContext(InRequest, SourceASC);
 
-	// 핵심:
 	// Spec은 공격자(Source) ASC에서 만들고,
 	// 적용은 피격자(Target) ASC에 한다.
 	FGameplayEffectSpecHandle SpecHandle =
@@ -537,7 +533,6 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 		SpecHandle.Data->AddDynamicAssetTag(InRequest.DamageTypeTag);
 	}
 
-	// 적용은 공격자 SourceASC가 TargetASC에게 수행
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 
 	OutResult.bWasApplied = true;
@@ -587,7 +582,6 @@ void UCombatComponent::HandleDamageResult(const FDamageRequest& InRequest, FDama
 
 		HandleDeath();
 	}
-	// 데미지 적용이 되었고, 블록이 되지 않는 경우
 	else if (OutResult.bWasApplied && !OutResult.bWasBlocked)
 	{
 		UAbilitySystemComponent* TargetASC = GetAbilitySystemComponent();
@@ -598,7 +592,7 @@ void UCombatComponent::HandleDamageResult(const FDamageRequest& InRequest, FDama
 			TargetASC->TryActivateAbilitiesByTag(HitReactTag);
 		}
 	}
-	
+
 	OnDamageApplied.Broadcast(OutResult);
 }
 
@@ -633,38 +627,44 @@ void UCombatComponent::DebugPrint(const FString& Message) const
 		return;
 	}
 
-	 Debug::Print(Message);
+	Debug::Print(Message);
 }
 
-void UCombatComponent::OpenProtegoParryWindow(float DurationSeconds)
+void UCombatComponent::OpenProtegoDefenseWindow(float ParryDurationSeconds, float BlockDurationSeconds)
 {
-	if (DurationSeconds <= 0.0f)
-	{
-		ProtegoParryWindowEndTime = -1.0f;
-		return;
-	}
-
 	UWorld* World = GetWorld();
 	if (!World)
 	{
 		ProtegoParryWindowEndTime = -1.0f;
+		ProtegoBlockWindowEndTime = -1.0f;
 		return;
 	}
 
-	ProtegoParryWindowEndTime = World->GetTimeSeconds() + DurationSeconds;
+	const float CurrentTime = World->GetTimeSeconds();
+
+	ProtegoParryWindowEndTime = (ParryDurationSeconds > 0.0f)
+		? (CurrentTime + ParryDurationSeconds)
+		: -1.0f;
+
+	ProtegoBlockWindowEndTime = (BlockDurationSeconds > 0.0f)
+		? (CurrentTime + BlockDurationSeconds)
+		: -1.0f;
 
 	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] OpenProtegoParryWindow | EndTime=%.2f | Duration=%.2f"),
+		TEXT("[CombatComponent] OpenProtegoDefenseWindow | ParryEnd=%.2f | BlockEnd=%.2f | ParryDuration=%.2f | BlockDuration=%.2f"),
 		ProtegoParryWindowEndTime,
-		DurationSeconds
+		ProtegoBlockWindowEndTime,
+		ParryDurationSeconds,
+		BlockDurationSeconds
 	));
 }
 
-void UCombatComponent::ClearProtegoParryWindow()
+void UCombatComponent::ClearProtegoDefenseWindow()
 {
 	ProtegoParryWindowEndTime = -1.0f;
+	ProtegoBlockWindowEndTime = -1.0f;
 
-	DebugPrint(TEXT("[CombatComponent] ClearProtegoParryWindow"));
+	DebugPrint(TEXT("[CombatComponent] ClearProtegoDefenseWindow"));
 }
 
 bool UCombatComponent::IsProtegoParryWindowActive() const
@@ -681,6 +681,22 @@ bool UCombatComponent::IsProtegoParryWindowActive() const
 	}
 
 	return World->GetTimeSeconds() <= ProtegoParryWindowEndTime;
+}
+
+bool UCombatComponent::IsProtegoBlockWindowActive() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	if (ProtegoBlockWindowEndTime < 0.0f)
+	{
+		return false;
+	}
+
+	return World->GetTimeSeconds() <= ProtegoBlockWindowEndTime;
 }
 
 bool UCombatComponent::HasOwnerGameplayTag(const FGameplayTag& Tag) const
@@ -701,8 +717,13 @@ bool UCombatComponent::HasOwnerGameplayTag(const FGameplayTag& Tag) const
 
 bool UCombatComponent::TryHandleProtegoDefense(const FDamageRequest& InRequest, FDamageResult& OutResult)
 {
-	// Protego 활성 상태가 아니면 여기서 처리 안 함
 	if (!HasOwnerGameplayTag(HOGGameplayTags::State_Spell_Protego_Active))
+	{
+		return false;
+	}
+
+	// 블록 시간도 끝났으면 Protego 방어 처리 안 함
+	if (!IsProtegoBlockWindowActive())
 	{
 		return false;
 	}
@@ -718,7 +739,7 @@ bool UCombatComponent::TryHandleProtegoDefense(const FDamageRequest& InRequest, 
 
 		if (bConsumeParryWindowOnSuccess)
 		{
-			ClearProtegoParryWindow();
+			ProtegoParryWindowEndTime = -1.0f;
 		}
 
 		AActor* AttackerActor = InRequest.SourceActor.Get();

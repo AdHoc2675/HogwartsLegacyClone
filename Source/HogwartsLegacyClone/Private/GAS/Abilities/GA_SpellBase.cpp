@@ -286,11 +286,14 @@ void UGA_SpellBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	if (ShouldApplyCastingActiveTag())
 	{
-		ASC->AddLooseGameplayTag(
-			FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
-		);
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->AddLooseGameplayTag(
+				FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
+			);
+		}
 	}
 }
 
@@ -298,11 +301,14 @@ void UGA_SpellBase::EndAbility(const FGameplayAbilitySpecHandle Handle, const FG
                                const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
                                bool bWasCancelled)
 {
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	if (ShouldApplyCastingActiveTag())
 	{
-		ASC->RemoveLooseGameplayTag(
-			FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
-		);
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->RemoveLooseGameplayTag(
+				FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
+			);
+		}
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
@@ -454,4 +460,9 @@ bool UGA_SpellBase::HasAllRequiredTags(AActor* Target, const FGameplayTagContain
 	}
 
 	return false;
+}
+
+bool UGA_SpellBase::ShouldApplyCastingActiveTag() const
+{
+	return true;
 }

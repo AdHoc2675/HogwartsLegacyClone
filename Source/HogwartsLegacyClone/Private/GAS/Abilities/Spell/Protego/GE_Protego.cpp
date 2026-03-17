@@ -12,7 +12,7 @@ UGE_Protego::UGE_Protego()
 	DurationPolicy = EGameplayEffectDurationType::HasDuration;
 
 	// 기본 지속시간
-	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(3.f));
+	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(1.f));
 
 	// Protego 활성 상태 태그 부여
 	UTargetTagsGameplayEffectComponent* TargetTagsComponent =
