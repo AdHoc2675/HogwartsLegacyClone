@@ -18,6 +18,8 @@
 #include "CollisionQueryParams.h"
 #include "CollisionShape.h"
 
+#include "HOGDebugHelper.h"
+
 ULockOnComponent::ULockOnComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -204,6 +206,10 @@ void ULockOnComponent::ClearCurrentTarget()
 	{
 		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, false);
 	}
+	else
+	{
+		Debug::Print(TEXT("[LockOn] ClearCurrentTarget | PrevTarget=None"));
+	}
 
 	CurrentTargetActor = nullptr;
 	CurrentTargetResult = FLockOnTargetResult();
@@ -212,12 +218,17 @@ void ULockOnComponent::ClearCurrentTarget()
 
 void ULockOnComponent::SetCurrentTarget(AActor* NewTarget, const FLockOnTargetResult& NewResult)
 {
-	if (CurrentTargetActor.Get() == NewTarget)
+	const AActor* PrevTarget = CurrentTargetActor.Get();
+
+	if (PrevTarget == NewTarget)
 	{
 		CurrentTargetResult = NewResult;
 		bHasValidTarget = (NewTarget != nullptr);
+
+
 		return;
 	}
+
 
 	if (CurrentTargetActor.Get() != nullptr)
 	{
@@ -244,6 +255,7 @@ void ULockOnComponent::RefreshCurrentTarget()
 		ClearCurrentTarget();
 		return;
 	}
+
 
 	SetCurrentTarget(NewResult.TargetActor, NewResult);
 }
@@ -339,6 +351,9 @@ void ULockOnComponent::GatherCandidateActors(TArray<AActor*>& OutCandidates) con
 	{
 		ObjParams.AddObjectTypesToQuery(ECC_WorldDynamic);
 	}
+
+	// 물리 오브젝트(PhysicsActor 프로필 등)도 락온 후보에 포함
+	ObjParams.AddObjectTypesToQuery(ECC_PhysicsBody);
 
 	if (ObjParams.IsValid() == false)
 	{
@@ -525,6 +540,7 @@ void ULockOnComponent::ApplyTargetOutline(
 
 	TArray<UPrimitiveComponent*> TargetComponents;
 	ResolveTargetPrimitiveComponents(TargetActor, TargetComponents);
+
 
 	if (TargetComponents.Num() == 0)
 	{

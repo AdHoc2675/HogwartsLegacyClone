@@ -4,7 +4,6 @@
 #include "AbilitySystemGlobals.h"
 #include "GAS/Attributes/HOGAttributeSet.h"
 #include "Character/BaseCharacter.h"
-#include "HOGDebugHelper.h"
 #include "Core/HOG_GameplayTags.h"
 #include "GameplayEffect.h"
 #include "GameFramework/Pawn.h"
@@ -28,17 +27,12 @@ void UCombatComponent::InitializeCombatComponent()
 	AActor* MyOwner = GetOwner();
 	if (!MyOwner)
 	{
-		DebugPrint(TEXT("[CombatComponent] Initialize failed | Owner is null"));
 		return;
 	}
 
 	OwnerCharacter = Cast<ABaseCharacter>(MyOwner);
 	if (!OwnerCharacter.IsValid())
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] Initialize failed | Owner is not ABaseCharacter | Owner=%s"),
-			*GetNameSafe(MyOwner)
-		));
 		return;
 	}
 
@@ -61,12 +55,6 @@ void UCombatComponent::InitializeCombatComponent()
 	}
 
 	AbilitySystemComponent = FoundASC;
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] Initialize | Owner=%s | ASC=%s"),
-		*GetNameSafe(OwnerCharacter.Get()),
-		*GetNameSafe(AbilitySystemComponent.Get())
-	));
 }
 
 UAbilitySystemComponent* UCombatComponent::GetAbilitySystemComponent() const
@@ -185,13 +173,11 @@ FDamageResult UCombatComponent::ApplyDamageRequest(const FDamageRequest& InReque
 
 	if (!ValidateDamageRequest(InRequest))
 	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageRequest failed | ValidateDamageRequest returned false"));
 		return Result;
 	}
 
 	if (ShouldIgnoreDamage(InRequest))
 	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageRequest ignored | ShouldIgnoreDamage returned true"));
 		return Result;
 	}
 
@@ -204,7 +190,6 @@ FDamageResult UCombatComponent::ApplyDamageRequest(const FDamageRequest& InReque
 
 	if (!ApplyDamageEffect(InRequest, Result))
 	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageRequest failed | ApplyDamageEffect returned false"));
 		return Result;
 	}
 
@@ -217,75 +202,38 @@ bool UCombatComponent::ValidateDamageRequest(const FDamageRequest& InRequest) co
 {
 	if (!OwnerCharacter.IsValid())
 	{
-		DebugPrint(TEXT("[CombatComponent] ValidateDamageRequest failed | OwnerCharacter invalid"));
 		return false;
 	}
 
 	if (!GetAbilitySystemComponent())
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ValidateDamageRequest failed | ASC missing | Owner=%s"),
-			*GetNameSafe(OwnerCharacter.Get())
-		));
 		return false;
 	}
 
 	if (!InRequest.SourceActor)
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ValidateDamageRequest failed | SourceActor null | Owner=%s"),
-			*GetNameSafe(OwnerCharacter.Get())
-		));
 		return false;
 	}
 
 	if (!InRequest.TargetActor)
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ValidateDamageRequest failed | TargetActor null | Owner=%s | Source=%s"),
-			*GetNameSafe(OwnerCharacter.Get()),
-			*GetNameSafe(InRequest.SourceActor.Get())
-		));
 		return false;
 	}
 
 	if (InRequest.TargetActor != OwnerCharacter.Get())
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ValidateDamageRequest failed | Target mismatch | Owner=%s | RequestTarget=%s | Source=%s"),
-			*GetNameSafe(OwnerCharacter.Get()),
-			*GetNameSafe(InRequest.TargetActor.Get()),
-			*GetNameSafe(InRequest.SourceActor.Get())
-		));
 		return false;
 	}
 
 	if (InRequest.BaseDamage < 0.0f)
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ValidateDamageRequest failed | BaseDamage negative | Owner=%s | BaseDamage=%.2f"),
-			*GetNameSafe(OwnerCharacter.Get()),
-			InRequest.BaseDamage
-		));
 		return false;
 	}
 
 	if (!DefaultDamageEffectClass)
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ValidateDamageRequest failed | DefaultDamageEffectClass null | Owner=%s"),
-			*GetNameSafe(OwnerCharacter.Get())
-		));
 		return false;
 	}
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] ValidateDamageRequest success | Owner=%s | Source=%s | Target=%s | BaseDamage=%.2f"),
-		*GetNameSafe(OwnerCharacter.Get()),
-		*GetNameSafe(InRequest.SourceActor.Get()),
-		*GetNameSafe(InRequest.TargetActor.Get()),
-		InRequest.BaseDamage
-	));
 
 	return true;
 }
@@ -324,7 +272,6 @@ FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(
 
 	if (!EffectSourceASC)
 	{
-		DebugPrint(TEXT("[CombatComponent] BuildEffectContext failed | EffectSourceASC is null"));
 		return ContextHandle;
 	}
 
@@ -347,13 +294,6 @@ FGameplayEffectContextHandle UCombatComponent::BuildEffectContext(
 	{
 		ContextHandle.AddSourceObject(InRequest.DamageCauser.Get());
 	}
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] BuildEffectContext | SourceASCOwner=%s | Instigator=%s | Causer=%s"),
-		*GetNameSafe(EffectSourceASC->GetOwner()),
-		*GetNameSafe(InstigatorActor),
-		*GetNameSafe(InRequest.DamageCauser.Get())
-	));
 
 	return ContextHandle;
 }
@@ -395,20 +335,17 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 	UAbilitySystemComponent* TargetASC = GetAbilitySystemComponent();
 	if (!TargetASC)
 	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | TargetASC is null"));
 		return false;
 	}
 
 	if (!DefaultDamageEffectClass)
 	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | DefaultDamageEffectClass is null"));
 		return false;
 	}
 
 	AActor* SourceActor = InRequest.SourceActor.Get();
 	if (!SourceActor)
 	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | SourceActor is null"));
 		return false;
 	}
 
@@ -428,87 +365,7 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 
 	if (!SourceASC)
 	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ApplyDamageEffect failed | SourceASC is null | Source=%s"),
-			*GetNameSafe(SourceActor)
-		));
 		return false;
-	}
-
-	if (SourceASC->AbilityActorInfo.IsValid())
-	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] SourceASC ActorInfo | ASC=%s | Owner=%s | Avatar=%s"),
-			*GetNameSafe(SourceASC->GetOwner()),
-			*GetNameSafe(SourceASC->AbilityActorInfo->OwnerActor.Get()),
-			*GetNameSafe(SourceASC->AbilityActorInfo->AvatarActor.Get())
-		));
-	}
-	else
-	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] SourceASC ActorInfo INVALID | ASC=%s"),
-			*GetNameSafe(SourceASC->GetOwner())
-		));
-	}
-
-	if (TargetASC->AbilityActorInfo.IsValid())
-	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] TargetASC ActorInfo | ASC=%s | Owner=%s | Avatar=%s"),
-			*GetNameSafe(TargetASC->GetOwner()),
-			*GetNameSafe(TargetASC->AbilityActorInfo->OwnerActor.Get()),
-			*GetNameSafe(TargetASC->AbilityActorInfo->AvatarActor.Get())
-		));
-	}
-	else
-	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] TargetASC ActorInfo INVALID | ASC=%s"),
-			*GetNameSafe(TargetASC->GetOwner())
-		));
-	}
-
-	const UHOGAttributeSet* SourceAttributeSet = SourceASC->GetSet<UHOGAttributeSet>();
-	const UHOGAttributeSet* TargetAttributeSet = TargetASC->GetSet<UHOGAttributeSet>();
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] ApplyDamageEffect ASC Check | SourceActor=%s | SourceASC=%s | TargetOwner=%s | TargetASC=%s"),
-		*GetNameSafe(SourceActor),
-		*GetNameSafe(SourceASC->GetOwner()),
-		*GetNameSafe(InRequest.TargetActor.Get()),
-		*GetNameSafe(TargetASC->GetOwner())
-	));
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] ApplyDamageEffect AttributeSet Check | SourceAttr=%s | TargetAttr=%s"),
-		SourceAttributeSet ? TEXT("Valid") : TEXT("Null"),
-		TargetAttributeSet ? TEXT("Valid") : TEXT("Null")
-	));
-
-	if (SourceAttributeSet)
-	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ApplyDamageEffect Source AttackPower = %.2f"),
-			SourceAttributeSet->GetAttackPower()
-		));
-	}
-	else
-	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect SourceAttributeSet is null"));
-	}
-
-	if (TargetAttributeSet)
-	{
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] ApplyDamageEffect Target Health = %.2f | MaxHealth = %.2f"),
-			TargetAttributeSet->GetHealth(),
-			TargetAttributeSet->GetMaxHealth()
-		));
-	}
-	else
-	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect TargetAttributeSet is null"));
 	}
 
 	const float ExpectedFinalDamage = CalculateExpectedFinalDamage(InRequest);
@@ -521,7 +378,6 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 
 	if (!SpecHandle.IsValid() || !SpecHandle.Data.IsValid())
 	{
-		DebugPrint(TEXT("[CombatComponent] ApplyDamageEffect failed | SpecHandle invalid"));
 		return false;
 	}
 
@@ -537,14 +393,6 @@ bool UCombatComponent::ApplyDamageEffect(const FDamageRequest& InRequest, FDamag
 
 	OutResult.bWasApplied = true;
 	OutResult.FinalDamage = ExpectedFinalDamage;
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] DamageApplied | Target=%s | Source=%s | BaseDamage=%.2f | FinalDamage=%.2f"),
-		*GetNameSafe(InRequest.TargetActor),
-		*GetNameSafe(InRequest.SourceActor),
-		InRequest.BaseDamage,
-		ExpectedFinalDamage
-	));
 
 	return true;
 }
@@ -570,7 +418,6 @@ void UCombatComponent::HandleDamageResult(const FDamageRequest& InRequest, FDama
 	const UHOGAttributeSet* CurrentAttributeSet = GetAttributeSet();
 	if (!CurrentAttributeSet)
 	{
-		DebugPrint(TEXT("[CombatComponent] HandleDamageResult warning | AttributeSet is null"));
 		OnDamageApplied.Broadcast(OutResult);
 		return;
 	}
@@ -610,11 +457,6 @@ void UCombatComponent::HandleDeath()
 		return;
 	}
 
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] HandleDeath | Owner=%s"),
-		*GetNameSafe(OwnerCharacter.Get())
-	));
-
 	bIsDead = true;
 	OwnerCharacter->Die();
 	OnDeath.Broadcast();
@@ -622,12 +464,6 @@ void UCombatComponent::HandleDeath()
 
 void UCombatComponent::DebugPrint(const FString& Message) const
 {
-	if (!bEnableDebug)
-	{
-		return;
-	}
-
-	Debug::Print(Message);
 }
 
 void UCombatComponent::OpenProtegoDefenseWindow(float ParryDurationSeconds, float BlockDurationSeconds)
@@ -649,22 +485,12 @@ void UCombatComponent::OpenProtegoDefenseWindow(float ParryDurationSeconds, floa
 	ProtegoBlockWindowEndTime = (BlockDurationSeconds > 0.0f)
 		? (CurrentTime + BlockDurationSeconds)
 		: -1.0f;
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] OpenProtegoDefenseWindow | ParryEnd=%.2f | BlockEnd=%.2f | ParryDuration=%.2f | BlockDuration=%.2f"),
-		ProtegoParryWindowEndTime,
-		ProtegoBlockWindowEndTime,
-		ParryDurationSeconds,
-		BlockDurationSeconds
-	));
 }
 
 void UCombatComponent::ClearProtegoDefenseWindow()
 {
 	ProtegoParryWindowEndTime = -1.0f;
 	ProtegoBlockWindowEndTime = -1.0f;
-
-	DebugPrint(TEXT("[CombatComponent] ClearProtegoDefenseWindow"));
 }
 
 bool UCombatComponent::IsProtegoParryWindowActive() const
@@ -744,12 +570,6 @@ bool UCombatComponent::TryHandleProtegoDefense(const FDamageRequest& InRequest, 
 
 		AActor* AttackerActor = InRequest.SourceActor.Get();
 
-		DebugPrint(FString::Printf(
-			TEXT("[CombatComponent] Protego Parry Success | Target=%s | Attacker=%s"),
-			*GetNameSafe(InRequest.TargetActor),
-			*GetNameSafe(AttackerActor)
-		));
-
 		OnParrySuccess.Broadcast(AttackerActor);
 		return true;
 	}
@@ -760,12 +580,6 @@ bool UCombatComponent::TryHandleProtegoDefense(const FDamageRequest& InRequest, 
 	OutResult.bWasParried = false;
 	OutResult.bKilledTarget = false;
 	OutResult.FinalDamage = 0.0f;
-
-	DebugPrint(FString::Printf(
-		TEXT("[CombatComponent] Protego Block | Target=%s | Source=%s"),
-		*GetNameSafe(InRequest.TargetActor),
-		*GetNameSafe(InRequest.SourceActor)
-	));
 
 	return true;
 }
