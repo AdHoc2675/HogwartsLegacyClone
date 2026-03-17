@@ -1,15 +1,26 @@
 #include "GAS/Abilities/Spell/Protego/GA_Spell_Protego.h"
 
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
+
 #include "Component/CombatComponent.h"
+
 #include "GAS/Abilities/Spell/Protego/GE_Protego.h"
 #include "GAS/Abilities/Spell/Protego/ProtegoActor.h"
 #include "GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.h"
+
 #include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerState.h"
+#include "Core/HOG_GameplayTags.h"
+
 #include "Character/BaseCharacter.h"
 #include "GameFramework/HOG_GameState.h"
 #include "Engine/World.h"
 #include "HOGDebugHelper.h"
+
+#include "TimerManager.h"
+
 
 UGA_Spell_Protego::UGA_Spell_Protego()
 {
@@ -135,13 +146,8 @@ void UGA_Spell_Protego::ActivateAbility(
 	CachedCombatComponent = GetOwnerCombatComponent();
 	if (CachedCombatComponent)
 	{
-		CachedCombatComponent->OpenProtegoParryWindow(ParryWindowSeconds);
+		CachedCombatComponent->OpenProtegoDefenseWindow(ParryWindowSeconds, BlockWindowSeconds);
 		BindCombatDelegates();
-
-		// Debug::Print(
-		// 	FString::Printf(TEXT("[GA_Spell_Protego] Parry Window Opened | Duration=%.2f"), ParryWindowSeconds),
-		// 	FColor::Cyan
-		// );
 	}
 	else
 	{
@@ -151,7 +157,22 @@ void UGA_Spell_Protego::ActivateAbility(
 	// 4) 일반 시전 성공 통지 -> 쿨타임 시작
 	NotifySpellCastSucceeded(ESpellCastContext::Normal);
 
-	// 현재는 수동 종료 전까지 유지
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ProtegoLifetimeTimerHandle);
+		World->GetTimerManager().SetTimer(
+			ProtegoLifetimeTimerHandle,
+			[this]()
+			{
+				if (IsActive())
+				{
+					EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+				}
+			},
+			BlockWindowSeconds,
+			false
+		);
+	}
 }
 
 void UGA_Spell_Protego::EndAbility(
@@ -163,9 +184,14 @@ void UGA_Spell_Protego::EndAbility(
 {
 	UnbindCombatDelegates();
 
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ProtegoLifetimeTimerHandle);
+	}
+
 	if (CachedCombatComponent)
 	{
-		CachedCombatComponent->ClearProtegoParryWindow();
+		CachedCombatComponent->ClearProtegoDefenseWindow();
 		CachedCombatComponent = nullptr;
 	}
 
@@ -215,21 +241,33 @@ bool UGA_Spell_Protego::TryTriggerCounterStupefy(AActor* AttackerActor)
 {
 	if (!IsValid(AttackerActor))
 	{
-		// Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | AttackerActor invalid"), FColor::Red);
-		// return false;
+		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | AttackerActor invalid"), FColor::Red);
+		return false;
 	}
 
 	if (!CounterStupefyAbilityClass)
 	{
-		// Debug::Print(TEXT("[GA_Spell_Protego] CounterStupefyAbilityClass is null"), FColor::Red);
-		// return false;
+		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | CounterStupefyAbilityClass is null"), FColor::Red);
+		return false;
+	}
+
+	if (!CanTriggerCounterStupefyFromAttacker(AttackerActor))
+	{
+		Debug::Print(
+			FString::Printf(
+				TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy skipped | Attacker is not enemy-like | Attacker=%s"),
+				*GetNameSafe(AttackerActor)
+			),
+			FColor::Yellow
+		);
+		return false;
 	}
 
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	if (!ASC)
 	{
-		// Debug::Print(TEXT("[GA_Spell_Protego] ASC missing"), FColor::Red);
-		// return false;
+		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | ASC missing"), FColor::Red);
+		return false;
 	}
 
 	FGameplayAbilitySpec* FoundSpec = nullptr;
@@ -250,14 +288,14 @@ bool UGA_Spell_Protego::TryTriggerCounterStupefy(AActor* AttackerActor)
 
 	if (!FoundSpec)
 	{
-		// Debug::Print(TEXT("[GA_Spell_Protego] Counter Stupefy spec not found on ASC"), FColor::Red);
-		// return false;
+		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | Counter Stupefy spec not found on ASC"), FColor::Red);
+		return false;
 	}
 
 	UGA_SpellStupefy* StupefyInstance = Cast<UGA_SpellStupefy>(FoundSpec->GetPrimaryInstance());
 	if (!StupefyInstance)
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] Stupefy primary instance missing"), FColor::Red);
+		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | Stupefy primary instance missing"), FColor::Red);
 		return false;
 	}
 
@@ -266,7 +304,11 @@ bool UGA_Spell_Protego::TryTriggerCounterStupefy(AActor* AttackerActor)
 	const bool bActivated = ASC->TryActivateAbility(FoundSpec->Handle);
 
 	Debug::Print(
-		FString::Printf(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy | Activated=%d"), bActivated ? 1 : 0),
+		FString::Printf(
+			TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy | Attacker=%s | Activated=%d"),
+			*GetNameSafe(AttackerActor),
+			bActivated ? 1 : 0
+		),
 		bActivated ? FColor::Green : FColor::Red
 	);
 
@@ -292,4 +334,60 @@ void UGA_Spell_Protego::UnbindCombatDelegates()
 	}
 
 	CachedCombatComponent->OnParrySuccess.RemoveDynamic(this, &UGA_Spell_Protego::HandleParrySuccess);
+}
+
+bool UGA_Spell_Protego::CanTriggerCounterStupefyFromAttacker(AActor* AttackerActor) const
+{
+	UAbilitySystemComponent* AttackerASC = ResolveAbilitySystemComponentFromActor(AttackerActor);
+	if (!AttackerASC)
+	{
+		Debug::Print(TEXT("[GA_Spell_Protego] CanTriggerCounterStupefyFromAttacker failed | AttackerASC missing"), FColor::Red);
+		return false;
+	}
+
+	FGameplayTagContainer OwnedTags;
+	AttackerASC->GetOwnedGameplayTags(OwnedTags);
+
+	const bool bHasEnemyTeamTag = OwnedTags.HasTag(HOGGameplayTags::Team_Enemy);
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[GA_Spell_Protego] CounterTagCheck | Attacker=%s | HasTeamEnemy=%d | Tags=%s"),
+			*GetNameSafe(AttackerActor),
+			bHasEnemyTeamTag ? 1 : 0,
+			*OwnedTags.ToStringSimple()
+		),
+		bHasEnemyTeamTag ? FColor::Green : FColor::Yellow
+	);
+
+	return bHasEnemyTeamTag;
+}
+
+UAbilitySystemComponent* UGA_Spell_Protego::ResolveAbilitySystemComponentFromActor(AActor* InActor) const
+{
+	if (!InActor)
+	{
+		return nullptr;
+	}
+
+	UAbilitySystemComponent* FoundASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(InActor);
+	if (FoundASC)
+	{
+		return FoundASC;
+	}
+
+	if (const APawn* Pawn = Cast<APawn>(InActor))
+	{
+		if (APlayerState* PS = Pawn->GetPlayerState())
+		{
+			return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PS);
+		}
+	}
+
+	return nullptr;
+}
+
+bool UGA_Spell_Protego::ShouldApplyCastingActiveTag() const
+{
+	return false;
 }

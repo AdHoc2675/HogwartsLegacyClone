@@ -38,6 +38,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat|Protego")
 	float ProtegoParryWindowEndTime = -1.0f;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat|Protego")
+	float ProtegoBlockWindowEndTime = -1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Protego")
 	bool bConsumeParryWindowOnSuccess = true;
@@ -74,6 +77,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="Combat|Event")
 	FOnDeathSignature OnDeath;
+	
+	UPROPERTY(BlueprintAssignable, Category="Combat|Event")
+	FOnParrySuccessSignature OnParrySuccess;
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Combat")
@@ -93,13 +99,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Combat")
 	bool IsFriendlyTo(AActor* OtherActor) const;
-
-public:
+	
 	UFUNCTION(BlueprintCallable, Category="Combat")
 	FDamageResult ApplyDamageRequest(const FDamageRequest& InRequest);
 
-	UPROPERTY(BlueprintAssignable, Category="Combat|Event")
-	FOnParrySuccessSignature OnParrySuccess;
+	
 
 protected:
 	bool ValidateDamageRequest(const FDamageRequest& InRequest) const;
@@ -121,13 +125,16 @@ protected:
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Combat|Protego")
-	void OpenProtegoParryWindow(float DurationSeconds);
+	void OpenProtegoDefenseWindow(float ParryDurationSeconds, float BlockDurationSeconds);
 
 	UFUNCTION(BlueprintCallable, Category="Combat|Protego")
-	void ClearProtegoParryWindow();
+	void ClearProtegoDefenseWindow();
 
 	UFUNCTION(BlueprintPure, Category="Combat|Protego")
 	bool IsProtegoParryWindowActive() const;
+	
+	UFUNCTION(BlueprintPure, Category="Combat|Protego")
+	bool IsProtegoBlockWindowActive() const;
 
 protected:
 	bool HasOwnerGameplayTag(const FGameplayTag& Tag) const;

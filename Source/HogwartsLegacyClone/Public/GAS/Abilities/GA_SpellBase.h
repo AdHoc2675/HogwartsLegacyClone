@@ -164,4 +164,7 @@ protected:
 	bool IsTargetBlocked(AActor* Target, const FGameplayTagContainer& Blocked) const;
 	bool HasAllRequiredTags(AActor* Target, const FGameplayTagContainer& Required) const;
 	
+	
+protected:
+	virtual bool ShouldApplyCastingActiveTag() const;
 };

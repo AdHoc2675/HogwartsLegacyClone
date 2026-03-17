@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GAS/Abilities/GA_SpellBase.h"
 #include "GameplayEffectTypes.h"
+#include "GameplayTagContainer.h"
 #include "GA_Spell_Protego.generated.h"
 
 class UGE_Protego;
@@ -68,6 +69,10 @@ protected:
 	/** Protego 활성 직후 패링 판정 시간 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Parry", meta=(ClampMin="0.01"))
 	float ParryWindowSeconds = 0.30f;
+	
+	/** Protego 활성 직후 Block 판정 시간 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Timing", meta=(ClampMin="0.01"))
+	float BlockWindowSeconds = 1.00f;
 
 	/** 스폰된 Protego Actor 참조 */
 	UPROPERTY()
@@ -79,4 +84,13 @@ protected:
 	/** 바인딩된 CombatComponent 캐시 */
 	UPROPERTY(Transient)
 	TObjectPtr<UCombatComponent> CachedCombatComponent;
+	
+	bool CanTriggerCounterStupefyFromAttacker(AActor* AttackerActor) const;
+	
+	UAbilitySystemComponent* ResolveAbilitySystemComponentFromActor(AActor* InActor) const;
+	
+	FTimerHandle ProtegoLifetimeTimerHandle;
+	
+protected:
+	virtual bool ShouldApplyCastingActiveTag() const override;
 };

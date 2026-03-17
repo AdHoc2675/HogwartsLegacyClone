@@ -23,10 +23,22 @@ FSpellCastRequest UGA_SpellStupefy::BuildSpellCastRequest(ESpellCastContext Cast
 	if (CastContext == ESpellCastContext::ParryCounter)
 	{
 		Request.bForceIgnoreCooldownCheck = true;
-		Request.bForceStartCooldown = true;
+		Request.bForceStartCooldown = false;
 	}
 
 	return Request;
+}
+
+bool UGA_SpellStupefy::CheckCooldown(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (PendingCastContext==ESpellCastContext::ParryCounter)
+	{
+		Debug::Print(TEXT("[GA_Spell_Stupefy] CheckCooldown bypassed for ParryCounter"));
+		return true;
+	}
+	
+	return Super::CheckCooldown(Handle, ActorInfo, OptionalRelevantTags);
 }
 
 void UGA_SpellStupefy::ActivateAbility(
@@ -47,13 +59,14 @@ void UGA_SpellStupefy::ActivateAbility(
 	);
 
 	const ESpellCastContext CastContext = ResolveCastContextAndConsume();
+	AActor* ForcedTargetSnapshot = PendingForcedTarget;
 	const FSpellCastRequest CastRequest = BuildSpellCastRequest(CastContext);
 
 	Debug::Print(
 		FString::Printf(
 			TEXT("[GA_Spell_Stupefy] CastContext=%d | ForcedTarget=%s | IgnoreCooldown=%d | ForceStartCooldown=%d"),
 			static_cast<int32>(CastContext),
-			*GetNameSafe(PendingForcedTarget),
+			*GetNameSafe(ForcedTargetSnapshot),
 			CastRequest.bForceIgnoreCooldownCheck ? 1 : 0,
 			CastRequest.bForceStartCooldown ? 1 : 0
 		)
@@ -158,6 +171,7 @@ void UGA_SpellStupefy::PrepareCastContext(
 
 ESpellCastContext UGA_SpellStupefy::ResolveCastContextAndConsume()
 {
+	const ESpellCastContext  ResolvedContext = PendingCastContext;
 	return PendingCastContext;
 }
 
