@@ -118,7 +118,7 @@ protected:
 	 * 를 채워서 반환
 	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
-	FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const;
+	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const;
 
 	/**
 	 * 시전 가능 여부 검사

@@ -112,4 +112,7 @@ protected:
 	 */
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> PendingForcedTarget = nullptr;
+	
+protected:
+	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const override;
 };

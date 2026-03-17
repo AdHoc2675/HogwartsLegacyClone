@@ -25,6 +25,7 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Dead, "State.Dead")
 	UE_DEFINE_GAMEPLAY_TAG(State_Hit, "State.Hit")
 	UE_DEFINE_GAMEPLAY_TAG(State_Attacking, "State.Attacking")
+	UE_DEFINE_GAMEPLAY_TAG(State_Stunned, "State.Stunned")
 
 	//Enemy Ability 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack, "Ability.Enemy.MeleeAttack")
