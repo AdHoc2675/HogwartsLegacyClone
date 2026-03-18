@@ -139,23 +139,102 @@ void UGA_Spell_Incendio::FireIncendio()
 	const bool bLockedTargetUsed = TryConsumeLockedTarget(LockedTarget, TargetTags, AimPoint);
 
 	const FVector AvatarLoc = Avatar->GetActorLocation();
-
-	FVector TargetLoc = IsValid(LockedTarget)
-		                    ? LockedTarget->GetActorLocation()
-		                    : AimPoint;
-
+	const FVector AvatarForward = Avatar->GetActorForwardVector().GetSafeNormal();
 	const float ConeRange = (ConeRangeOverride > 0.f) ? ConeRangeOverride : Range;
 
-	if (TargetLoc.IsNearlyZero())
-	{
-		TargetLoc = AvatarLoc + (Avatar->GetActorForwardVector() * ConeRange);
-		Debug::Print(TEXT("[Incendio] TargetLoc fallback to ForwardVector"));
-	}
+	FVector ConeForward = AvatarForward;
 
-	FVector ConeForward = (TargetLoc - AvatarLoc).GetSafeNormal();
-	if (ConeForward.IsNearlyZero())
+	//락온 대상이 있으면  대상을 그대로 사용
+	if (bLockedTargetUsed && IsValid(LockedTarget))
 	{
-		ConeForward = Avatar->GetActorForwardVector();
+		const FVector TargetLoc = LockedTarget->GetActorLocation();
+		ConeForward = (TargetLoc - AvatarLoc).GetSafeNormal();
+
+		if (ConeForward.IsNearlyZero())
+		{
+			ConeForward = AvatarForward;
+		}
+		
+		Debug::Print(
+			FString::Printf(
+				TEXT("[Incendio] LockedTarget Aim | Target=%s | TargetLoc=%s | ConeForward=%s"),
+				*GetNameSafe(LockedTarget),
+				*TargetLoc.ToString(),
+				*ConeForward.ToString()
+			)
+		);	
+		
+	}
+	
+	// 1-B) 락온 대상이 없으면: 카메라 CenterAim 기준 방향 사용
+	else
+	{
+		FVector FallbackForward = FVector::ZeroVector;
+
+		APawn* Pawn = Cast<APawn>(Avatar);
+		if (Pawn)
+		{
+			APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+			if (PC && PC->PlayerCameraManager)
+			{
+				FallbackForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
+
+				Debug::Print(
+					FString::Printf(
+						TEXT("[Incendio] NoLock CameraForward | Forward=%s"),
+						*FallbackForward.ToString()
+					)
+				);
+			}
+		}
+
+		// 카메라 Forward를 못 가져왔으면 AimPoint 참고
+		if (FallbackForward.IsNearlyZero() && !AimPoint.IsNearlyZero())
+		{
+			FallbackForward = (AimPoint - AvatarLoc).GetSafeNormal();
+
+			Debug::Print(
+				FString::Printf(
+					TEXT("[Incendio] NoLock AimPointFallback | AimPoint=%s | Forward=%s"),
+						*AimPoint.ToString(),
+						*FallbackForward.ToString()
+				)
+			);
+		}
+
+		// 여전히 실패하면 캐릭터 Forward
+		if (FallbackForward.IsNearlyZero())
+		{
+			FallbackForward = AvatarForward;
+			Debug::Print(TEXT("[Incendio] NoLock FinalFallback -> AvatarForward"));
+		}
+
+		// 핵심:
+		// 카메라가 바닥을 보고 있어도 Incendio는 "전방으로 퍼지는" 느낌을 유지해야 하므로
+		// 아래 방향 성분은 제거한다.
+		if (FallbackForward.Z < 0.f)
+		{
+			FallbackForward.Z = 0.f;
+		}
+
+		// XY 기준으로 다시 정규화
+		FallbackForward = FVector(FallbackForward.X, FallbackForward.Y, 0.f).GetSafeNormal();
+
+		// 정규화 실패 시 캐릭터 전방 사용
+		if (FallbackForward.IsNearlyZero())
+		{
+			FallbackForward = AvatarForward;
+		}
+
+		ConeForward = FallbackForward;
+
+		Debug::Print(
+			FString::Printf(
+				TEXT("[Incendio] NoLock FinalForward | AimPoint=%s | ConeForward=%s"),
+				*AimPoint.ToString(),
+				*ConeForward.ToString()
+			)
+		);
 	}
 
 
