@@ -50,6 +50,20 @@ protected:
 	// 화염 범위 (반경). 사거리(길이)는 Definition의 CastRange를 사용
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Trace")
 	float AttackRadius = 150.f;
+	
+	//원뿔시작 위치 (캐릭으로 부터 얼마나 떨어져서 나갈지) 
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Cone")
+	float ConeStartOffset = 100.f;
+	
+	//원뿔 각도 
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Cone")
+	float ConeHalfAngleDeg = 40.f;
+	
+	//원뿔거리는 DA에서 CastRange 수정이지만 여기서 처리. 만약 이 값이 0 이면 DA 값을 사용한다.
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Cone")
+	float ConeRangeOverride = 0.f;
+	
+	
 
 	// 타격 대상 콜리전 채널
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Trace")
