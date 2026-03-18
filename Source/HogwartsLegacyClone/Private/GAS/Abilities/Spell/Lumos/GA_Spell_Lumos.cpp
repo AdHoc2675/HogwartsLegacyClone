@@ -74,20 +74,24 @@ void UGA_Spell_Lumos::ActivateAbility(
 		OnStartMontageEnded(nullptr, false);
 	}
 
-	// 2. PlayerCharacter에서 지팡이(WandMesh)를 찾아 빛 부착
+	// 2. 광원 생성 (지팡이 대신 캐릭터 루트 컴포넌트에 부착 후 우측 상단으로 오프셋 조절)
 	if (PlayerCharacter)
 	{
-		UStaticMeshComponent* WandMesh = Cast<UStaticMeshComponent>(PlayerCharacter->GetDefaultSubobjectByName(TEXT("WandMesh")));
-
-		if (WandMesh)
+		// 지팡이에 붙이지 않고 플레이어의 캡슐이나 매시에 부착
+		UCapsuleComponent* PlayerCapsule = PlayerCharacter->GetCapsuleComponent();
+		
+		if (PlayerCapsule)
 		{
-			FName AttachSocketName = TEXT("TipSocket");
-
+			// 광원 생성
 			SpawnedLight = NewObject<UPointLightComponent>(PlayerCharacter);
 			if (SpawnedLight)
 			{
 				SpawnedLight->RegisterComponent();
-				SpawnedLight->AttachToComponent(WandMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocketName);
+				// 캡슐에 부착. (회전할 때 광원이 같이 돌게끔)
+				SpawnedLight->AttachToComponent(PlayerCapsule, FAttachmentTransformRules::KeepRelativeTransform);
+
+				// ⭐ 캐릭터 중심(루트) 기준으로 "약간 우측(Y), 약간 전방/위(Z)"에 위치하도록 설정
+				SpawnedLight->SetRelativeLocation(FVector(0.f, 60.f, 180.f));
 
 				SpawnedLight->SetLightColor(LightColor);
 				SpawnedLight->SetIntensity(LightIntensity);
@@ -95,11 +99,20 @@ void UGA_Spell_Lumos::ActivateAbility(
 				SpawnedLight->SetCastShadows(true);
 			}
 
+			// 파티클 (지팡이 끝이 아니라 광원과 같은 위치에 띄울 것인지, 
+			// 아니면 VFX는 지팡이 끝에 두고 빛만 위에 띄울 것인지 선택 가능)
+			
+			// 현재는 광원과 동일한 공중(우측 상단) 위치에 VFX도 스폰
 			if (LumosVFX)
 			{
 				SpawnedVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(
-					LumosVFX, WandMesh, AttachSocketName,
-					FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::SnapToTarget, true 
+					LumosVFX,
+					PlayerCapsule,
+					NAME_None, // 소켓 사용안함
+					FVector(0.f, 60.f, 180.f), // 광원과 동일한 오프셋 위치
+					FRotator::ZeroRotator,
+					EAttachLocation::KeepRelativeOffset,
+					true 
 				);
 			}
 		}
