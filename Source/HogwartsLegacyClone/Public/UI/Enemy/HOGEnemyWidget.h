@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "HOGEnemyHUDBase.h"
 #include "Blueprint/UserWidget.h"
-#include "EnemyWidget.generated.h"
+#include "HOGEnemyWidget.generated.h"
 
 class UHpWidget;
 class UCharacterInfoWidget;
@@ -12,13 +13,13 @@ class UCharacterInfoWidget;
  * 
  */
 UCLASS()
-class HOGWARTSLEGACYCLONE_API UEnemyWidget : public UUserWidget
+class HOGWARTSLEGACYCLONE_API UHOGEnemyWidget : public UHOGEnemyHUDBase
 {
 public:
 	GENERATED_BODY()
 	
-	void UpdateWidget(FText& Name, float HpRatio);
-	void UpdateWidget(FText& Name, float NewHp, float MaxHp);
+	virtual void SetEnemyHp(float CurHp, float MaxHp) override;
+	virtual void SetEnemyName(const FName& Name) override;
 	
 protected:
 	UPROPERTY(meta = (BindWidget))

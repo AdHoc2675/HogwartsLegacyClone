@@ -3,9 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/NoExportTypes.h"
+#include "GameplayTagContainer.h"
+#include "AbilitySystemComponent.h"
+
 #include "HOG_WidgetController.generated.h"
 
+class ULockOnComponent;
+class UHOGEnemyHUDBase;
+class UHOGPlayerHUDBase;
+class APlayerCharacterBase;
+class AHOG_PlayerController;
+class USpellComponent;
+class AHOG_PlayerState;
 /**
  * 
  */
@@ -13,5 +22,66 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API UHOG_WidgetController : public UObject
 {
 	GENERATED_BODY()
+
+public:
+	void Init(AHOG_PlayerController* InPlayerController, APlayerCharacterBase* InPlayerCharacter, TSubclassOf<UHOGPlayerHUDBase> InPlayerHUDClass, TSubclassOf<UHOGEnemyHUDBase> InEnemyHUDClass);
+	void UnlockSpellSlot(FGameplayTag SpellID);
+	void Shutdown();
 	
+private:
+	void CreatePlayerWidget(AHOG_PlayerController* InPlayerController);
+	
+	// ===== Player =====
+	AHOG_PlayerState* GetPlayerState(APlayerCharacterBase* PlayerCharacter) const;
+	
+	void BindSpellComponent(AHOG_PlayerState* PlayerCharacter);
+	void UnBindSpellComponent();
+	
+	void BindPlayerHP(AHOG_PlayerState* PlayerCharacter);
+	void UnbindPlayerHP();
+	void OnPlayerHpChanged(const FOnAttributeChangeData& Data);
+	
+	UFUNCTION()
+	void OnSpellCooldownStarted(FGameplayTag SpellID, float CooldownSeconds);
+	UFUNCTION()
+	void OnSpellCooldownEnded(FGameplayTag SpellID);
+	
+	UPROPERTY()
+	UHOGPlayerHUDBase* PlayerHUD;
+	
+	UPROPERTY()
+	USpellComponent* SpellComponent;
+	
+	UPROPERTY()
+	TSubclassOf<UHOGPlayerHUDBase> PlayerHUDClass;
+	
+	UPROPERTY()
+	UAbilitySystemComponent* PlayerASC;
+	
+	FDelegateHandle PlayerHPDelegateHandle;
+	
+	// ===== Enemy =====
+	void CreateEnemyWidget(AHOG_PlayerController* InPlayerController);
+	
+	void BindLockOnComponent(APlayerCharacterBase* PlayerCharacter);
+	void UnBindLockOnComponent();
+	void HandleLockOn(AActor* Target);
+	void HandleLockOnReleased(AActor* Target);
+	void BindEnemyASC(UAbilitySystemComponent* TargetASC);
+	void ClearEnemyBinding();
+	void OnEnemyHpChanged(const FOnAttributeChangeData& Data);
+	
+	UPROPERTY()
+	UHOGEnemyHUDBase* EnemyHUD;
+	 
+	UPROPERTY()
+	UAbilitySystemComponent* BoundEnemyASC;
+	
+	UPROPERTY()
+	ULockOnComponent* LockOnComponent;
+	
+	UPROPERTY()
+	TSubclassOf<UHOGEnemyHUDBase> EnemyHUDClass;
+	
+	FDelegateHandle EnemyHPDelegateHandle;
 };
