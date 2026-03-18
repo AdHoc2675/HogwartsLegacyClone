@@ -83,8 +83,11 @@ public:
 	bool DoesTargetMeetRequirements(AActor* Target) const;
 
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Targeting")
-	bool AcquireTargetFromLockOn(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags, FVector& OutAimPoint) const;
-
+	bool TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags, FVector& OutAimPoint) const;
+	
+	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Targeting")
+	bool BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverride = -1.f) const;
+	
 protected:
 	virtual void ActivateAbility(
 		const FGameplayAbilitySpecHandle Handle,
@@ -115,7 +118,7 @@ protected:
 	 * 를 채워서 반환
 	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
-	FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const;
+	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const;
 
 	/**
 	 * 시전 가능 여부 검사
@@ -160,5 +163,8 @@ protected:
 protected:
 	bool IsTargetBlocked(AActor* Target, const FGameplayTagContainer& Blocked) const;
 	bool HasAllRequiredTags(AActor* Target, const FGameplayTagContainer& Required) const;
-	bool GetCenterAimPoint(FVector& OutAimPoint, float RangeOverride = -1.f) const;
+	
+	
+protected:
+	virtual bool ShouldApplyCastingActiveTag() const;
 };

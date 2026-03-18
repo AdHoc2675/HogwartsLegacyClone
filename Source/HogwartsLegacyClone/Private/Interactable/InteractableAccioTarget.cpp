@@ -1,43 +1,22 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿#include "Interactable/InteractableAccioTarget.h"
 
-
-#include "Interactable/InteractableAccioTarget.h"
 #include "Components/StaticMeshComponent.h"
-#include "AbilitySystemComponent.h"
-#include "Core/HOG_GameplayTags.h"
 
 AInteractableAccioTarget::AInteractableAccioTarget()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
 	BaseMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BaseMesh"));
-	RootComponent = BaseMesh;
-    
-    // 타겟은 고정되어 움직이지 않음
+	BaseMesh->SetupAttachment(SceneRoot);
+
+	// 타겟은 고정 오브젝트
 	BaseMesh->SetSimulatePhysics(false);
-	
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 }
 
-void AInteractableAccioTarget::BeginPlay()
+void AInteractableAccioTarget::HandleInteract(AActor* Interactor)
 {
-	Super::BeginPlay();
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Team_Object);
-		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
-	}
-}
+	Super::HandleInteract(Interactor);
 
-bool AInteractableAccioTarget::CanInteract_Implementation(AActor* Interactor)
-{
-	return true;
+	// 고정 타겟 자체는 별도 상호작용 처리 없음
+	// Accio 스펠 로직 또는 외부 시스템에서 직접 사용
 }
-
-void AInteractableAccioTarget::Interact_Implementation(AActor* Interactor)
-{
-	if (!IInteractableInterface::Execute_CanInteract(this, Interactor)) return;
-    // 고정 타겟
-}
-

@@ -124,7 +124,7 @@ void UGA_MeleeAttack::OnMontageCancelled()
 
 void UGA_MeleeAttack::OnWeaponHit(FGameplayEventData Payload)
 {
-	// Debug::Print(TEXT("[GA_MeleeAttack] OnWeaponHit called"), FColor::Orange);
+	Debug::Print(TEXT("[GA_MeleeAttack] OnWeaponHit called"), FColor::Orange);
 
 	// 맞은 대상 꺼냄(플레이어)
 	AActor* TargetActor = const_cast<AActor*>(Payload.Target.Get());

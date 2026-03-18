@@ -129,11 +129,8 @@ bool UGA_SpellBase::DoesTargetMeetRequirements(AActor* Target) const
 	return true;
 }
 
-bool UGA_SpellBase::AcquireTargetFromLockOn(
-	AActor*& OutTarget,
-	FGameplayTagContainer& OutTargetTags,
-	FVector& OutAimPoint
-) const
+bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags,
+                                           FVector& OutAimPoint) const
 {
 	OutTarget = nullptr;
 	OutTargetTags.Reset();
@@ -142,13 +139,23 @@ bool UGA_SpellBase::AcquireTargetFromLockOn(
 	UDA_SpellDefinition* Def = GetSpellDefinitionOrWarn();
 	if (!Def)
 	{
-		GetCenterAimPoint(OutAimPoint, 2000.f);
+		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | SpellDefinition Missing"));
+		BuildFallbackAimPoint(OutAimPoint, 2000.f);
 		return false;
 	}
 
+	Debug::Print(
+		FString::Printf(
+			TEXT("[GA_SpellBase] TryConsumeLockedTarget | SpellID=%s | CastRange=%.2f"),
+			*SpellID.ToString(),
+			Def->CastRange
+		)
+	);
+
 	if (!CurrentActorInfo)
 	{
-		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | CurrentActorInfo Missing"));
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
@@ -156,49 +163,122 @@ bool UGA_SpellBase::AcquireTargetFromLockOn(
 	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
 	if (!PlayerCharacter)
 	{
-		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		Debug::Print(
+			FString::Printf(
+				TEXT("[GA_SpellBase] TryConsumeLockedTarget | PlayerCharacter Cast Failed | Avatar=%s"),
+				*GetNameSafe(Avatar)
+			)
+		);
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
 	ULockOnComponent* LockOn = PlayerCharacter->GetLockOnComponent();
 	if (!LockOn)
 	{
-		GetCenterAimPoint(OutAimPoint, Def->CastRange);
+		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | LockOnComponent Missing"));
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
-	LockOn->MaxRange = Def->CastRange;
+	FLockOnTargetResult LockedResult;
+	const bool bHasLockedTarget = LockOn->TryGetLockedTargetResult(LockedResult);
 
-	FLockOnTargetResult Result;
-	const bool bFound = LockOn->FindBestTarget(Def->TargetRequiredTags, Result);
+	Debug::Print(
+		FString::Printf(
+			TEXT("[GA_SpellBase] TryConsumeLockedTarget | HasLockedTarget=%d | LockedTarget=%s"),
+			bHasLockedTarget ? 1 : 0,
+			*GetNameSafe(LockedResult.TargetActor)
+		)
+	);
 
-	if (!bFound || !IsValid(Result.TargetActor))
+	if (!bHasLockedTarget || !IsValid(LockedResult.TargetActor))
 	{
-		if (!Result.AimPoint.IsNearlyZero())
-		{
-			OutAimPoint = Result.AimPoint;
-		}
-		else
-		{
-			GetCenterAimPoint(OutAimPoint, Def->CastRange);
-		}
+		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | No Valid Locked Target"));
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
-	if (!DoesTargetMeetRequirements(Result.TargetActor))
+	Debug::Print(
+		FString::Printf(
+			TEXT("[GA_SpellBase] TryConsumeLockedTarget | LockedTargetTags=%s"),
+			*LockedResult.TargetTags.ToStringSimple()
+		)
+	);
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[GA_SpellBase] TryConsumeLockedTarget | RequiredTags=%s | BlockedTags=%s"),
+			*Def->TargetRequiredTags.ToStringSimple(),
+			*Def->TargetBlockedTags.ToStringSimple()
+		)
+	);
+
+	if (!DoesTargetMeetRequirements(LockedResult.TargetActor))
 	{
-		OutAimPoint = Result.TargetActor->GetActorLocation();
+		Debug::Print(
+			FString::Printf(
+				TEXT("[GA_SpellBase] TryConsumeLockedTarget | Target Requirement Failed | Target=%s"),
+				*GetNameSafe(LockedResult.TargetActor)
+			)
+		);
+
+		OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
+			? LockedResult.TargetActor->GetActorLocation()
+			: LockedResult.AimPoint;
 		return false;
 	}
 
-	OutTarget = Result.TargetActor;
-	OutTargetTags = Result.TargetTags;
-	OutAimPoint = Result.AimPoint.IsNearlyZero()
-		              ? Result.TargetActor->GetActorLocation()
-		              : Result.AimPoint;
+	OutTarget = LockedResult.TargetActor;
+	OutTargetTags = LockedResult.TargetTags;
+	OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
+		? LockedResult.TargetActor->GetActorLocation()
+		: LockedResult.AimPoint;
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[GA_SpellBase] TryConsumeLockedTarget | Success | Target=%s | AimPoint=%s"),
+			*GetNameSafe(OutTarget),
+			*OutAimPoint.ToString()
+		)
+	);
 
 	return true;
 }
+
+bool UGA_SpellBase::BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverride) const
+{
+	if (!CurrentActorInfo)
+	{
+		return false;
+	}
+
+	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
+	if (!Avatar)
+	{
+		return false;
+	}
+
+	APawn* Pawn = Cast<APawn>(Avatar);
+	if (!Pawn)
+	{
+		return false;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+	if (!PC || !PC->PlayerCameraManager)
+	{
+		return false;
+	}
+
+	const float UseRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
+	const FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
+	const FVector CamForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
+
+	OutAimPoint = CamLoc + (CamForward * UseRange);
+	return true;
+}
+
 
 void UGA_SpellBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
                                     const FGameplayAbilityActivationInfo ActivationInfo,
@@ -206,11 +286,14 @@ void UGA_SpellBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	if (ShouldApplyCastingActiveTag())
 	{
-		ASC->AddLooseGameplayTag(
-			FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
-		);
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->AddLooseGameplayTag(
+				FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
+			);
+		}
 	}
 }
 
@@ -218,13 +301,14 @@ void UGA_SpellBase::EndAbility(const FGameplayAbilitySpecHandle Handle, const FG
                                const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
                                bool bWasCancelled)
 {
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	if (ShouldApplyCastingActiveTag())
 	{
-		ASC->RemoveLooseGameplayTag(
-			FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
-		);
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->RemoveLooseGameplayTag(
+				FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
+			);
+		}
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
@@ -329,38 +413,6 @@ bool UGA_SpellBase::CanCastAsSpecialFreeCast(FSpellCastCheckResult& OutCheckResu
 	return OutCheckResult.bCanCast;
 }
 
-bool UGA_SpellBase::GetCenterAimPoint(FVector& OutAimPoint, float RangeOverride) const
-{
-	if (!CurrentActorInfo)
-	{
-		return false;
-	}
-
-	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
-	if (!Avatar)
-	{
-		return false;
-	}
-
-	APawn* Pawn = Cast<APawn>(Avatar);
-	if (!Pawn)
-	{
-		return false;
-	}
-
-	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-	if (!PC || !PC->PlayerCameraManager)
-	{
-		return false;
-	}
-
-	const float UseRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
-	const FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
-	const FVector CamForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
-
-	OutAimPoint = CamLoc + (CamForward * UseRange);
-	return true;
-}
 
 bool UGA_SpellBase::IsTargetBlocked(AActor* Target, const FGameplayTagContainer& Blocked) const
 {
@@ -408,4 +460,9 @@ bool UGA_SpellBase::HasAllRequiredTags(AActor* Target, const FGameplayTagContain
 	}
 
 	return false;
+}
+
+bool UGA_SpellBase::ShouldApplyCastingActiveTag() const
+{
+	return true;
 }

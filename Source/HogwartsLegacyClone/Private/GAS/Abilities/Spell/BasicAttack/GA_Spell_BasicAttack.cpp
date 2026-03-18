@@ -290,7 +290,7 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 	FVector AimPoint = FVector::ZeroVector;
 
 	const bool bHasTarget =
-		AcquireTargetFromLockOn(TargetActor, TargetTags, AimPoint);
+		TryConsumeLockedTarget(TargetActor, TargetTags, AimPoint);
 
 
 	/* =========================
@@ -310,7 +310,7 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 	{
 		FVector CenterAimPoint = FVector::ZeroVector;
 
-		if (GetCenterAimPoint(CenterAimPoint))
+		if (BuildFallbackAimPoint(CenterAimPoint))
 		{
 			const FVector ToAim = (CenterAimPoint - SpawnLocation).GetSafeNormal();
 
@@ -382,10 +382,10 @@ bool UGA_Spell_BasicAttack::BuildTraceStartEnd(
 	FVector AimPoint = FVector::ZeroVector;
 
 	const bool bHasTarget =
-		AcquireTargetFromLockOn(TargetActor, TargetTags, AimPoint);
+		TryConsumeLockedTarget(TargetActor, TargetTags, AimPoint);
 
 	FVector CenterAim;
-	if (!GetCenterAimPoint(CenterAim, Range))
+	if (!BuildFallbackAimPoint(CenterAim, Range))
 	{
 		return false;
 	}

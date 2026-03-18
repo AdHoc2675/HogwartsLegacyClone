@@ -93,7 +93,7 @@ bool UGA_Spell_Accio::FireAccio()
 	AActor* AcquiredTarget = nullptr;
 
 	// 1. LockOn 컴포넌트를 이용해 타겟팅하거나 정면 트레이스 수행
-	bool bHasTarget = AcquireTargetFromLockOn(AcquiredTarget, TargetTags, AimPoint);
+	bool bHasTarget = TryConsumeLockedTarget(AcquiredTarget, TargetTags, AimPoint);
 
 	if (!IsValid(AcquiredTarget))
 	{

@@ -112,4 +112,13 @@ protected:
 	 */
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> PendingForcedTarget = nullptr;
+
+protected:
+	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const override;
+
+	virtual bool CheckCooldown(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr
+	) const override;
 };

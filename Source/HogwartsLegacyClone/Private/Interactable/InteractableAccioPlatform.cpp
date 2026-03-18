@@ -1,27 +1,20 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿#include "Interactable/InteractableAccioPlatform.h"
 
-#include "Interactable/InteractableAccioPlatform.h"
 #include "Components/StaticMeshComponent.h"
-#include "AbilitySystemComponent.h"
-#include "Core/HOG_GameplayTags.h"
+#include "PhysicsEngine/BodyInstance.h"
 
-// Sets default values
 AInteractableAccioPlatform::AInteractableAccioPlatform()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
 	BaseMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BaseMesh"));
-	RootComponent = BaseMesh;
-	
-	// 물리 활성화 및 마찰 설정
+	BaseMesh->SetupAttachment(SceneRoot);
+
+	// 물리 활성화 및 충돌 설정
 	BaseMesh->SetSimulatePhysics(true);
 	BaseMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-	
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 }
 
-// Called when the game starts or when spawned
 void AInteractableAccioPlatform::BeginPlay()
 {
 	Super::BeginPlay();
@@ -31,36 +24,27 @@ void AInteractableAccioPlatform::BeginPlay()
 		FBodyInstance* BodyInst = BaseMesh->GetBodyInstance();
 		if (BodyInst)
 		{
-			// 회전 및 Z축 고정 (기울어지거나 들썩이지 않고 수평으로만 움직임)
+			// 회전 고정
 			BodyInst->bLockXRotation = true;
 			BodyInst->bLockYRotation = true;
 			BodyInst->bLockZRotation = true;
-			BodyInst->bLockZTranslation = true; // Z축 승강 제한
-			
+
+			// Z축만 유지하고 흔들림 방지
+			BodyInst->bLockZTranslation = true;
+
 			BodyInst->SetDOFLock(EDOFMode::SixDOF);
 
-			// 플레이어가 타도 밀리지 않도록 질량 크게 설정
+			// 플레이어가 올라가도 쉽게 밀리지 않도록 무게/감쇠 조정
 			BaseMesh->SetMassOverrideInKg(NAME_None, 10000.0f, true);
-			BaseMesh->SetLinearDamping(2.0f); // 미끄러짐 방지 제한
+			BaseMesh->SetLinearDamping(2.0f);
 		}
 	}
-
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Team_Object);
-		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Interactable_AccioPlatform); 
-	}
 }
 
-bool AInteractableAccioPlatform::CanInteract_Implementation(AActor* Interactor)
+void AInteractableAccioPlatform::HandleInteract(AActor* Interactor)
 {
-    return true;
-}
+	Super::HandleInteract(Interactor);
 
-void AInteractableAccioPlatform::Interact_Implementation(AActor* Interactor)
-{
-    // C++ 인터페이스 규칙 검사
-    if (!IInteractableInterface::Execute_CanInteract(this, Interactor)) return;
-    // 발판 자체 상호작용은 특별한 처리가 필요하지 않고 Accio 로직에서 직접 제어
+	// 발판 자체는 별도 상호작용 처리 없음
+	// Accio 스펠 로직 쪽에서 직접 제어
 }
-
