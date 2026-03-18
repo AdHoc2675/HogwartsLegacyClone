@@ -14,13 +14,7 @@
   <component name="ChangeListManager">
     <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Data/BP_DA_Incendio.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Data/BP_DA_Incendio.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Spell/Incendio/BP_GA_Spell_Incendio.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Spell/Incendio/BP_GA_Spell_Incendio.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/HogwartsLegacyClone.Build.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/HogwartsLegacyClone.Build.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Incendio/GA_Spell_Incendio.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Incendio/GA_Spell_Incendio.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Core/HOG_GameplayTags.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Incendio/GA_Spell_Incendio.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Incendio/GA_Spell_Incendio.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +89,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "REF__IncendioCombatSystem",
+    "git-widget-placeholder": "main",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -231,6 +225,7 @@
       <workItem from="1773736771571" duration="180000" />
       <workItem from="1773736992640" duration="3722000" />
       <workItem from="1773793336467" duration="2704000" />
+      <workItem from="1773797923499" duration="728000" />
     </task>
     <servers />
   </component>
