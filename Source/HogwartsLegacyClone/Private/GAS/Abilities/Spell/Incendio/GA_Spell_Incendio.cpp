@@ -55,10 +55,18 @@ void UGA_Spell_Incendio::ActivateAbility(
 	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
 	if (!AnimInstance)
 	{
+		const float Duration = AnimInstance->Montage_Play(CastMontage, 1.5f);
+		if (Duration > 0.f)
+		{
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &UGA_Spell_Incendio::OnMontageEnded);
+			AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
+
 		FireIncendio();
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
+
 
 	const float Duration = AnimInstance->Montage_Play(CastMontage, 1.f);
 	if (Duration > 0.f)
