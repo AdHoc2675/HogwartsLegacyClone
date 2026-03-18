@@ -90,4 +90,17 @@ protected:
 
 	// 타이머를 관리하기 위한 핸들
 	FTimerHandle LevitationTimerHandle;
+
+protected:
+	void UpdateHovering(); // <- 부양(Hovering) 높이 유지용 업데이트 함수 추가
+
+	// ====== 런타임 상태 ====== 추가
+	UPROPERTY(Transient)
+	FTimerHandle HoverTimerHandle;
+
+	UPROPERTY(Transient)
+	float HoverTargetZ = 0.f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPrimitiveComponent> HoverTargetComp;
 };

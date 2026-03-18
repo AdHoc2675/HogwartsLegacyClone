@@ -83,8 +83,19 @@ void UGA_Spell_Leviosa::ActivateAbility(
 					if (!IsValid(HitActor) || HitActor == Character) continue;
 
 					// 검사: 띄울 수 있는 대상인가? (살아있는 캐릭터 혹은 물리 시뮬레이션 동작 중인 개체)
-					UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(HitActor->GetRootComponent());
-					bool bIsMovable = HitActor->IsA<ACharacter>() || (RootPrim && RootPrim->IsSimulatingPhysics());
+					bool bIsSimulatingPhysics = false;
+					TArray<UPrimitiveComponent*> PrimitiveComps;
+					HitActor->GetComponents<UPrimitiveComponent>(PrimitiveComps);
+					for (UPrimitiveComponent* PrimComp : PrimitiveComps)
+					{
+						if (PrimComp->IsSimulatingPhysics())
+						{
+							bIsSimulatingPhysics = true;
+							break;
+						}
+					}
+
+					bool bIsMovable = HitActor->IsA<ACharacter>() || bIsSimulatingPhysics;
 
 					// 바닥 같은 StaticMesh는 패스됨
 					if (bIsMovable)
@@ -152,9 +163,21 @@ bool UGA_Spell_Leviosa::StartLevitation()
 
 	// 1. 시각 효과 & 사운드 재생
 	FVector TargetLoc = LevitatedTarget->GetActorLocation();
+
+	// 이펙트 출력을 위해 타겟의 실제 최하단 메쉬 위치를 찾아 좀 더 자연스럽게 출력 시도
+	TArray<UPrimitiveComponent*> RenderComps;
+	LevitatedTarget->GetComponents<UPrimitiveComponent>(RenderComps);
+	for (auto Comp : RenderComps)
+	{
+		if (Comp->IsA<UStaticMeshComponent>() || Comp->IsA<USkeletalMeshComponent>())
+		{
+			TargetLoc = Comp->GetComponentLocation();
+			break;
+		}
+	}
+
 	if (LevitateVFX)
 	{
-		// 타겟의 살짝 아래쪽에서 솟아오르는 이펙트를 연출
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, LevitateVFX, TargetLoc - FVector(0, 0, 50.f));
 	}
 	if (LevitateSound)
@@ -178,22 +201,44 @@ bool UGA_Spell_Leviosa::StartLevitation()
 		}
 	}
 
-	// 3. 물리 엔진을 이용해 강제로 위로 띄우기 (간단한 물리적 구현)
+	// 3. 물리 엔진을 이용해 강제로 위로 띄우기 설정
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(LevitatedTarget))
 	{
 		if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
 		{
-			MoveComp->GravityScale = 0.0f;               // 중력 무시
+			MoveComp->GravityScale = 0.0f;                // 중력 무시
 			MoveComp->SetMovementMode(MOVE_Flying);      // 낙하 방지
 			MoveComp->Velocity = FVector(0.f, 0.f, 250.f); // 위로 살짝 띄우기
 		}
 	}
-	else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(LevitatedTarget->GetRootComponent()))
+	else
 	{
-		if (PrimComp->IsSimulatingPhysics())
+		// 사물(Platform)일 경우
+		TArray<UPrimitiveComponent*> PrimitiveComps;
+		LevitatedTarget->GetComponents<UPrimitiveComponent>(PrimitiveComps);
+		for (UPrimitiveComponent* PrimComp : PrimitiveComps)
 		{
-			PrimComp->SetEnableGravity(false);
-			PrimComp->SetPhysicsLinearVelocity(FVector(0.f, 0.f, 250.f));
+			if (PrimComp->IsSimulatingPhysics())
+			{
+				HoverTargetComp = PrimComp;
+
+
+				// 물리 시뮬레이션은 유지하되, 중력만 끄고 초기 속도를 위로 주어 살짝 띄우기
+				PrimComp->SetSimulatePhysics(false);
+
+				// 목표 높이 (현재 높이 + 250) 설정
+				HoverTargetZ = PrimComp->GetComponentLocation().Z + 250.f;
+
+				// 짧은 주기로 부양 로직으로 이동시킴
+				GetWorld()->GetTimerManager().SetTimer(
+					HoverTimerHandle,
+					this,
+					&UGA_Spell_Leviosa::UpdateHovering,
+					0.01f,
+					true
+				);
+				break;
+			}
 		}
 	}
 
@@ -247,6 +292,7 @@ void UGA_Spell_Leviosa::EndAbility(
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(LevitationTimerHandle);
+		World->GetTimerManager().ClearTimer(HoverTimerHandle);
 	}
 
 	if (IsValid(LevitatedTarget))
@@ -270,17 +316,42 @@ void UGA_Spell_Leviosa::EndAbility(
 				MoveComp->SetMovementMode(MOVE_Falling);
 			}
 		}
-		else if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(LevitatedTarget->GetRootComponent()))
+		else if (HoverTargetComp)
 		{
-			if (PrimComp->IsSimulatingPhysics())
-			{
-				PrimComp->SetEnableGravity(true);
-			}
-		}
+			// 꺼두었던 물리를 다시 켬
 
-		Debug::Print(FString::Printf(TEXT("[Leviosa] Dropped %s"), *LevitatedTarget->GetName()), FColor::Green);
-		LevitatedTarget = nullptr;
+			HoverTargetComp->SetSimulatePhysics(true);
+			HoverTargetComp->SetEnableGravity(true);
+		}
+        
+        // 상태 초기화
+        HoverTargetComp = nullptr;
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGA_Spell_Leviosa::UpdateHovering()
+{
+	if (!IsValid(LevitatedTarget) || !IsValid(HoverTargetComp))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(HoverTimerHandle);
+		return;
+	}
+
+	// 현재 위치
+	FVector CurrentLoc = HoverTargetComp->GetComponentLocation();
+
+	// 목표 위치
+	FVector TargetLoc = CurrentLoc;
+	TargetLoc.Z = HoverTargetZ;
+
+	// Z축으로 부드럽게 이동 (보간) - InterpSpeed(3.0f 등) 조절로 상승 속도 제어 가능
+	// 델타 타임은 타이머 반복 주기 0.02f 사용
+	FVector NewLoc = FMath::VInterpTo(CurrentLoc, TargetLoc, 0.02f, 3.0f);
+
+	// 컴포넌트의 위치를 강제로 이동 (물리가 꺼져있으므로 이대로 쭉 밀고 올라감 - 플레이어도 함께 밀려 올라감)
+	HoverTargetComp->SetWorldLocation(NewLoc);
+
+	// 만약 목표 높이에 거의 다 도달했으면 타이머를 끄고 멈추게 할 수도 있음
 }
