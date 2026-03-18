@@ -7,6 +7,9 @@
 #include "GameplayTagContainer.h"
 #include "LockOnComponent.generated.h"
 
+// 락온된 대상이 변경이 된 경우
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnLockOnTargetChanged, AActor*);
+
 class UAbilitySystemComponent;
 class UPrimitiveComponent;
 
@@ -71,7 +74,7 @@ public:
 	// ===== 현재 타겟 상태 API =====
 	UFUNCTION(BlueprintPure, Category="HOG|LockOn")
 	bool HasValidCurrentTarget() const;
-	
+
 	UFUNCTION(BlueprintCallable, Category="HOG|LockOn")
 	bool TryGetLockedTargetResult(FLockOnTargetResult& OutResult) const;
 
@@ -143,6 +146,11 @@ public:
 	// ===== 디버그 =====
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|LockOn|Debug")
 	bool bDebugPrint = false;
+	
+	// ===== 락온 대상 변경시 =====
+public:
+	FOnLockOnTargetChanged OnLockOnTarget;
+	FOnLockOnTargetChanged OnLockOnReleased;
 
 private:
 	bool ShouldRunRealtimeTargeting() const;

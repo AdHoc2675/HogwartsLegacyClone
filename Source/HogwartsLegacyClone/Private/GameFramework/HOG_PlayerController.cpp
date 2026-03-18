@@ -13,6 +13,7 @@
 #include "InputMappingContext.h"
 #include "Engine/LocalPlayer.h"
 #include "GAS/HOGAbilitySystemComponent.h"
+#include "UI/HOG_WidgetController.h"
 
 AHOG_PlayerController::AHOG_PlayerController()
 {
@@ -24,6 +25,24 @@ void AHOG_PlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	ApplyDefaultMappingContext();
+	
+	// WidgetController 생성
+	WidgetController = NewObject<UHOG_WidgetController>(this);
+	if (APlayerCharacterBase* PC = GetPlayerCharacterBase())
+	{
+		WidgetController->Init(this, PC, PlayerHUDClass, EnemyHUDClass);
+	}
+}
+
+void AHOG_PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (WidgetController)
+	{
+		WidgetController->Shutdown();
+		WidgetController = nullptr;
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AHOG_PlayerController::SetupInputComponent()

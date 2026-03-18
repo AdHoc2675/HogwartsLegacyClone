@@ -13,6 +13,9 @@ class UDA_InputConfig;
 class UInputMappingContext;
 class UInputAction;
 class UEnhancedInputComponent;
+class UHOG_WidgetController;
+class UHOGPlayerHUDBase;
+class UHOGEnemyHUDBase;
 
 /**
  * DataAsset 기반 PlayerController
@@ -32,6 +35,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
 
@@ -47,6 +51,16 @@ protected:
 	/** IMC 적용 여부(중복 적용 방지) */
 	UPROPERTY(Transient)
 	bool bAppliedMappingContext = false;
+	
+	/** 위젯 컨트롤러 */
+	UPROPERTY()
+	UHOG_WidgetController* WidgetController;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UHOGPlayerHUDBase> PlayerHUDClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UHOGEnemyHUDBase> EnemyHUDClass;
 
 protected:
 	/** LocalPlayer Subsystem에 DefaultMappingContext 추가 */
