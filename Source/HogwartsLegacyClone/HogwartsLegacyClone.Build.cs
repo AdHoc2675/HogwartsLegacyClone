@@ -21,7 +21,10 @@ public class HogwartsLegacyClone : ModuleRules
 			"Niagara",
 			"AnimGraphRuntime",
 			"AIModule",
-			"UMG"
+			
+			"UMG",
+			"Slate",
+			"SlateCore"
 
 		});
 

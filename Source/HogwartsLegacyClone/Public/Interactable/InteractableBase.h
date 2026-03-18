@@ -50,16 +50,24 @@ public:
 	================================ */
 	virtual bool CanInteract_Implementation(AActor* Interactor) override;
 	virtual void Interact_Implementation(AActor* Interactor) override;
+	
+	virtual bool CanReceiveInteractionTag_Implementation(AActor* Interactor, FGameplayTag InteractionTag) override;
+	virtual void ReceiveInteractionTag_Implementation(AActor* Interactor, FGameplayTag InteractionTag) override;
 
 protected:
 	/** 자식이 실제 상호작용 결과를 구현하는 곳 */
 	virtual void HandleInteract(AActor* Interactor);
 
+	/** 자식이 실제 태그 기반 상호작용 결과를 구현하는 곳 */
+	virtual void HandleReceiveInteractionTag(AActor* Interactor, FGameplayTag InteractionTag);
+
 	/** BP/C++에서 설정한 기본 태그를 ASC에 적용 */
 	virtual void ApplyDefaultOwnedTags();
 
+	
 	/** 공통 ASC 유효성 체크 헬퍼 */
 	bool HasAbilitySystemComponent() const;
+	
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interactable")
