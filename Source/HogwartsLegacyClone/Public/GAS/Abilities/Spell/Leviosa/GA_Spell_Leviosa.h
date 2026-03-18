@@ -48,7 +48,7 @@ protected:
 
 	// 타겟 부유 시작 상태 진입 (태그 바인딩 및 상태 적용용)
 	UFUNCTION(BlueprintCallable, Category = "HOG|Spell|Leviosa")
-	void StartLevitation();
+	bool StartLevitation();
 
 	// 지속 시간 종료시 어빌리티를 종료
 	UFUNCTION()
