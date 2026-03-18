@@ -46,7 +46,7 @@ void UGA_Spell_Accio::ActivateAbility(
 		UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
 		if (AnimInstance)
 		{
-			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.5f);
+			const float Duration = AnimInstance->Montage_Play(CastMontage, 3.f);
 			if (Duration > 0.f)
 			{
 				FOnMontageEnded EndDelegate;
@@ -58,7 +58,7 @@ void UGA_Spell_Accio::ActivateAbility(
 				{
 					EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 				}
-				// 성공했다면 EndAbility를 부르지 않음 -> 어빌리티(마법)가 계속 켜져있음!
+				// 성공했다면 EndAbility를 부르지 않음
 				return;
 			}
 		}
@@ -161,6 +161,8 @@ bool UGA_Spell_Accio::FireAccio()
 	OriginalTarget = AcquiredTarget;
 	TargetToMove = nullptr;
 	PullDestination = nullptr;
+	bIsPullingInteractable = false; // 기본값 초기화
+	CurrentPullSpeed = DefaultPullSpeed;
 
 	// 플레이어가 현재 어떤 바닥을 밟고 있는지 확인
 	ACharacter* AvatarChar = Cast<ACharacter>(Avatar);
@@ -173,6 +175,23 @@ bool UGA_Spell_Accio::FireAccio()
 
 	UAbilitySystemComponent* FloorASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CurrentFloorActor);
 	bool bIsStandingOnPlatform = FloorASC && FloorASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
+
+	// [대상 식별] 적(Enemy)인지, 상호작용 물체(Interactable)인지 판별
+	if (TargetASC)
+	{
+		// 태그 계층구조를 활용해 "Interactable" 하위 태그가 있는지, "Unit.Enemy" 하위 태그가 있는지 확인
+		if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Interactable"))))
+		{
+			bIsPullingInteractable = true;
+			CurrentPullSpeed = InteractablePullSpeed; // 물체/발판 등은 부드럽게
+		}
+		else if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Unit.Enemy"))) || 
+				 TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Enemy))
+		{
+			bIsPullingInteractable = false;
+			CurrentPullSpeed = EnemyPullSpeed; // 적은 빠르고 강렬하게 당김
+		}
+	}
 
 	// [규칙 2] 맞춘 대상이 'AccioTarget' 이고, 밟고 있는 바닥이 'AccioPlatform' 일 때
 	if (bIsHitTarget)
@@ -260,16 +279,16 @@ void UGA_Spell_Accio::UpdatePulling()
 	Direction.Z = 0.f; 
 	FVector PullDirection = Direction.GetSafeNormal();
 
-	// 속도 적용
+	// 설정된 CurrentPullSpeed를 속도 적용에 사용
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 	{
-		TargetCharacter->GetCharacterMovement()->Velocity = PullDirection * PullSpeed;
+		TargetCharacter->GetCharacterMovement()->Velocity = PullDirection * CurrentPullSpeed;
 	}
 	else if (UPrimitiveComponent* MovePrimComp = Cast<UPrimitiveComponent>(TargetToMove->GetRootComponent()))
 	{
 		if (MovePrimComp->IsSimulatingPhysics())
 		{
-			MovePrimComp->SetPhysicsLinearVelocity(PullDirection * PullSpeed);
+			MovePrimComp->SetPhysicsLinearVelocity(PullDirection * CurrentPullSpeed);
 		}
 	}
 }

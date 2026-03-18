@@ -62,8 +62,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
 	TObjectPtr<UNiagaraSystem> AccioVFX;
 
+	// 대상에 따른 끌어당기기 속도 세분화
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
-	float PullSpeed = 1000.f;
+	float EnemyPullSpeed = 3000.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
+	float InteractablePullSpeed = 500.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
+	float DefaultPullSpeed = 1000.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
 	float StopDistance = 150.f;
@@ -79,4 +86,10 @@ protected:
 	TObjectPtr<AActor> PullDestination; // 도착 지점 (보통 플레이어지만, 타겟 지점일 수 있음)
 
 	FTimerHandle PullTimerHandle;
+
+	// 현재 타겟이 상호작용 가능한 물체인지 여부 (토글식 작동 판단용)
+	bool bIsPullingInteractable = false;
+
+	// 현재 적용 중인 당기기 속도
+	float CurrentPullSpeed = 0.f;
 };
