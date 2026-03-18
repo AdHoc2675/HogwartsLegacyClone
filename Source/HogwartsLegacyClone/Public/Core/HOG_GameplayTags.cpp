@@ -55,6 +55,8 @@ namespace HOGGameplayTags
 	//Protage State
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_Active, "State.Spell.Protego.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_ParrySuccess, "State.Spell.Protego.ParrySuccess")
+	
+	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Lumos_Active, "State.Spell.Lumos.Active")
 
 	//Damage
 	UE_DEFINE_GAMEPLAY_TAG(Damage_Melee, "Damage.Melee")

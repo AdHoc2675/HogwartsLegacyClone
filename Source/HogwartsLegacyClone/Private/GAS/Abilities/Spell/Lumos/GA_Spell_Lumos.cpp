@@ -13,6 +13,8 @@
 #include "NiagaraComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 
 UGA_Spell_Lumos::UGA_Spell_Lumos()
 {
@@ -40,32 +42,45 @@ void UGA_Spell_Lumos::ActivateAbility(
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, PlayerCharacter->GetActorLocation());
 	}
+	
+	// 시전할 때 마법 지팡이(무기) 꺼내기 판정 유지
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->AddLooseGameplayTag(HOGGameplayTags::State_Combat_Active);
+	}
 
-	// 1. 애니메이션 플레이
+	// 1. Lumos_Start 애니메이션 플레이
 	if (PlayerCharacter && PlayerCharacter->GetMesh() && CastMontage)
 	{
 		UAnimInstance* AnimInstance = PlayerCharacter->GetMesh()->GetAnimInstance();
 		if (AnimInstance)
 		{
-			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.0f);
+			const float Duration = AnimInstance->Montage_Play(CastMontage, 2.5f);
 			if (Duration > 0.f)
 			{
 				FOnMontageEnded EndDelegate;
-				EndDelegate.BindUObject(this, &UGA_Spell_Lumos::OnMontageEnded);
+				EndDelegate.BindUObject(this, &UGA_Spell_Lumos::OnStartMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
 			}
+			else
+			{
+				OnStartMontageEnded(CastMontage, false);
+			}
 		}
+	}
+	else
+	{
+		// 몽타주가 없으면 바로 빛나는 상태로 넘어감
+		OnStartMontageEnded(nullptr, false);
 	}
 
 	// 2. PlayerCharacter에서 지팡이(WandMesh)를 찾아 빛 부착
 	if (PlayerCharacter)
 	{
-		// 외부 의존성을 최소화하기 위해 객체 이름으로 기본 컴포넌트를 찾아옴
 		UStaticMeshComponent* WandMesh = Cast<UStaticMeshComponent>(PlayerCharacter->GetDefaultSubobjectByName(TEXT("WandMesh")));
 
 		if (WandMesh)
 		{
-			// 설정해 둔 소켓(TipSocket)이 있다면 사용하고, 없다면 메시 중심에 부착
 			FName AttachSocketName = TEXT("TipSocket");
 
 			SpawnedLight = NewObject<UPointLightComponent>(PlayerCharacter);
@@ -83,35 +98,77 @@ void UGA_Spell_Lumos::ActivateAbility(
 			if (LumosVFX)
 			{
 				SpawnedVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(
-					LumosVFX,
-					WandMesh,
-					AttachSocketName,
-					FVector::ZeroVector,
-					FRotator::ZeroRotator,
-					EAttachLocation::SnapToTarget,
-					true 
+					LumosVFX, WandMesh, AttachSocketName,
+					FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::SnapToTarget, true 
 				);
 			}
 		}
 	}
 }
 
+// ========= 1. Start 재생 끝 ========
+void UGA_Spell_Lumos::OnStartMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	// 시작 모션이 끝났으니, 이제 플레이어는 Hold 자세로 움직일 수 있음
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		// 이 캐스팅 관련 태그를 빼주어야 `Input_Move` 에서 차단을 안당하고 걸을 수 있음.
+		ASC->RemoveLooseGameplayTag(HOGGameplayTags::State_Casting_Active);
+
+		// ABP에게 상체를 Lumos_Hold 상태로 만들도록 알려줌
+		ASC->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag(FName("State.Spell.Lumos.Active")));
+	}
+}
+
+// ========= 2. 토글 버튼 다시 누름 (Lumos 끄기) ========
 void UGA_Spell_Lumos::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 
-	// 다시 동일한 입력이 발생하면 강제로 불을 끄고 어빌리티 종료
+	// 토글 버튼을 눌렀을 때
 	if (bIsActiveLumos)
 	{
-		Debug::Print(TEXT("[Lumos] Canceled by Toggle Input."), FColor::Yellow);
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		bIsActiveLumos = false;
+
+		// 마법 상태를 끝내므로 먼저 애니메이션 홀드를 품
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(FName("State.Spell.Lumos.Active")));
+			
+			// 끄는 모션 도중에는 움직이면 안된다면 다시 잠깐 막기 (선택 사항)
+			// ASC->AddLooseGameplayTag(HOGGameplayTags::State_Casting_Active); 
+		}
+
+		APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get());
+		
+		// 3. Lumos_Stop 애니메이션 플레이
+		if (PlayerCharacter && PlayerCharacter->GetMesh() && StopMontage)
+		{
+			UAnimInstance* AnimInstance = PlayerCharacter->GetMesh()->GetAnimInstance();
+			if (AnimInstance)
+			{
+				const float Duration = AnimInstance->Montage_Play(StopMontage, 2.5f);
+				if (Duration > 0.f)
+				{
+					FOnMontageEnded EndDelegate;
+					EndDelegate.BindUObject(this, &UGA_Spell_Lumos::OnStopMontageEnded);
+					AnimInstance->Montage_SetEndDelegate(EndDelegate, StopMontage);
+					return; // Stop 애니메이션이 끝날 때 완전히 종료하도록 리턴
+				}
+			}
+		}
+
+		// Stop 몽타주가 없거나 실패 시 즉시 종료
+		OnStopMontageEnded(nullptr, false);
 	}
 }
 
-void UGA_Spell_Lumos::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+// ========= 3. Stop 재생 끝 -> 완전 종료 ========
+void UGA_Spell_Lumos::OnStopMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	// 몽타주 종료 여부와 상관없이 마법(빛)은 유지되어야 하므로 아무 처리도 하지 않고 어빌리티를 계속 돌려둠
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
 }
+
 
 void UGA_Spell_Lumos::EndAbility(
 	const FGameplayAbilitySpecHandle Handle,
@@ -129,7 +186,14 @@ void UGA_Spell_Lumos::EndAbility(
 		UGameplayStatics::PlaySoundAtLocation(this, EndVoiceSound, PlayerCharacter->GetActorLocation());
 	}
 
-	// 능력이 꺼질 때마다 깔끔하게 빛 광원 삭제
+	// 어빌리티 종료 시 추가했던 모든 관련 태그 정리
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(HOGGameplayTags::State_Combat_Active);
+		ASC->RemoveLooseGameplayTag(FGameplayTag::RequestGameplayTag(FName("State.Spell.Lumos.Active")));
+	}
+
+	// 능력이 꺼질 때 깔끔하게 빛 광원 삭제
 	if (SpawnedLight)
 	{
 		SpawnedLight->DestroyComponent();

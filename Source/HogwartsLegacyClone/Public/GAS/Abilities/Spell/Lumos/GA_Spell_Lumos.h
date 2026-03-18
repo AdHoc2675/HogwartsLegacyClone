@@ -48,13 +48,22 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo
 	) override;
 
+protected:
+	// Start 애니메이션 완료 시 호출
 	UFUNCTION()
-	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnStartMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// Stop 애니메이션 완료 시 호출 (불 끄고 어빌리티 완전 종료)
+	UFUNCTION()
+	void OnStopMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 protected:
 	// ====== Lumos 설정 ======
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Anim")
-	TObjectPtr<UAnimMontage> CastMontage;
+	TObjectPtr<UAnimMontage> CastMontage; // Start 애니메이션 용 몽타주
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Anim")
+	TObjectPtr<UAnimMontage> StopMontage; // Stop 애니메이션 용 몽타주
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Sound")
 	TObjectPtr<USoundBase> CastVoiceSound;
