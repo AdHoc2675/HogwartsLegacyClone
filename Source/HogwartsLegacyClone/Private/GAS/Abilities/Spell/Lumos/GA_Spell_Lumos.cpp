@@ -38,9 +38,16 @@ void UGA_Spell_Lumos::ActivateAbility(
 	bIsActiveLumos = true;
 	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get());
 
-	if (CastVoiceSound && PlayerCharacter)
+	if (PlayerCharacter)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, PlayerCharacter->GetActorLocation());
+		if (CastVoiceSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, PlayerCharacter->GetActorLocation());
+		}
+		if (CastSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, CastSound, PlayerCharacter->GetActorLocation());
+		}
 	}
 	
 	// 시전할 때 마법 지팡이(무기) 꺼내기 판정 유지
@@ -194,9 +201,16 @@ void UGA_Spell_Lumos::EndAbility(
 
 	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get());
 
-	if (EndVoiceSound && PlayerCharacter)
+	if (PlayerCharacter)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, EndVoiceSound, PlayerCharacter->GetActorLocation());
+		if (EndVoiceSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, EndVoiceSound, PlayerCharacter->GetActorLocation());
+		}
+		if (EndSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, EndSound, PlayerCharacter->GetActorLocation());
+		}
 	}
 
 	// 어빌리티 종료 시 추가했던 모든 관련 태그 정리

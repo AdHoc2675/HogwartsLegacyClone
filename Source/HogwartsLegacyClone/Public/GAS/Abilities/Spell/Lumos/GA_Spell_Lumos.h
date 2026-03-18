@@ -60,16 +60,24 @@ protected:
 protected:
 	// ====== Lumos 설정 ======
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Anim")
-	TObjectPtr<UAnimMontage> CastMontage; // Start 애니메이션 용 몽타주
+	TObjectPtr<UAnimMontage> CastMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Anim")
-	TObjectPtr<UAnimMontage> StopMontage; // Stop 애니메이션 용 몽타주
+	TObjectPtr<UAnimMontage> StopMontage;
 
+	// 기존 보이스 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Sound")
 	TObjectPtr<USoundBase> CastVoiceSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Sound")
 	TObjectPtr<USoundBase> EndVoiceSound;
+
+	// 마법 효과음 (SFX)
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Sound")
+	TObjectPtr<USoundBase> CastSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Sound")
+	TObjectPtr<USoundBase> EndSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Visual")
 	TObjectPtr<UNiagaraSystem> LumosVFX;
