@@ -119,7 +119,7 @@ void UGA_Spell_Leviosa::ActivateAbility(
 		UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
 		if (AnimInstance)
 		{
-			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.5f);
+			const float Duration = AnimInstance->Montage_Play(CastMontage, 3.f);
 			if (Duration > 0.f)
 			{
 				FOnMontageEnded EndDelegate;
