@@ -94,10 +94,16 @@ protected:
 
 	// ====== 런타임 상태 ======
 	UPROPERTY(Transient)
-	TObjectPtr<UPointLightComponent> SpawnedLight;
+	TObjectPtr<UPointLightComponent> SpawnedLight; // 머리 위 메인 조명
 
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> SpawnedVFX;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPointLightComponent> WandLight; // 지팡이 끝 보조 조명
+
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraComponent> WandVFX;
 
 	UPROPERTY(Transient)
 	bool bIsActiveLumos = false;
