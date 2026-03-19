@@ -33,6 +33,13 @@ void UGA_Spell_Accio::ActivateAbility(
 	const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	
+	FGameplayTagContainer RelevantTags;
+	if (!CheckCooldown(Handle, ActorInfo, &RelevantTags))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
 
 	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
 	{

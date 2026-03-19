@@ -12,6 +12,10 @@
 
 #include "GameFramework/Actor.h"
 
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "GameFramework/Character.h"
+
 UGA_SpellStupefy::UGA_SpellStupefy()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -53,6 +57,13 @@ void UGA_SpellStupefy::ActivateAbility(
 )
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	
+	FGameplayTagContainer RelevantTags;
+	if (!CheckCooldown(Handle, ActorInfo, &RelevantTags))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
 
 	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
 	{
@@ -123,6 +134,21 @@ void UGA_SpellStupefy::ExecuteStupefyCast(
 		ResetPendingCastData();
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
+	}
+	
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (Character && Character->GetMesh() && CastMontage)
+	{
+		if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+		{
+			const float MontageDuration = AnimInstance->Montage_Play(CastMontage, 1.0f);
+			if (MontageDuration > 0.f)
+			{
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &UGA_SpellStupefy::OnMontageEnded);
+				AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
+			}
+		}
 	}
 
 	// 슬로우 모션은 Ability에서 직접 처리하지 않음.
@@ -297,4 +323,11 @@ void UGA_SpellStupefy::ResetPendingCastData()
 {
 	PendingCastContext = ESpellCastContext::Normal;
 	PendingForcedTarget = nullptr;
+}
+
+void UGA_SpellStupefy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	// 현재 방식은 몽타주가 연출용이므로
+	// 종료 시 별도 판정 처리는 하지 않는다.
+	// 필요해지면 이후 Notify 기반으로 전환 가능.
 }
