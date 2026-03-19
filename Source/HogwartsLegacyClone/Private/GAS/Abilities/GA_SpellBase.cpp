@@ -72,7 +72,6 @@ UDA_SpellDefinition* UGA_SpellBase::GetSpellDefinitionOrWarn() const
 		*SpellID.ToString()
 	);
 
-	//Debug::Print(Msg, FColor::Yellow);
 	return nullptr;
 }
 
@@ -129,8 +128,11 @@ bool UGA_SpellBase::DoesTargetMeetRequirements(AActor* Target) const
 	return true;
 }
 
-bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags,
-                                           FVector& OutAimPoint) const
+bool UGA_SpellBase::TryConsumeLockedTarget(
+	AActor*& OutTarget,
+	FGameplayTagContainer& OutTargetTags,
+	FVector& OutAimPoint
+) const
 {
 	OutTarget = nullptr;
 	OutTargetTags.Reset();
@@ -139,22 +141,12 @@ bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagConta
 	UDA_SpellDefinition* Def = GetSpellDefinitionOrWarn();
 	if (!Def)
 	{
-		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | SpellDefinition Missing"));
 		BuildFallbackAimPoint(OutAimPoint, 2000.f);
 		return false;
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_SpellBase] TryConsumeLockedTarget | SpellID=%s | CastRange=%.2f"),
-			*SpellID.ToString(),
-			Def->CastRange
-		)
-	);
-
 	if (!CurrentActorInfo)
 	{
-		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | CurrentActorInfo Missing"));
 		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
@@ -163,12 +155,6 @@ bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagConta
 	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
 	if (!PlayerCharacter)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_SpellBase] TryConsumeLockedTarget | PlayerCharacter Cast Failed | Avatar=%s"),
-				*GetNameSafe(Avatar)
-			)
-		);
 		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
@@ -176,7 +162,6 @@ bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagConta
 	ULockOnComponent* LockOn = PlayerCharacter->GetLockOnComponent();
 	if (!LockOn)
 	{
-		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | LockOnComponent Missing"));
 		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
@@ -184,45 +169,14 @@ bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagConta
 	FLockOnTargetResult LockedResult;
 	const bool bHasLockedTarget = LockOn->TryGetLockedTargetResult(LockedResult);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_SpellBase] TryConsumeLockedTarget | HasLockedTarget=%d | LockedTarget=%s"),
-			bHasLockedTarget ? 1 : 0,
-			*GetNameSafe(LockedResult.TargetActor)
-		)
-	);
-
 	if (!bHasLockedTarget || !IsValid(LockedResult.TargetActor))
 	{
-		Debug::Print(TEXT("[GA_SpellBase] TryConsumeLockedTarget | No Valid Locked Target"));
 		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_SpellBase] TryConsumeLockedTarget | LockedTargetTags=%s"),
-			*LockedResult.TargetTags.ToStringSimple()
-		)
-	);
-
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_SpellBase] TryConsumeLockedTarget | RequiredTags=%s | BlockedTags=%s"),
-			*Def->TargetRequiredTags.ToStringSimple(),
-			*Def->TargetBlockedTags.ToStringSimple()
-		)
-	);
-
 	if (!DoesTargetMeetRequirements(LockedResult.TargetActor))
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_SpellBase] TryConsumeLockedTarget | Target Requirement Failed | Target=%s"),
-				*GetNameSafe(LockedResult.TargetActor)
-			)
-		);
-
 		OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
 			? LockedResult.TargetActor->GetActorLocation()
 			: LockedResult.AimPoint;
@@ -234,14 +188,6 @@ bool UGA_SpellBase::TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagConta
 	OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
 		? LockedResult.TargetActor->GetActorLocation()
 		: LockedResult.AimPoint;
-
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_SpellBase] TryConsumeLockedTarget | Success | Target=%s | AimPoint=%s"),
-			*GetNameSafe(OutTarget),
-			*OutAimPoint.ToString()
-		)
-	);
 
 	return true;
 }
@@ -279,10 +225,12 @@ bool UGA_SpellBase::BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverr
 	return true;
 }
 
-
-void UGA_SpellBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-                                    const FGameplayAbilityActivationInfo ActivationInfo,
-                                    const FGameplayEventData* TriggerEventData)
+void UGA_SpellBase::ActivateAbility(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData
+)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
@@ -297,9 +245,13 @@ void UGA_SpellBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 	}
 }
 
-void UGA_SpellBase::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-                               const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
-                               bool bWasCancelled)
+void UGA_SpellBase::EndAbility(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility,
+	bool bWasCancelled
+)
 {
 	if (ShouldApplyCastingActiveTag())
 	{
@@ -412,7 +364,6 @@ bool UGA_SpellBase::CanCastAsSpecialFreeCast(FSpellCastCheckResult& OutCheckResu
 	OutCheckResult = CheckCanCastSpell(ESpellCastContext::SpecialFreeCast);
 	return OutCheckResult.bCanCast;
 }
-
 
 bool UGA_SpellBase::IsTargetBlocked(AActor* Target, const FGameplayTagContainer& Blocked) const
 {
