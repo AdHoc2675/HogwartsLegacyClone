@@ -10,6 +10,7 @@ class UAnimMontage;
 class UGameplayEffect;
 class UNiagaraSystem;
 class USoundBase;
+class UNiagaraComponent;
 
 /**
  * 근거리 화염 마법 (Incendio)
@@ -100,4 +101,12 @@ protected:
 	// 화염 발사/폭발 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Sound")
 	TObjectPtr<USoundBase> ExplosionSound;
+	
+protected:
+	void ApplyIncendioVFXParams(
+		UNiagaraComponent* NiagaraComp,
+		const FVector& InConeForward,
+		float InConeRange,
+		float InConeHalfAngleDeg
+	) const;
 };
