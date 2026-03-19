@@ -37,6 +37,29 @@ void UGA_Spell_Incendio::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
+	{
+		return;
+	}
+
+	ExecuteIncendioCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_Incendio::OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	ExecuteIncendioCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_Incendio::ExecuteIncendioCast(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
