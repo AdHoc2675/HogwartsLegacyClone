@@ -13,6 +13,7 @@
 #include "InputMappingContext.h"
 #include "Engine/LocalPlayer.h"
 #include "GAS/HOGAbilitySystemComponent.h"
+#include "Pool/DamageNumberPool.h"
 #include "UI/HOG_WidgetController.h"
 
 AHOG_PlayerController::AHOG_PlayerController()
@@ -32,6 +33,11 @@ void AHOG_PlayerController::BeginPlay()
 	{
 		WidgetController->Init(this, PC, PlayerHUDClass, EnemyHUDClass);
 	}
+	
+	// 데미지 넘버 풀 생성
+	DamageNumberPool = NewObject<UDamageNumberPool>(this);
+	DamageNumberPool->InitPool(this, DamageNumberWidgetClass);
+	
 }
 
 void AHOG_PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
