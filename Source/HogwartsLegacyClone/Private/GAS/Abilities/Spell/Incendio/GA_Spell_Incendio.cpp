@@ -14,6 +14,11 @@
 #include "AbilitySystemInterface.h"
 #include "NiagaraFunctionLibrary.h"
 
+#include "Character/Player/PlayerCharacterBase.h"
+#include "Components/StaticMeshComponent.h"
+
+#include "NiagaraComponent.h"
+
 #include "Core/HOG_GameplayTags.h"
 #include "Core/HOG_Struct.h"
 #include "Component/CombatComponent.h"
@@ -34,7 +39,6 @@ void UGA_Spell_Incendio::ActivateAbility(
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		Debug::Print(TEXT("[Incendio] CommitAbility Failed"), FColor::Red);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -49,7 +53,6 @@ void UGA_Spell_Incendio::ActivateAbility(
 
 	if (!Character || !Character->GetMesh() || !CastMontage)
 	{
-		Debug::Print(TEXT("[Incendio] No Character/Mesh/Montage -> FireIncendio direct"));
 		FireIncendio();
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
@@ -58,12 +61,10 @@ void UGA_Spell_Incendio::ActivateAbility(
 	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
 	if (!AnimInstance)
 	{
-		Debug::Print(TEXT("[Incendio] AnimInstance Missing -> FireIncendio direct"));
 		FireIncendio();
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
-
 
 	const float Duration = AnimInstance->Montage_Play(CastMontage, 1.f);
 	if (Duration > 0.f)
@@ -72,12 +73,10 @@ void UGA_Spell_Incendio::ActivateAbility(
 		EndDelegate.BindUObject(this, &UGA_Spell_Incendio::OnMontageEnded);
 		AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
 
-		Debug::Print(TEXT("[Incendio] Montage Play Success -> FireIncendio"));
 		FireIncendio();
 	}
 	else
 	{
-		Debug::Print(TEXT("[Incendio] Montage Play Failed"), FColor::Red);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 	}
 }
@@ -91,7 +90,6 @@ void UGA_Spell_Incendio::FireIncendio()
 {
 	if (!CurrentActorInfo || !CurrentActorInfo->AvatarActor.IsValid())
 	{
-		Debug::Print(TEXT("[Incendio] FireIncendio Abort | CurrentActorInfo Invalid"), FColor::Red);
 		return;
 	}
 
@@ -99,7 +97,6 @@ void UGA_Spell_Incendio::FireIncendio()
 	UWorld* World = Avatar->GetWorld();
 	if (!World)
 	{
-		Debug::Print(TEXT("[Incendio] FireIncendio Abort | World Invalid"), FColor::Red);
 		return;
 	}
 
@@ -107,25 +104,14 @@ void UGA_Spell_Incendio::FireIncendio()
 	const float Range = GetCastRange();
 	const float BaseDmg = GetBaseDamage();
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[Incendio] Fire Start | Avatar=%s | Range=%.2f | BaseDmg=%.2f"),
-			*GetNameSafe(Avatar),
-			Range,
-			BaseDmg
-		)
-	);
-
 	if (Range <= 0.f)
 	{
-		Debug::Print(TEXT("[Incendio] Range is 0! Check SpellDefinition Data Asset."), FColor::Red);
 		return;
 	}
 
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
 	if (!SourceASC)
 	{
-		Debug::Print(TEXT("[Incendio] SourceASC is null."), FColor::Red);
 		return;
 	}
 
@@ -154,16 +140,6 @@ void UGA_Spell_Incendio::FireIncendio()
 		{
 			ConeForward = AvatarForward;
 		}
-		
-		Debug::Print(
-			FString::Printf(
-				TEXT("[Incendio] LockedTarget Aim | Target=%s | TargetLoc=%s | ConeForward=%s"),
-				*GetNameSafe(LockedTarget),
-				*TargetLoc.ToString(),
-				*ConeForward.ToString()
-			)
-		);	
-		
 	}
 	
 	// 1-B) 락온 대상이 없으면: 카메라 CenterAim 기준 방향 사용
@@ -178,13 +154,6 @@ void UGA_Spell_Incendio::FireIncendio()
 			if (PC && PC->PlayerCameraManager)
 			{
 				FallbackForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
-
-				Debug::Print(
-					FString::Printf(
-						TEXT("[Incendio] NoLock CameraForward | Forward=%s"),
-						*FallbackForward.ToString()
-					)
-				);
 			}
 		}
 
@@ -192,21 +161,12 @@ void UGA_Spell_Incendio::FireIncendio()
 		if (FallbackForward.IsNearlyZero() && !AimPoint.IsNearlyZero())
 		{
 			FallbackForward = (AimPoint - AvatarLoc).GetSafeNormal();
-
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] NoLock AimPointFallback | AimPoint=%s | Forward=%s"),
-						*AimPoint.ToString(),
-						*FallbackForward.ToString()
-				)
-			);
 		}
 
 		// 여전히 실패하면 캐릭터 Forward
 		if (FallbackForward.IsNearlyZero())
 		{
 			FallbackForward = AvatarForward;
-			Debug::Print(TEXT("[Incendio] NoLock FinalFallback -> AvatarForward"));
 		}
 
 		// 핵심:
@@ -227,16 +187,7 @@ void UGA_Spell_Incendio::FireIncendio()
 		}
 
 		ConeForward = FallbackForward;
-
-		Debug::Print(
-			FString::Printf(
-				TEXT("[Incendio] NoLock FinalForward | AimPoint=%s | ConeForward=%s"),
-				*AimPoint.ToString(),
-				*ConeForward.ToString()
-			)
-		);
 	}
-
 
 	// 원뿔 시작점을 캐릭터 바로 앞쪽으로 약간 이동
 	const FVector ConeOrigin = AvatarLoc + (ConeForward * ConeStartOffset);
@@ -245,18 +196,6 @@ void UGA_Spell_Incendio::FireIncendio()
 	const float ConeHalfAngleRad = FMath::DegreesToRadians(ConeHalfAngleDeg);
 	const float ConeMinDot = FMath::Cos(ConeHalfAngleRad);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT(
-				"[Incendio] Cone Setup | UsedLocked=%d | LockedTarget=%s | ConeOrigin=%s | Forward=%s | ConeRange=%.2f | HalfAngle=%.2f"),
-			bLockedTargetUsed ? 1 : 0,
-			*GetNameSafe(LockedTarget),
-			*ConeOrigin.ToString(),
-			*ConeForward.ToString(),
-			ConeRange,
-			ConeHalfAngleDeg
-		)
-	);
 	// ==============================
 	// 2) 후보 수집용 구형 Overlap
 	// ==============================
@@ -282,21 +221,39 @@ void UGA_Spell_Incendio::FireIncendio()
 		CandidateSphere,
 		QueryParams
 	);
-
-	Debug::Print(
-		FString::Printf(
-			TEXT("[Incendio] Overlap Result | bHit=%d | Count=%d"),
-			bHit ? 1 : 0,
-			OverlapResults.Num()
-		)
-	);
+	
+	// ==============================
+	// 2-B) VFX 스폰 위치/회전 결정
+	// ==============================
+	const float VFXForwardOffset = 80.0f;
+	const FVector VFXSpawnLocation = ConeOrigin + (ConeForward * VFXForwardOffset);
+	const FRotator VFXSpawnRotation = ConeForward.Rotation();
 
 	// ==============================
 	// 3) VFX / SFX
 	// ==============================
 	if (FireVFX)
 	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, FireVFX, ConeOrigin, ConeForward.Rotation());
+		const FVector VFXScale(3.0f, 1.5f, 1.5f);
+
+		UNiagaraComponent* SpawnedNiagara = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			World,
+			FireVFX,
+			VFXSpawnLocation,
+			VFXSpawnRotation,
+			VFXScale,
+			true,
+			true,
+			ENCPoolMethod::None,
+			true
+		);
+
+		ApplyIncendioVFXParams(
+			SpawnedNiagara,
+			ConeForward,
+			ConeRange,
+			ConeHalfAngleDeg
+		);
 	}
 
 	if (ExplosionSound)
@@ -453,7 +410,6 @@ void UGA_Spell_Incendio::FireIncendio()
 
 	if (!bHit)
 	{
-		Debug::Print(TEXT("[Incendio] No overlap candidates."), FColor::Yellow);
 		return;
 	}
 
@@ -478,13 +434,6 @@ void UGA_Spell_Incendio::FireIncendio()
 		const float DistToTarget = ToTarget.Size();
 		if (DistToTarget > ConeRange)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] Cone Reject Distance | Target=%s | Dist=%.2f"),
-					*GetNameSafe(TargetActor),
-					DistToTarget
-				)
-			);
 			continue;
 		}
 
@@ -497,25 +446,8 @@ void UGA_Spell_Incendio::FireIncendio()
 		const float Dot = FVector::DotProduct(ConeForward, ToTargetDir);
 		if (Dot < ConeMinDot)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] Cone Reject Angle | Target=%s | Dot=%.3f | Need>=%.3f"),
-					*GetNameSafe(TargetActor),
-					Dot,
-					ConeMinDot
-				)
-			);
 			continue;
 		}
-
-		Debug::Print(
-			FString::Printf(
-				TEXT("[Incendio] Cone Accept | Target=%s | Dist=%.2f | Dot=%.3f"),
-				*GetNameSafe(TargetActor),
-				DistToTarget,
-				Dot
-			)
-		);
 
 		// ==============================
 		// 4-1) 인터랙터블 대상이면 Burn 태그 신호 전달
@@ -530,23 +462,9 @@ void UGA_Spell_Incendio::FireIncendio()
 				BurnInteractionTag
 			);
 
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] Interactable Check | Target=%s | CanReceiveBurn=%d"),
-					*GetNameSafe(TargetActor),
-					bCanReceiveBurn ? 1 : 0
-				)
-			);
-
 			if (bCanReceiveBurn)
 			{
 				IInteractableInterface::Execute_ReceiveInteractionTag(TargetActor, Avatar, BurnInteractionTag);
-				Debug::Print(
-					FString::Printf(
-						TEXT("[Incendio] Burn Interaction Sent | Target=%s"),
-						*GetNameSafe(TargetActor)
-					)
-				);
 			}
 		}
 
@@ -556,12 +474,6 @@ void UGA_Spell_Incendio::FireIncendio()
 		const bool bMeetsRequirement = DoesTargetMeetRequirements(TargetActor);
 		if (!bMeetsRequirement)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] Requirement Failed | Target=%s"),
-					*GetNameSafe(TargetActor)
-				)
-			);
 			continue;
 		}
 
@@ -584,34 +496,11 @@ void UGA_Spell_Incendio::FireIncendio()
 		if (TargetASC)
 		{
 			TargetASC->GetOwnedGameplayTags(ActualTargetTags);
-
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] TargetASC Found | Target=%s | Tags=%s"),
-					*GetNameSafe(TargetActor),
-					*ActualTargetTags.ToStringSimple()
-				)
-			);
-		}
-		else
-		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] TargetASC Missing | Target=%s"),
-					*GetNameSafe(TargetActor)
-				)
-			);
 		}
 
 		UCombatComponent* CombatComp = TargetActor->FindComponentByClass<UCombatComponent>();
 		if (!CombatComp)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] CombatComponent Missing -> Skip | Target=%s"),
-					*GetNameSafe(TargetActor)
-				)
-			);
 			continue;
 		}
 
@@ -628,14 +517,6 @@ void UGA_Spell_Incendio::FireIncendio()
 		DamageRequest.TargetTags = ActualTargetTags;
 
 		FDamageResult DamageResult = CombatComp->ApplyDamageRequest(DamageRequest);
-
-		Debug::Print(
-			FString::Printf(
-				TEXT("[Incendio] DamageApplied=%d | Target=%s"),
-				DamageResult.bWasApplied ? 1 : 0,
-				*GetNameSafe(TargetActor)
-			)
-		);
 
 		if (!DamageResult.bWasApplied)
 		{
@@ -654,35 +535,38 @@ void UGA_Spell_Incendio::FireIncendio()
 			{
 				DotSpec.Data->SetSetByCallerMagnitude(HOGGameplayTags::Data_Damage, BurnDamagePerTick);
 				SourceASC->ApplyGameplayEffectSpecToTarget(*DotSpec.Data.Get(), TargetASC);
-
-				Debug::Print(
-					FString::Printf(
-						TEXT("[Incendio] BurnApplied | Target=%s | BurnPerTick=%.2f"),
-						*GetNameSafe(TargetActor),
-						BurnDamagePerTick
-					)
-				);
 			}
-			else
-			{
-				Debug::Print(
-					FString::Printf(
-						TEXT("[Incendio] Burn Spec Invalid | Target=%s"),
-						*GetNameSafe(TargetActor)
-					)
-				);
-			}
-		}
-		else
-		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[Incendio] Burn Skip | Target=%s | HasASC=%d | HasBurnGE=%d"),
-					*GetNameSafe(TargetActor),
-					TargetASC ? 1 : 0,
-					DotDamageEffectClass ? 1 : 0
-				)
-			);
 		}
 	}
+}
+
+void UGA_Spell_Incendio::ApplyIncendioVFXParams(
+	UNiagaraComponent* NiagaraComp,
+	const FVector& InConeForward,
+	float InConeRange,
+	float InConeHalfAngleDeg
+) const
+{
+	if (!NiagaraComp)
+	{
+		return;
+	}
+
+	const FVector SafeForward = InConeForward.GetSafeNormal();
+
+	const float HalfAngleRad = FMath::DegreesToRadians(InConeHalfAngleDeg);
+	const float LateralSpread = InConeRange * FMath::Tan(HalfAngleRad) * 0.35f;
+
+	const FVector MinimumVelocity(InConeRange * 0.35f, -LateralSpread, 0.0f);
+	const FVector MaximumVelocity(InConeRange * 0.60f, LateralSpread, InConeRange * 0.04f);
+	
+	const float RingRadius = FMath::Clamp(LateralSpread * 0.35f, 12.0f, 120.0f);
+	NiagaraComp->SetVariableFloat(TEXT("User.RingRadius"), RingRadius);
+
+	NiagaraComp->SetVariableVec3(TEXT("User.ConeForward"), SafeForward);
+	NiagaraComp->SetVariableFloat(TEXT("User.ConeRange"), InConeRange);
+	NiagaraComp->SetVariableFloat(TEXT("User.ConeHalfAngleDeg"), InConeHalfAngleDeg);
+
+	NiagaraComp->SetVariableVec3(TEXT("User.MinimumVelocity"), MinimumVelocity);
+	NiagaraComp->SetVariableVec3(TEXT("User.MaximumVelocity"), MaximumVelocity);
 }

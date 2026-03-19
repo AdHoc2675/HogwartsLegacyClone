@@ -55,6 +55,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="GAS")
 	UHOGAbilitySystemComponent* GetHOGAbilitySystemComponent() const;
+	
+	UFUNCTION(BlueprintCallable, Category="HOG|Combat")
+	UStaticMeshComponent* GetWandMesh() const { return WandMesh; }
 
 protected:
 	virtual void BeginPlay() override;

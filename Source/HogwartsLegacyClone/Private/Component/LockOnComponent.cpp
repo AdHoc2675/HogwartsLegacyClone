@@ -206,10 +206,6 @@ void ULockOnComponent::ClearCurrentTarget()
 	{
 		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, false);
 	}
-	else
-	{
-		Debug::Print(TEXT("[LockOn] ClearCurrentTarget | PrevTarget=None"));
-	}
 
 	CurrentTargetActor = nullptr;
 	CurrentTargetResult = FLockOnTargetResult();
