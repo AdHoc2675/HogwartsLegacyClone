@@ -17,6 +17,9 @@ class UHOG_WidgetController;
 class UHOGPlayerHUDBase;
 class UHOGEnemyHUDBase;
 
+class UUserWidget;
+class UDamageNumberPool;
+
 /**
  * DataAsset 기반 PlayerController
  * - UDA_InputConfig를 읽어 EnhancedInput 바인딩/IMC 추가
@@ -29,7 +32,7 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API AHOG_PlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+
 public:
 	AHOG_PlayerController();
 
@@ -51,14 +54,14 @@ protected:
 	/** IMC 적용 여부(중복 적용 방지) */
 	UPROPERTY(Transient)
 	bool bAppliedMappingContext = false;
-	
+
 	/** 위젯 컨트롤러 */
 	UPROPERTY()
 	UHOG_WidgetController* WidgetController;
-	
+
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UHOGPlayerHUDBase> PlayerHUDClass;
-	
+
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UHOGEnemyHUDBase> EnemyHUDClass;
 
@@ -89,7 +92,7 @@ private:
 	/** Jump */
 	void OnJumpStarted();
 	void OnJumpCompleted();
-	
+
 private:
 	// Ability Action -> Tag 역조회 캐시
 	UPROPERTY(Transient)
@@ -100,5 +103,14 @@ private:
 	void OnAbilityActionStarted(const FInputActionInstance& Instance);
 	void OnAbilityActionCompleted(const FInputActionInstance& Instance);
 
-	
+	// FloatDamage
+public:
+	UDamageNumberPool* GetDamageNumberPool() const { return DamageNumberPool; }
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
+
+	UPROPERTY()
+	UDamageNumberPool* DamageNumberPool;
 };

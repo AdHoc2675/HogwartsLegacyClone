@@ -82,4 +82,22 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "LifeSpan")
 	float LifeSpanWhenDead = 3.f;
+	
+	// ===== floating Damage =====
+	UFUNCTION()
+	void SpawnDamageNumber(float Damage);
+	void BindDamageDelegate();
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	FName DamageSocketName = TEXT("head");
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	FVector DamageNumberOffset = FVector(0.f, 0.f, 30.f);
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
+	
+	float LastDamageNumberZ = 0.f;
+	float DamageNumberSpacing = 40.f;
+	double LastDamageNumberTime = 0.0;
 };
