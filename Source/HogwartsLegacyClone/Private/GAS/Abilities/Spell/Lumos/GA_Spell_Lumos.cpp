@@ -131,8 +131,8 @@ void UGA_Spell_Lumos::ActivateAbility(
 
 				WandLight->SetLightColor(LightColor);
 				// 보조 조명이 너무 밝으면 눈이 부시므로 세기를 살짝 줄임
-				WandLight->SetIntensity(LightIntensity * 0.25f); 
-				WandLight->SetAttenuationRadius(LightAttenuationRadius * 0.25f);
+				WandLight->SetIntensity(LightIntensity * 0.01f); 
+				WandLight->SetAttenuationRadius(LightAttenuationRadius * 0.01f);
 				// 그림자가 2개 생기면 부자연스럽고 최적화에 안 좋으므로 보조 조명은 그림자 끔
 				WandLight->SetCastShadows(false); 
 			}

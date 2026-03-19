@@ -9,6 +9,7 @@
 class UAnimMontage;
 class USoundBase;
 class UNiagaraSystem;
+class UNiagaraComponent;
 
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Accio : public UGA_SpellBase
@@ -92,4 +93,8 @@ protected:
 
 	// 현재 적용 중인 당기기 속도
 	float CurrentPullSpeed = 0.f;
+
+	// 생성된 VFX 트래킹용
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraComponent> SpawnedAccioVFX;
 };
