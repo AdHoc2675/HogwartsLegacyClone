@@ -58,13 +58,36 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="HOG|Combat")
 	UStaticMeshComponent* GetWandMesh() const { return WandMesh; }
+	
+public:
+	// =========================
+	// Spell Facing
+	// =========================
+	UFUNCTION(BlueprintCallable, Category="HOG|Look")
+	void BeginForcedFacingToLocation(const FVector& TargetLocation);
+
+	UFUNCTION(BlueprintCallable, Category="HOG|Look")
+	void BeginForcedFacingToRotation(const FRotator& TargetRotation);
+
+	UFUNCTION(BlueprintCallable, Category="HOG|Look")
+	void StopForcedFacing();
+
+	UFUNCTION(BlueprintPure, Category="HOG|Look")
+	bool IsForcedFacingActive() const { return bForcedFacingActive; }
+
+	UFUNCTION(BlueprintPure, Category="HOG|Look")
+	bool IsForcedFacingFinished() const;
+	
+	
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 
 	void InitializeAbilityActorInfo();
+	void UpdateForcedFacing(float DeltaSeconds);
 
 #pragma region Camera
 protected:
@@ -88,6 +111,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Look")
 	float LookPitchScale = 1.0f;
+
+	// 시전 직전 강제 회전 속도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Look")
+	float ForcedFacingInterpSpeed = 25.0f;
+
+	// 이 각도 안으로 들어오면 회전 완료로 판정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Look")
+	float ForcedFacingAcceptAngle = 5.0f;
 #pragma endregion
 
 protected:
@@ -107,6 +138,18 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<ULockOnComponent> LockOnComponent;
+	
+	
+protected:
+	// =========================
+	// Forced Facing Runtime
+	// =========================
+	UPROPERTY(Transient)
+	bool bForcedFacingActive = false;
+
+	UPROPERTY(Transient)
+	FRotator ForcedFacingTargetRotation = FRotator::ZeroRotator;
+	
 
 #pragma region Wand
 protected:

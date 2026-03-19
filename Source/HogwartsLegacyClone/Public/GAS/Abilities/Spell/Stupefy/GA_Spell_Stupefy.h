@@ -10,8 +10,8 @@ class AActor;
 
 /**
  * Stupefy
- * - 일반 시전: LockOn 타겟 대상 즉시 명중, 데미지만 적용
- * - 패링 반격: ForcedTarget 대상 즉시 명중, 데미지 + 기절 적용
+ * - 일반 시전: LockOn 타겟 대상 즉시 명중, 기절상태 부여 및 데미지 / 쿨타임 진행
+ * - 패링 반격: 일반시전 시 진행되는 쿨타임과 무관하게 즉시 시전
  *
  * 슬로우 모션은 Ability에서 직접 처리하지 않고,
  * ANS_Stupefy_Slowmotion 에서 처리한다.
@@ -121,4 +121,19 @@ protected:
 		const FGameplayAbilityActorInfo* ActorInfo,
 		FGameplayTagContainer* OptionalRelevantTags = nullptr
 	) const override;
+	
+protected:
+	virtual void OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData
+) override;
+
+	void ExecuteStupefyCast(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	);
 };

@@ -92,4 +92,19 @@ protected:
 
 	// 현재 적용 중인 당기기 속도
 	float CurrentPullSpeed = 0.f;
+	
+protected:
+	virtual void OnPreCastFacingFinished(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	) override;
+
+	void ExecuteAccioCast(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	);
 };

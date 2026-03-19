@@ -103,4 +103,19 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPrimitiveComponent> HoverTargetComp;
+	
+protected:
+	virtual void OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData
+) override;
+
+	void ExecuteLeviosaCast(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	);
 };

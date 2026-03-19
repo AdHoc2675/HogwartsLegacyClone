@@ -167,4 +167,70 @@ protected:
 	
 protected:
 	virtual bool ShouldApplyCastingActiveTag() const;
+	
+protected:
+	// =========================
+	// Pre-Cast Facing
+	// =========================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Facing")
+	bool bRequireFacingBeforeCast = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Facing")
+	float PreCastFacingPollInterval = 0.01f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Facing")
+	float PreCastFacingTimeout = 0.20f;
+
+	UPROPERTY(Transient)
+	bool bWaitingForPreCastFacing = false;
+
+	UPROPERTY(Transient)
+	float PreCastFacingElapsed = 0.f;
+
+	UPROPERTY(Transient)
+	FTimerHandle PreCastFacingTimerHandle;
+
+	UPROPERTY(Transient)
+	FGameplayAbilitySpecHandle CachedFacingHandle;
+
+	UPROPERTY(Transient)
+	FGameplayAbilityActivationInfo CachedFacingActivationInfo;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UGameplayAbility> CachedFacingAbilityForSafety = nullptr;
+
+protected:
+	virtual bool TryBuildPreCastFacingTargetLocation(FVector& OutTargetLocation) const;
+	bool TryBeginPreCastFacing(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	);
+
+	void TickPreCastFacing();
+
+	/**
+	 * 파생 Ability가 Override 해서,
+	 * "회전 완료 후 이어서 실행할 실제 본문"을 구현한다.
+	 *
+	 * 사용법:
+	 * - 파생 ActivateAbility 시작부에서 Super::ActivateAbility(...)
+	 * - 그 다음 if (TryBeginPreCastFacing(...)) return;
+	 * - 아니면 기존 본문 계속 실행
+	 *
+	 * 회전 대기 후에는 이 함수가 자동 호출된다.
+	 */
+	virtual void OnPreCastFacingFinished(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	);
+
+	/**
+	 * 파생 Ability가 "지금은 회전 대기 시작만 하고, 나중에 OnPreCastFacingFinished에서 본문 실행" 구조인지 여부.
+	 * 기본값 true.
+	 */
+	virtual bool ShouldDeferCastUntilFacingFinished() const;
 };

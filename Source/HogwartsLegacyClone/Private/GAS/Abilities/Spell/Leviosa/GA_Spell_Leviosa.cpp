@@ -1,13 +1,11 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "GAS/Abilities/Spell/Leviosa/GA_Spell_Leviosa.h"
+﻿#include "GAS/Abilities/Spell/Leviosa/GA_Spell_Leviosa.h"
 #include "HOGDebugHelper.h"
 #include "Core/HOG_GameplayTags.h"
 
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
@@ -26,6 +24,29 @@ void UGA_Spell_Leviosa::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
+	{
+		return;
+	}
+
+	ExecuteLeviosaCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_Leviosa::OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	ExecuteLeviosaCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_Leviosa::ExecuteLeviosaCast(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -326,6 +347,7 @@ void UGA_Spell_Leviosa::EndAbility(
         
         // 상태 초기화
         HoverTargetComp = nullptr;
+		LevitatedTarget = nullptr;
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

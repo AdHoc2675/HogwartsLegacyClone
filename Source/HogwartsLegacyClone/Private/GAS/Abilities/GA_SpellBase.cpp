@@ -12,6 +12,7 @@
 #include "AbilitySystemComponent.h"
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Component/LockOnComponent.h"
+#include "TimerManager.h"
 
 UGA_SpellBase::UGA_SpellBase()
 {
@@ -20,6 +21,7 @@ UGA_SpellBase::UGA_SpellBase()
 	// 따라서 별도의 정책 변경은 하지 않고 GA_Base의 기본 정책을 사용한다.
 
 	bWarnIfDefinitionMissing = true;
+	bRequireFacingBeforeCast=true;
 }
 
 UDA_SpellDefinition* UGA_SpellBase::GetSpellDefinition() const
@@ -253,6 +255,14 @@ void UGA_SpellBase::EndAbility(
 	bool bWasCancelled
 )
 {
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(PreCastFacingTimerHandle);
+	}
+
+	bWaitingForPreCastFacing = false;
+	PreCastFacingElapsed = 0.f;
+
 	if (ShouldApplyCastingActiveTag())
 	{
 		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
@@ -414,6 +424,139 @@ bool UGA_SpellBase::HasAllRequiredTags(AActor* Target, const FGameplayTagContain
 }
 
 bool UGA_SpellBase::ShouldApplyCastingActiveTag() const
+{
+	return true;
+}
+
+bool UGA_SpellBase::TryBuildPreCastFacingTargetLocation(FVector& OutTargetLocation) const
+{
+	AActor* LockedTarget =nullptr;
+	FGameplayTagContainer LockedTargetTags;
+	FVector AimPoint = FVector::ZeroVector;
+	
+	if (TryConsumeLockedTarget(LockedTarget, LockedTargetTags, AimPoint))
+	{
+		OutTargetLocation=AimPoint.IsNearlyZero()
+		?LockedTarget->GetActorLocation()
+		:AimPoint;
+		
+		return true;		
+	}
+	
+	if (BuildFallbackAimPoint(AimPoint))
+	{
+		OutTargetLocation = AimPoint;
+		return true;
+	}
+	
+	return false;
+	
+}
+
+bool UGA_SpellBase::TryBeginPreCastFacing(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	if (!bRequireFacingBeforeCast)
+	{
+		return false;
+	}
+	
+	if (!ShouldDeferCastUntilFacingFinished())
+	{
+		return false;
+	}
+	
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
+	if (!PlayerCharacter)
+	{
+		return false;
+	}
+	
+	FVector TargetLocation = FVector::ZeroVector;
+	if (!TryBuildPreCastFacingTargetLocation(TargetLocation))
+	{
+		return false;
+	}
+	
+	PlayerCharacter->BeginForcedFacingToLocation(TargetLocation);
+
+	if (PlayerCharacter->IsForcedFacingFinished())
+	{
+		PlayerCharacter->StopForcedFacing();
+		return false;
+	}
+	
+	CachedFacingHandle = Handle;
+	CachedFacingActivationInfo = ActivationInfo;
+	CachedFacingAbilityForSafety = this;
+
+	bWaitingForPreCastFacing = true;
+	PreCastFacingElapsed = 0.f;
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(PreCastFacingTimerHandle);
+		World->GetTimerManager().SetTimer(
+			PreCastFacingTimerHandle,
+			this,
+			&UGA_SpellBase::TickPreCastFacing,
+			PreCastFacingPollInterval,
+			true
+		);
+	}
+
+	return true;
+}
+
+void UGA_SpellBase::TickPreCastFacing()
+{
+	if (!bWaitingForPreCastFacing)
+	{
+		return;
+	}
+	
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
+	if (!PlayerCharacter)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(PreCastFacingTimerHandle);
+		}
+		
+		bWaitingForPreCastFacing=false;
+		return;
+	}
+	
+	PreCastFacingElapsed+=PreCastFacingPollInterval;
+	
+	if (PlayerCharacter->IsForcedFacingFinished()||PreCastFacingElapsed>=PreCastFacingTimeout)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(PreCastFacingTimerHandle);
+		}
+
+		PlayerCharacter->StopForcedFacing();
+		bWaitingForPreCastFacing = false;
+
+		OnPreCastFacingFinished(
+			CachedFacingHandle,
+			CurrentActorInfo,
+			CachedFacingActivationInfo,
+			nullptr
+		);
+	}
+}
+
+void UGA_SpellBase::OnPreCastFacingFinished(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	//파생 ability 에서 override
+}
+
+bool UGA_SpellBase::ShouldDeferCastUntilFacingFinished() const
 {
 	return true;
 }
