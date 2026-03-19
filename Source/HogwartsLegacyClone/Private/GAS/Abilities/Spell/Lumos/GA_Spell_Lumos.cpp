@@ -81,10 +81,10 @@ void UGA_Spell_Lumos::ActivateAbility(
 		OnStartMontageEnded(nullptr, false);
 	}
 
-	// 2. 광원 생성 (지팡이 대신 캐릭터 루트 컴포넌트에 부착 후 우측 상단으로 오프셋 조절)
+	// 2. 광원 생성 (머리 위 메인 조명 + 지팡이 끝 보조 조명/VFX)
 	if (PlayerCharacter)
 	{
-		// 지팡이에 붙이지 않고 플레이어의 캡슐이나 매시에 부착
+		// --- [1] 머리 위 메인 조명 (주변을 밝히고 그림자 생성) ---
 		UCapsuleComponent* PlayerCapsule = PlayerCharacter->GetCapsuleComponent();
 		
 		if (PlayerCapsule)
@@ -106,20 +106,43 @@ void UGA_Spell_Lumos::ActivateAbility(
 				SpawnedLight->SetCastShadows(true);
 			}
 
-			// 파티클 (지팡이 끝이 아니라 광원과 같은 위치에 띄울 것인지, 
-			// 아니면 VFX는 지팡이 끝에 두고 빛만 위에 띄울 것인지 선택 가능)
-			
-			// 현재는 광원과 동일한 공중(우측 상단) 위치에 VFX도 스폰
 			if (LumosVFX)
 			{
 				SpawnedVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(
-					LumosVFX,
-					PlayerCapsule,
-					NAME_None, // 소켓 사용안함
-					FVector(0.f, 60.f, 180.f), // 광원과 동일한 오프셋 위치
-					FRotator::ZeroRotator,
-					EAttachLocation::KeepRelativeOffset,
-					true 
+					LumosVFX, PlayerCapsule, NAME_None,
+					FVector(0.f, 60.f, 180.f), FRotator::ZeroRotator,
+					EAttachLocation::KeepRelativeOffset, true 
+				);
+			}
+		}
+
+		// --- [2] 지팡이 끝 보조 조명 & VFX (연출용) ---
+		UStaticMeshComponent* WandMesh = Cast<UStaticMeshComponent>(PlayerCharacter->GetDefaultSubobjectByName(TEXT("WandMesh")));
+
+		if (WandMesh)
+		{
+			FName AttachSocketName = TEXT("TipSocket");
+
+			WandLight = NewObject<UPointLightComponent>(PlayerCharacter);
+			if (WandLight)
+			{
+				WandLight->RegisterComponent();
+				WandLight->AttachToComponent(WandMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocketName);
+
+				WandLight->SetLightColor(LightColor);
+				// 보조 조명이 너무 밝으면 눈이 부시므로 세기를 살짝 줄임
+				WandLight->SetIntensity(LightIntensity * 0.01f); 
+				WandLight->SetAttenuationRadius(LightAttenuationRadius * 0.01f);
+				// 그림자가 2개 생기면 부자연스럽고 최적화에 안 좋으므로 보조 조명은 그림자 끔
+				WandLight->SetCastShadows(false); 
+			}
+
+			if (LumosVFX)
+			{
+				WandVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(
+					LumosVFX, WandMesh, AttachSocketName,
+					FVector::ZeroVector, FRotator::ZeroRotator,
+					EAttachLocation::SnapToTarget, true 
 				);
 			}
 		}

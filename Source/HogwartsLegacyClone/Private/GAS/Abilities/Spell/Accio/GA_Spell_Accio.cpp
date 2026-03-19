@@ -11,6 +11,7 @@
 #include "Animation/AnimInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
@@ -225,7 +226,34 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (AccioVFX && IsValid(OriginalTarget))
 	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, OriginalTarget->GetActorLocation());
+		// 대상의 중심이 될 메쉬를 찾음
+		UPrimitiveComponent* AttachComp = Cast<UPrimitiveComponent>(OriginalTarget->GetRootComponent());
+
+		TArray<UPrimitiveComponent*> PrimComps;
+		OriginalTarget->GetComponents<UPrimitiveComponent>(PrimComps);
+		for (UPrimitiveComponent* Comp : PrimComps)
+		{
+			// 스켈레탈 메쉬나 스태틱 메쉬를 우선적으로 찾아 부착
+			if (Comp->IsA<UStaticMeshComponent>() || Comp->IsA<USkeletalMeshComponent>())
+			{
+				AttachComp = Comp;
+				break;
+			}
+		}
+
+		if (AttachComp)
+		{
+			// 타겟 메쉬에 VFX를 부착하여 타겟이 움직일 때 VFX도 함께 움직이게 함
+			SpawnedAccioVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(
+				AccioVFX,
+				AttachComp,
+				NAME_None,
+				FVector::ZeroVector,
+				FRotator::ZeroRotator,
+				EAttachLocation::SnapToTarget,
+				true
+			);
+		}
 	}
 
 	// 물체의 성질에 따라 중력 무시 처리 세팅
@@ -354,6 +382,12 @@ void UGA_Spell_Accio::EndAbility(
 	bool bWasCancelled)
 {
 	if (UWorld* World = GetWorld()) World->GetTimerManager().ClearTimer(PullTimerHandle);
+
+	if (SpawnedAccioVFX)
+	{
+		SpawnedAccioVFX->DestroyComponent();
+		SpawnedAccioVFX = nullptr;
+	}
 
 	if (IsValid(TargetToMove))
 	{
