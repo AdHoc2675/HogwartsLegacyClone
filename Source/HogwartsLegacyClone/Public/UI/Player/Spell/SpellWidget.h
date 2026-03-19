@@ -9,15 +9,19 @@
 /**
  * 
  */
+struct FGameplayTag;
 class UProgressBar;
 class UImage;
+class UOverlay;
+
 UCLASS()
 class HOGWARTSLEGACYCLONE_API USpellWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	void UseSpell(const float Time);
+	void UseSpell(FGameplayTag SpellID, float InCooldownTime);
+	void UnLockSpell();
 
 private:
 	void UpdateSpellCoolDown();
@@ -27,7 +31,10 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	UImage* SpellIcon;
-
+	
+	UPROPERTY(meta = (BindWidget))
+	UOverlay* SpellSlotLockOverlay;
+	
 	FTimerHandle SpellTimerHandle;
 
 	float StartTime;

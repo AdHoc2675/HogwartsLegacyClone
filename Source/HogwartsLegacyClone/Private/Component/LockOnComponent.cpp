@@ -205,6 +205,7 @@ void ULockOnComponent::ClearCurrentTarget()
 	if (CurrentTargetActor.Get() != nullptr)
 	{
 		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, false);
+		OnLockOnReleased.Broadcast(CurrentTargetActor.Get());
 	}
 
 	CurrentTargetActor = nullptr;
@@ -238,6 +239,7 @@ void ULockOnComponent::SetCurrentTarget(AActor* NewTarget, const FLockOnTargetRe
 	if (CurrentTargetActor.Get() != nullptr)
 	{
 		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, true);
+		OnLockOnTarget.Broadcast(CurrentTargetActor.Get());
 	}
 }
 

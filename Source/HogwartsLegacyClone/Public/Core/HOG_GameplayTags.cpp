@@ -20,6 +20,7 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill2, "Input.Skill2")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill3, "Input.Skill3")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Skill4, "Input.Skill4")
+	UE_DEFINE_GAMEPLAY_TAG(Input_Skill5, "Input.Skill5")
 
 	//State
 	UE_DEFINE_GAMEPLAY_TAG(State_Dead, "State.Dead")
@@ -40,6 +41,7 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Incendio, "Spell.Incendio")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Leviosa, "Spell.Leviosa")
 	UE_DEFINE_GAMEPLAY_TAG(Spell_Stupefy, "Spell.Stupefy")
+	UE_DEFINE_GAMEPLAY_TAG(Spell_Lumos, "Spell.Lumos")
 
 	//CombatState
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Active, "State.Combat.Active")
@@ -53,6 +55,8 @@ namespace HOGGameplayTags
 	//Protage State
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_Active, "State.Spell.Protego.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Protego_ParrySuccess, "State.Spell.Protego.ParrySuccess")
+	
+	UE_DEFINE_GAMEPLAY_TAG(State_Spell_Lumos_Active, "State.Spell.Lumos.Active")
 
 	//Damage
 	UE_DEFINE_GAMEPLAY_TAG(Damage_Melee, "Damage.Melee")

@@ -30,12 +30,10 @@ private:
 	void UpdateBar();
 	 
 	UPROPERTY(EditDefaultsOnly, category = "InterpSpeed")
-	float InterpSpeed;
+	float InterpSpeed = 5.f;
 	
 	FTimerHandle TimerHandle;
 	float TargetPercentage = 1.f;
 	float CurrentPercentage= 1.f;
 	float TimerRate = 0.016f;
-	
-	
 };
