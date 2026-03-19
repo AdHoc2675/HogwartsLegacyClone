@@ -7,6 +7,7 @@
 
 class UGameplayEffect;
 class AActor;
+class UAnimMontage;
 
 /**
  * Stupefy
@@ -113,6 +114,14 @@ protected:
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> PendingForcedTarget = nullptr;
 
+	/**
+ * Stupefy 캐스팅 몽타주
+ * - 연출용 재생
+ * - 실제 판정은 ExecuteStupefyCast()에서 즉시 처리
+ */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Anim")
+	TObjectPtr<UAnimMontage> CastMontage;
+
 protected:
 	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const override;
 
@@ -121,14 +130,14 @@ protected:
 		const FGameplayAbilityActorInfo* ActorInfo,
 		FGameplayTagContainer* OptionalRelevantTags = nullptr
 	) const override;
-	
+
 protected:
 	virtual void OnPreCastFacingFinished(
-	const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo,
-	const FGameplayEventData* TriggerEventData
-) override;
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	) override;
 
 	void ExecuteStupefyCast(
 		const FGameplayAbilitySpecHandle Handle,
@@ -136,4 +145,7 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData
 	);
+
+	UFUNCTION()
+	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 };
