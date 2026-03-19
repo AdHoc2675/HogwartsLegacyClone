@@ -20,12 +20,15 @@ class HOGWARTSLEGACYCLONE_API AEnemyAIControllerBase : public AAIController
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "AI")
+	void ActivateAI();
+	
 	AEnemyAIControllerBase();
 	
 	AActor* GetTargetActor() const;
 	void SetTargetActor(AActor* TargetActor);
 	void ClearTargetActor();
-
+	
 	AEnemyCharacterBase* GetEnemyCharacter() const;
 
 protected:
@@ -45,6 +48,8 @@ protected:
 	
 	UPROPERTY()
 	AEnemyCharacterBase* EnemyCharacter;
+
+	bool bActivated = false;
 
 private:
 	void StartBehaviorTree();

@@ -9,6 +9,13 @@
 
 #include "EnemyCharacterBase.generated.h"
 
+UENUM(BlueprintType)
+enum class EAIActivationMode : uint8
+{
+	Immediate,     
+	WaitForSignal   
+};
+
 class UDA_EnemyConfigBase;
 class UHOGAttributeSet;
 class AController;
@@ -33,6 +40,9 @@ public:
 	
 	// ===== IAbilitySystemInterface =====
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
+	// ===== AI Activation Mode =====
+	EAIActivationMode GetActivationMode() const { return ActivationMode; }
 	
 	// ===== Getters =====
 	float GetHealth() const;
@@ -77,6 +87,9 @@ protected:
 	virtual void HandleDeath_Implementation() override;
 	virtual void OnHealthChanged(float OldValue, float NewValue);
 	
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Activation")
+	EAIActivationMode ActivationMode = EAIActivationMode::Immediate;
+	
 private:
 	void OnHealthChangedInternal(const FOnAttributeChangeData& Data);
 	
@@ -87,9 +100,6 @@ private:
 	UFUNCTION()
 	void SpawnDamageNumber(float Damage);
 	void BindDamageDelegate();
-	
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	FName DamageSocketName = TEXT("head");
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	FVector DamageNumberOffset = FVector(0.f, 0.f, 30.f);

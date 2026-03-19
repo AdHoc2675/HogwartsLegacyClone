@@ -11,6 +11,16 @@
 
 #include "Perception/AIPerceptionTypes.h"
 
+void AEnemyAIControllerBase::ActivateAI()
+{
+	if (bActivated) return;
+	bActivated = true;
+	
+	StartBehaviorTree();
+	BehaviorTreeComp = Cast<UBehaviorTreeComponent>(BrainComponent);
+	BlackboardComp = GetBlackboardComponent();
+}
+
 AEnemyAIControllerBase::AEnemyAIControllerBase()
 {
 	// Perception 컴포넌트 생성
@@ -50,14 +60,12 @@ void AEnemyAIControllerBase::OnPossess(APawn* InPawn)
     
 	EnemyCharacter = Cast<AEnemyCharacterBase>(InPawn);
 	if (!EnemyCharacter) return;
-
-	// BT 먼저 시작
-	StartBehaviorTree();
-    
-	// 컴포넌트 캐싱
-	BehaviorTreeComp = Cast<UBehaviorTreeComponent>(BrainComponent);
-	BlackboardComp = GetBlackboardComponent();
-    
+	
+	if (EnemyCharacter->GetActivationMode() == EAIActivationMode::Immediate)
+	{
+		ActivateAI();
+	}
+	
 	// 콜백 등록은 마지막에
 	BindCallbacks();
 }
@@ -75,6 +83,7 @@ void AEnemyAIControllerBase::OnUnPossess()
 
 void AEnemyAIControllerBase::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
+	if (!bActivated) return; 
 	if (!Actor) return;
 	
 	if (Stimulus.WasSuccessfullySensed())
