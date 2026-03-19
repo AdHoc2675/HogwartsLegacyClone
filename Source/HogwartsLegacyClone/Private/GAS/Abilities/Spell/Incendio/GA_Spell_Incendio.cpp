@@ -66,7 +66,7 @@ void UGA_Spell_Incendio::ActivateAbility(
 		return;
 	}
 
-	const float Duration = AnimInstance->Montage_Play(CastMontage, 1.f);
+	const float Duration = AnimInstance->Montage_Play(CastMontage, 3.f);
 	if (Duration > 0.f)
 	{
 		FOnMontageEnded EndDelegate;
