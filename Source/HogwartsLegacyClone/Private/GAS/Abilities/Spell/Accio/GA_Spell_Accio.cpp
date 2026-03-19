@@ -1,17 +1,22 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GAS/Abilities/Spell/Accio/GA_Spell_Accio.h"
+
 #include "HOGDebugHelper.h"
 #include "Core/HOG_GameplayTags.h"
+
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystemComponent.h"
 
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
+
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
@@ -29,13 +34,36 @@ void UGA_Spell_Accio::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
+	{
+		return;
+	}
+
+	ExecuteAccioCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_Accio::OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	ExecuteAccioCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_Accio::ExecuteAccioCast(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	ACharacter* Character = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
 
 	if (CastVoiceSound && Character)
 	{
@@ -182,12 +210,41 @@ bool UGA_Spell_Accio::FireAccio()
 
 	UAbilitySystemComponent* FloorASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CurrentFloorActor);
 	bool bIsStandingOnPlatform = FloorASC && FloorASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
+	
+	// =========================
+	// 최소 수정:
+	// "타겟팅은 됐지만 Accio로 실제 이동 가능한 대상은 아닌 경우" 차단
+	// 예: Rideable 같은 다른 Interactable 태그만 있고,
+	//     Accio 관련 태그/Enemy 태그는 없는 경우
+	// =========================
+	bool bCanBeMovedByAccioTag = false;
+
+	if (TargetASC)
+	{
+		if (TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget) ||
+			TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform) ||
+			TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Enemy) ||
+			TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Unit.Enemy"))))
+		{
+			bCanBeMovedByAccioTag = true;
+		}
+	}
+
+	if (!bCanBeMovedByAccioTag)
+	{
+		Debug::Print(
+			FString::Printf(TEXT("[Accio] Target is targetable but not movable by Accio tag: %s"), *GetNameSafe(AcquiredTarget)),
+			FColor::Red
+		);
+		return false;
+	}
 
 	// [대상 식별] 적(Enemy)인지, 상호작용 물체(Interactable)인지 판별
 	if (TargetASC)
 	{
 		// 태그 계층구조를 활용해 "Interactable" 하위 태그가 있는지, "Unit.Enemy" 하위 태그가 있는지 확인
-		if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Interactable"))))
+		if (TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform) ||
+	TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget))
 		{
 			bIsPullingInteractable = true;
 			CurrentPullSpeed = InteractablePullSpeed; // 물체/발판 등은 부드럽게
@@ -226,34 +283,7 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (AccioVFX && IsValid(OriginalTarget))
 	{
-		// 대상의 중심이 될 메쉬를 찾음
-		UPrimitiveComponent* AttachComp = Cast<UPrimitiveComponent>(OriginalTarget->GetRootComponent());
-
-		TArray<UPrimitiveComponent*> PrimComps;
-		OriginalTarget->GetComponents<UPrimitiveComponent>(PrimComps);
-		for (UPrimitiveComponent* Comp : PrimComps)
-		{
-			// 스켈레탈 메쉬나 스태틱 메쉬를 우선적으로 찾아 부착
-			if (Comp->IsA<UStaticMeshComponent>() || Comp->IsA<USkeletalMeshComponent>())
-			{
-				AttachComp = Comp;
-				break;
-			}
-		}
-
-		if (AttachComp)
-		{
-			// 타겟 메쉬에 VFX를 부착하여 타겟이 움직일 때 VFX도 함께 움직이게 함
-			SpawnedAccioVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(
-				AccioVFX,
-				AttachComp,
-				NAME_None,
-				FVector::ZeroVector,
-				FRotator::ZeroRotator,
-				EAttachLocation::SnapToTarget,
-				true
-			);
-		}
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, OriginalTarget->GetActorLocation());
 	}
 
 	// 물체의 성질에 따라 중력 무시 처리 세팅
@@ -347,6 +377,7 @@ void UGA_Spell_Accio::UpdatePulling()
 		{
 			ActualMoveComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 		}
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -382,12 +413,6 @@ void UGA_Spell_Accio::EndAbility(
 	bool bWasCancelled)
 {
 	if (UWorld* World = GetWorld()) World->GetTimerManager().ClearTimer(PullTimerHandle);
-
-	if (SpawnedAccioVFX)
-	{
-		SpawnedAccioVFX->DestroyComponent();
-		SpawnedAccioVFX = nullptr;
-	}
 
 	if (IsValid(TargetToMove))
 	{
