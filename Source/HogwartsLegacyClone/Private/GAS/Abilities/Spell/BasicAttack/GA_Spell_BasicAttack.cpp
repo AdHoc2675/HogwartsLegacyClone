@@ -40,6 +40,29 @@ void UGA_Spell_BasicAttack::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
+	{
+		return;
+	}
+
+	ExecuteBasicAttackCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_BasicAttack::OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	ExecuteBasicAttackCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_Spell_BasicAttack::ExecuteBasicAttackCast(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
 	// 첫 입력: 콤보 시작
 	bComboInProgress = true;
 	bNextComboQueued = false;
@@ -59,8 +82,8 @@ void UGA_Spell_BasicAttack::InputPressed(
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 
 	APlayerCharacterBase* PlayerCharacter = ActorInfo
-		                                        ? Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get())
-		                                        : nullptr;
+		? Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get())
+		: nullptr;
 
 	if (!bComboInProgress)
 	{
@@ -278,7 +301,6 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 	const FVector SpawnLocation =
 		AvatarCharacter->GetMesh()->GetSocketLocation(WandSocketName);
 
-
 	FVector ShootDirection = AvatarCharacter->GetActorForwardVector();
 
 	/* =========================
@@ -291,7 +313,6 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 
 	const bool bHasTarget =
 		TryConsumeLockedTarget(TargetActor, TargetTags, AimPoint);
-
 
 	/* =========================
 	   방향 계산
@@ -347,7 +368,6 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 	{
 		return;
 	}
-
 
 	/* =========================
 	   Projectile 초기화

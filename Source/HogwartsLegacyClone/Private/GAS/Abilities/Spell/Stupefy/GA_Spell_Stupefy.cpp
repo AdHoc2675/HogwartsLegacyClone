@@ -3,7 +3,9 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+
 #include "Component/CombatComponent.h"
+
 #include "Core/HOG_Struct.h"
 #include "GameplayEffect.h"
 #include "HOGDebugHelper.h"
@@ -52,8 +54,32 @@ void UGA_SpellStupefy::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
+	{
+		return;
+	}
+
+	ExecuteStupefyCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_SpellStupefy::OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData
+)
+{
+	ExecuteStupefyCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UGA_SpellStupefy::ExecuteStupefyCast(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData
+)
+{
 	const ESpellCastContext CastContext = ResolveCastContextAndConsume();
-	AActor* ForcedTargetSnapshot = PendingForcedTarget;
 	const FSpellCastRequest CastRequest = BuildSpellCastRequest(CastContext);
 
 	FSpellCastCheckResult CheckResult;
@@ -127,7 +153,7 @@ void UGA_SpellStupefy::PrepareCastContext(
 ESpellCastContext UGA_SpellStupefy::ResolveCastContextAndConsume()
 {
 	const ESpellCastContext ResolvedContext = PendingCastContext;
-	return PendingCastContext;
+	return ResolvedContext;
 }
 
 bool UGA_SpellStupefy::ResolveTargetForCast(

@@ -1,28 +1,34 @@
 #include "Character/Player/PlayerCharacterBase.h"
 
 #include "Camera/CameraComponent.h"
+
 #include "Component/LockOnComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "GAS/HOGAbilitySystemComponent.h"
+
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "UObject/ConstructorHelpers.h"
-
 #include "GameFramework/HOG_PlayerState.h"
-#include "GAS/HOGAbilitySystemComponent.h"
+
+#include "UObject/ConstructorHelpers.h"
 #include "Core/HOG_GameplayTags.h"
 #include "HOGDebugHelper.h"
 
+
 APlayerCharacterBase::APlayerCharacterBase()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 	bUseControllerRotationYaw = false;
 
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{
+		// 평소엔 자유시점 / 자유이동
 		MoveComp->bOrientRotationToMovement = true;
-		MoveComp->RotationRate = FRotator(0.0f, 600.0f, 0.0f);
+		MoveComp->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
 		MoveComp->JumpZVelocity = 700.f;
 		MoveComp->AirControl = 0.35f;
 		MoveComp->MaxWalkSpeed = 500.f;
@@ -32,8 +38,13 @@ APlayerCharacterBase::APlayerCharacterBase()
 	// 카메라 스프링암 셋팅
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetCapsuleComponent());
-	CameraBoom->TargetArmLength = 400.f;
+	CameraBoom->TargetArmLength = 300.f;
+	CameraBoom->SocketOffset = FVector(0.f, 65.f, 20.f);
+	CameraBoom->TargetOffset = FVector(0.f, 0.f, 55.f);
 	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->bDoCollisionTest = true;
+	CameraBoom->bEnableCameraLag = false;
+	CameraBoom->bEnableCameraRotationLag = false;
 
 	// 카메라 셋팅
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -66,13 +77,6 @@ APlayerCharacterBase::APlayerCharacterBase()
 	{
 		WandMesh->SetStaticMesh(WandMeshFinder.Object);
 	}
-	else
-	{
-		// Debug::Print(
-		// 	TEXT("[PlayerCharacterBase] Failed to load WandMesh: /Game/Fab/Ornamental_Wand/OrnamentalWand.OrnamentalWand"),
-		// 	FColor::Red
-		// );
-	}
 
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 }
@@ -100,6 +104,13 @@ void APlayerCharacterBase::BeginPlay()
 	}
 
 	RefreshWandVisibilityFromCombatState();
+}
+
+void APlayerCharacterBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	UpdateForcedFacing(DeltaSeconds);
 }
 
 void APlayerCharacterBase::PossessedBy(AController* NewController)
@@ -134,14 +145,77 @@ void APlayerCharacterBase::InitializeAbilityActorInfo()
 
 	// OwnerActor = PlayerState, AvatarActor = Character
 	HOGASC->InitAbilityActorInfo(HOGPlayerState, this);
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] ASC Init Success | ASC=%s | Owner=%s | Avatar=%s"),
-	// 	*GetNameSafe(HOGASC),
-	// 	*GetNameSafe(HOGASC->GetOwnerActor()),
-	// 	*GetNameSafe(HOGASC->GetAvatarActor())
-	// ), FColor::Green);
 }
+
+
+void APlayerCharacterBase::BeginForcedFacingToLocation(const FVector& TargetLocation)
+{
+	FVector ToTarget = TargetLocation - GetActorLocation();
+	ToTarget.Z = 0.f;
+
+	if (ToTarget.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FRotator TargetRot = ToTarget.Rotation();
+	BeginForcedFacingToRotation(TargetRot);
+	
+}
+
+void APlayerCharacterBase::BeginForcedFacingToRotation(const FRotator& TargetRotation)
+{
+	ForcedFacingTargetRotation=FRotator(0.f,TargetRotation.Yaw,0.f);
+	bForcedFacingActive=true;
+	
+	//강제 회전중에는 이동방향 일시 중지 
+	if (UCharacterMovementComponent* MoveComp=GetCharacterMovement())
+	{
+		MoveComp->bOrientRotationToMovement=false;
+	}
+}
+
+void APlayerCharacterBase::StopForcedFacing()
+{
+	bForcedFacingActive=false;
+{
+}
+	
+	//평상시 회전 복구
+	if (UCharacterMovementComponent* MoveComp=GetCharacterMovement())
+	{
+		MoveComp->bOrientRotationToMovement=true;
+	}
+}
+
+bool APlayerCharacterBase::IsForcedFacingFinished() const
+{
+	const float DeltaYaw = FMath::Abs(FMath::FindDeltaAngleDegrees(
+		GetActorRotation().Yaw,
+		ForcedFacingTargetRotation.Yaw
+	));
+
+	return DeltaYaw <= ForcedFacingAcceptAngle;
+}
+void APlayerCharacterBase::UpdateForcedFacing(float DeltaSeconds)
+{
+	if (!bForcedFacingActive)
+	{
+		return;
+	}
+	
+	const FRotator CurrentRot=GetActorRotation();
+	const FRotator NewRot = FMath::RInterpTo(CurrentRot,ForcedFacingTargetRotation,DeltaSeconds,ForcedFacingInterpSpeed);
+	
+	SetActorRotation(FRotator(0.f, NewRot.Yaw, 0.f));
+
+	if (IsForcedFacingFinished())
+	{
+		SetActorRotation(ForcedFacingTargetRotation);
+		StopForcedFacing();
+	}
+}
+
 
 UHOGAbilitySystemComponent* APlayerCharacterBase::GetHOGAbilitySystemComponent() const
 {
@@ -154,9 +228,11 @@ UHOGAbilitySystemComponent* APlayerCharacterBase::GetHOGAbilitySystemComponent()
 	return Cast<UHOGAbilitySystemComponent>(HOGPlayerState->GetAbilitySystemComponent());
 }
 
+
+
 void APlayerCharacterBase::Input_Move(const FInputActionValue& Value)
 {
-	if (bCastingActive)
+	if (bCastingActive && !bForcedFacingActive)
 	{
 		return;
 	}
@@ -222,12 +298,6 @@ void APlayerCharacterBase::HandleCombatActiveTagChanged(const FGameplayTag Callb
 {
 	bCombatActive = (NewCount > 0);
 	RefreshWandVisibilityFromCombatState();
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] Combat Active Tag Changed | NewCount=%d | bCombatActive=%s"),
-	// 	NewCount,
-	// 	(bCombatActive ? TEXT("true") : TEXT("false"))
-	// ), FColor::Cyan);
 }
 
 void APlayerCharacterBase::HandleCombatInactiveTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
@@ -237,24 +307,12 @@ void APlayerCharacterBase::HandleCombatInactiveTagChanged(const FGameplayTag Cal
 		bCombatActive = false;
 		RefreshWandVisibilityFromCombatState();
 	}
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] Combat Inactive Tag Changed | NewCount=%d | bCombatActive=%s"),
-	// 	NewCount,
-	// 	(bCombatActive ? TEXT("true") : TEXT("false"))
-	// ), FColor::Silver);
 }
 
 void APlayerCharacterBase::HandleCastingActiveTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
 	bCastingActive = (NewCount > 0);
 	RefreshWandVisibilityFromCombatState();
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] Casting Active Tag Changed | NewCount=%d | bCastingActive=%s"),
-	// 	NewCount,
-	// 	(bCastingActive ? TEXT("true") : TEXT("false"))
-	// ), FColor::Orange);
 }
 
 void APlayerCharacterBase::HandleCastingInactiveTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
@@ -264,12 +322,6 @@ void APlayerCharacterBase::HandleCastingInactiveTagChanged(const FGameplayTag Ca
 		bCastingActive = false;
 		RefreshWandVisibilityFromCombatState();
 	}
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] Casting Inactive Tag Changed | NewCount=%d | bCastingActive=%s"),
-	// 	NewCount,
-	// 	(bCastingActive ? TEXT("true") : TEXT("false"))
-	// ), FColor::Orange);
 }
 
 void APlayerCharacterBase::RefreshWandVisibilityFromCombatState()
@@ -277,13 +329,6 @@ void APlayerCharacterBase::RefreshWandVisibilityFromCombatState()
 	const bool bShouldShowWand = (bCombatActive || bCastingActive);
 
 	SetWandVisible(bShouldShowWand);
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] RefreshWandVisibility | Combat=%s | Casting=%s | Show=%s"),
-	// 	(bCombatActive ? TEXT("true") : TEXT("false")),
-	// 	(bCastingActive ? TEXT("true") : TEXT("false")),
-	// 	(bShouldShowWand ? TEXT("true") : TEXT("false"))
-	// ), FColor::Green);
 }
 
 void APlayerCharacterBase::SetWandVisible(bool bVisible)
@@ -300,9 +345,4 @@ void APlayerCharacterBase::SetWandVisible(bool bVisible)
 void APlayerCharacterBase::SetCanQueueNextCombo(bool bInCanQueue)
 {
 	bCanQueueNextCombo = bInCanQueue;
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] SetCanQueueNextCombo | %s"),
-	// 	bCanQueueNextCombo ? TEXT("true") : TEXT("false")
-	// ), FColor::Cyan);
 }

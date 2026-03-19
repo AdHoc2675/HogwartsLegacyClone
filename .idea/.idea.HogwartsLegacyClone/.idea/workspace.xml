@@ -14,41 +14,19 @@
   <component name="ChangeListManager">
     <list default="true" id="4017c41f-baa8-4d50-8ca2-1657962124b1" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.HogwartsLegacyClone/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Assets/Mixed_Magic_VFX_Pack/VFX/NS_Gelmir_Fury.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Assets/Mixed_Magic_VFX_Pack/VFX/NS_Gelmir_Fury.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Assets/Mixed_Magic_VFX_Pack/VFX/NS_Gelmir_Wizard_Impact.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Assets/Mixed_Magic_VFX_Pack/VFX/NS_Gelmir_Wizard_Impact.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Assets/Mixed_Magic_VFX_Pack/VFX/NS_Magma_Shot.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Assets/Mixed_Magic_VFX_Pack/VFX/NS_Magma_Shot.uasset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand/Materials/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand/Textures/OrnamentalWand_BaseColor.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand/Textures/OrnamentalWand_Metallic.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand/Textures/OrnamentalWand_Normal.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand/Textures/OrnamentalWand_Roughness.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_00/Materials/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_00/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_00/Textures/OrnamentalWand_BaseColor.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_00/Textures/OrnamentalWand_Metallic.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_00/Textures/OrnamentalWand_Normal.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_00/Textures/OrnamentalWand_Roughness.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_01/Materials/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_01/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_01/Textures/OrnamentalWand_BaseColor.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_01/Textures/OrnamentalWand_Metallic.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_01/Textures/OrnamentalWand_Normal.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_01/Textures/OrnamentalWand_Roughness.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_02/Materials/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_02/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_02/Textures/OrnamentalWand_BaseColor.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_02/Textures/OrnamentalWand_Metallic.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_02/Textures/OrnamentalWand_Normal.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_02/Textures/OrnamentalWand_Roughness.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_03/Materials/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_03/OrnamentalWand.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_03/Textures/OrnamentalWand_BaseColor.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_03/Textures/OrnamentalWand_Metallic.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_03/Textures/OrnamentalWand_Normal.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Fab/Ornamental_Wand_03/Textures/OrnamentalWand_Roughness.uasset" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Character/Player/BP_PlayerCharacterBase.uasset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/_BP/Spell/Incendio/BP_GA_Spell_Incendio.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/_BP/Spell/Incendio/BP_GA_Spell_Incendio.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/Player/PlayerCharacterBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/Character/Player/PlayerCharacterBase.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GA_SpellBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/GA_SpellBase.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Accio/GA_Spell_Accio.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Accio/GA_Spell_Accio.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Leviosa/GA_Spell_Leviosa.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Leviosa/GA_Spell_Leviosa.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Private/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/Player/PlayerCharacterBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/Character/Player/PlayerCharacterBase.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GA_SpellBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/GA_SpellBase.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Accio/GA_Spell_Accio.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Accio/GA_Spell_Accio.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/BasicAttack/GA_Spell_BasicAttack.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Leviosa/GA_Spell_Leviosa.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Leviosa/GA_Spell_Leviosa.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/HogwartsLegacyClone/Public/GAS/Abilities/Spell/Stupefy/GA_Spell_Stupefy.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -108,6 +86,7 @@
     <commands />
     <urls />
   </component>
+  <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
 }</component>
@@ -123,7 +102,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "InCendioCenterAim",
+    "git-widget-placeholder": "CameraREF",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -260,12 +239,14 @@
       <workItem from="1773736992640" duration="3722000" />
       <workItem from="1773793336467" duration="2704000" />
       <workItem from="1773797923499" duration="3826000" />
+      <workItem from="1773893149268" duration="8501000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
