@@ -67,7 +67,7 @@ protected:
 
 	// 마법 지속 시간 (초 단위)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Leviosa|Time")
-	float LevitationDuration = 5.0f;
+	float LevitationDuration = 1.0f;
 
 	// ====== 시각 및 사운드 효과 ======
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Visual")
@@ -103,6 +103,15 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPrimitiveComponent> HoverTargetComp;
+
+	UPROPERTY(Transient)
+	float HoverInitialZ = 0.f;
+
+	UPROPERTY(Transient)
+	float HoverElapsedTime = 0.f;
+
+	UPROPERTY(Transient)
+	float CurrentLevitateDuration = 0.f;
 	
 protected:
 	virtual void OnPreCastFacingFinished(

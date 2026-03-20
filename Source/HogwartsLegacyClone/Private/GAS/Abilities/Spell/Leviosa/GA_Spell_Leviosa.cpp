@@ -266,8 +266,13 @@ bool UGA_Spell_Leviosa::StartLevitation()
 				// 물리 시뮬레이션은 유지하되, 중력만 끄고 초기 속도를 위로 주어 살짝 띄우기
 				PrimComp->SetSimulatePhysics(false);
 
-				// 목표 높이 (현재 높이 + 개별 설정된 떠오르는 높이) 설정
-				HoverTargetZ = PrimComp->GetComponentLocation().Z + FinalLevitateZOffset;
+				// 목표 높이 설정
+				HoverInitialZ = PrimComp->GetComponentLocation().Z;
+				HoverTargetZ = HoverInitialZ + FinalLevitateZOffset;
+				
+				// 보간을 위한 시간 초기화
+				HoverElapsedTime = 0.0f;
+				CurrentLevitateDuration = FMath::Max(0.1f, FinalLevitationDuration); // 0 방어 코드
 
 				// 짧은 주기로 부양 로직으로 이동시킴
 				GetWorld()->GetTimerManager().SetTimer(
@@ -380,19 +385,27 @@ void UGA_Spell_Leviosa::UpdateHovering()
 		return;
 	}
 
+	// 타이머 주기(0.01f)만큼 경과 시간 증가
+	HoverElapsedTime += 0.01f;
+	
+	// 전체 지속 시간 대비 진행도 (0.0 ~ 1.0)
+	float Alpha = FMath::Clamp(HoverElapsedTime / CurrentLevitateDuration, 0.0f, 1.0f);
+
 	// 현재 위치
 	FVector CurrentLoc = HoverTargetComp->GetComponentLocation();
 
-	// 목표 위치
-	FVector TargetLoc = CurrentLoc;
-	TargetLoc.Z = HoverTargetZ;
+	// 시간에 기반해 Z축 위치 계산 (InterpEaseOut 활용하여 위로 갈수록 살짝 부드러워지게 적용, 원치 않으면 단순 Lerp 사용 가능)
+	float EasedAlpha = FMath::InterpEaseOut(0.0f, 1.0f, Alpha, 2.0f);
+	float NewZ = FMath::Lerp(HoverInitialZ, HoverTargetZ, EasedAlpha);
 
-	// Z축으로 부드럽게 이동 (보간) - InterpSpeed(3.0f 등) 조절로 상승 속도 제어 가능
-	// 델타 타임은 타이머 반복 주기 0.02f 사용
-	FVector NewLoc = FMath::VInterpTo(CurrentLoc, TargetLoc, 0.02f, 3.0f);
+	CurrentLoc.Z = NewZ;
 
-	// 컴포넌트의 위치를 강제로 이동 (물리가 꺼져있으므로 이대로 쭉 밀고 올라감 - 플레이어도 함께 밀려 올라감)
-	HoverTargetComp->SetWorldLocation(NewLoc);
+	// 컴포넌트의 위치를 강제로 이동
+	HoverTargetComp->SetWorldLocation(CurrentLoc);
 
-	// 만약 목표 높이에 거의 다 도달했으면 타이머를 끄고 멈추게 할 수도 있음
+	// 목표 높이에 도달했으면 상승(업데이트) 정지, 마법 종료(OnLevitationDurationEnded) 때까지 공중에 머무름
+	if (Alpha >= 1.0f)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(HoverTimerHandle);
+	}
 }
