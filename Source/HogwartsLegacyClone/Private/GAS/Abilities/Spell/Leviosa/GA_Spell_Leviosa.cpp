@@ -233,14 +233,16 @@ bool UGA_Spell_Leviosa::StartLevitation()
 	// 3. 물리 엔진을 이용해 강제로 위로 띄우기 설정
 	
 	// 기본값은 어빌리티에 설정된 값을 사용
-	float FinalLevitationDuration = LevitationDuration;
+	float FinalRiseDuration = LevitationDuration;
+	float FinalHoverDuration = LevitationHoverDuration; // 추가된 체공 시간 초기화
 	float FinalLevitateZOffset = 250.f;
 
 	// 대상이 InteractableLevitatable라면 개별 설정된 값을 덮어씌움
 	if (AInteractableLevitatable* LevitatableObj = Cast<AInteractableLevitatable>(LevitatedTarget))
 	{
-		FinalLevitationDuration = LevitatableObj->GetLevitateDuration();
+		FinalRiseDuration = LevitatableObj->GetLevitateDuration();
 		FinalLevitateZOffset = LevitatableObj->GetLevitateHeight();
+		FinalHoverDuration = LevitatableObj->GetLevitateHoverDuration(); // 체공 시간 덮어쓰기
 	}
 
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(LevitatedTarget))
@@ -249,6 +251,7 @@ bool UGA_Spell_Leviosa::StartLevitation()
 		{
 			MoveComp->GravityScale = 0.0f;                // 중력 무시
 			MoveComp->SetMovementMode(MOVE_Flying);      // 낙하 방지
+			// 캐릭터의 경우 Velocity로 위로 미는 방식
 			MoveComp->Velocity = FVector(0.f, 0.f, FinalLevitateZOffset); // 위로 살짝 띄우기
 		}
 	}
@@ -272,9 +275,8 @@ bool UGA_Spell_Leviosa::StartLevitation()
 				
 				// 보간을 위한 시간 초기화
 				HoverElapsedTime = 0.0f;
-				CurrentLevitateDuration = FMath::Max(0.1f, FinalLevitationDuration); // 0 방어 코드
+				CurrentLevitateDuration = FMath::Max(0.1f, FinalRiseDuration); // 시간 0 방어 코드
 
-				// 짧은 주기로 부양 로직으로 이동시킴
 				GetWorld()->GetTimerManager().SetTimer(
 					HoverTimerHandle,
 					this,
@@ -289,12 +291,14 @@ bool UGA_Spell_Leviosa::StartLevitation()
 
 	Debug::Print(FString::Printf(TEXT("[Leviosa] Levitated %s!"), *LevitatedTarget->GetName()), FColor::Cyan);
 
-	// 지정된 지속 시간(FinalLevitationDuration) 이후에 어빌리티를 종료하도록 타이머 설정
+	// 부유가 끝난 직후 + 체공 시간(HoverDuration)을 모두 버틴 뒤 어빌리티를 종료하도록 함
+	float TotalLevitationTime = FinalRiseDuration + FinalHoverDuration;
+
 	GetWorld()->GetTimerManager().SetTimer(
 		LevitationTimerHandle,
 		this,
 		&UGA_Spell_Leviosa::OnLevitationDurationEnded,
-		FinalLevitationDuration,
+		TotalLevitationTime, 
 		false
 	);
 

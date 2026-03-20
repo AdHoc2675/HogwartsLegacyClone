@@ -65,9 +65,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HOG|Spell|Leviosa|Effect")
 	TSubclassOf<UGameplayEffect> LevitationEffectClass;
 
-	// 마법 지속 시간 (초 단위)
+	// 마법 지속 시간 (초 단위) - 상승 시간
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Leviosa|Time")
 	float LevitationDuration = 1.0f;
+
+	// 허공에 머무는 유지 시간
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Leviosa|Time")
+	float LevitationHoverDuration = 2.5f; 
 
 	// ====== 시각 및 사운드 효과 ======
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Visual")

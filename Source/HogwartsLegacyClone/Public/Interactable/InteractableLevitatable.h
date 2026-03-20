@@ -38,6 +38,7 @@ public:
 	// Getter
 	float GetLevitateHeight() const { return LevitateHeight; }
 	float GetLevitateDuration() const { return LevitateDuration; }
+	float GetLevitateHoverDuration() const { return LevitateHoverDuration; } // 추가: 체공 시간 Getter
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Mesh")
@@ -54,7 +55,10 @@ protected:
 	float LevitateHeight = 250.f; // 위로 떠오르는 대상 높이
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|Levitate")
-	float LevitateDuration = 5.0f; // 마법 지속 시간
+	float LevitateDuration = 1.0f; // 상승하는 데 걸리는 시간
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|Levitate")
+	float LevitateHoverDuration = 1.0f; // 다 떠오른 후 공중에 머무는 시간
 
 	// === 플랫폼 모드 설정 ===
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="HOG|Levitate")
