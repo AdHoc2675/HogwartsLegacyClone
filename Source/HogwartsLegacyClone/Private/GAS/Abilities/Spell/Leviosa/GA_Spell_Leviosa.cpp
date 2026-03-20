@@ -9,6 +9,7 @@
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Interactable/InteractableLevitatable.h"
 #include "DrawDebugHelpers.h"
 
 UGA_Spell_Leviosa::UGA_Spell_Leviosa()
@@ -230,13 +231,25 @@ bool UGA_Spell_Leviosa::StartLevitation()
 	}
 
 	// 3. 물리 엔진을 이용해 강제로 위로 띄우기 설정
+	
+	// 기본값은 어빌리티에 설정된 값을 사용
+	float FinalLevitationDuration = LevitationDuration;
+	float FinalLevitateZOffset = 250.f;
+
+	// 대상이 InteractableLevitatable라면 개별 설정된 값을 덮어씌움
+	if (AInteractableLevitatable* LevitatableObj = Cast<AInteractableLevitatable>(LevitatedTarget))
+	{
+		FinalLevitationDuration = LevitatableObj->GetLevitateDuration();
+		FinalLevitateZOffset = LevitatableObj->GetLevitateHeight();
+	}
+
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(LevitatedTarget))
 	{
 		if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
 		{
 			MoveComp->GravityScale = 0.0f;                // 중력 무시
 			MoveComp->SetMovementMode(MOVE_Flying);      // 낙하 방지
-			MoveComp->Velocity = FVector(0.f, 0.f, 250.f); // 위로 살짝 띄우기
+			MoveComp->Velocity = FVector(0.f, 0.f, FinalLevitateZOffset); // 위로 살짝 띄우기
 		}
 	}
 	else
@@ -250,12 +263,11 @@ bool UGA_Spell_Leviosa::StartLevitation()
 			{
 				HoverTargetComp = PrimComp;
 
-
 				// 물리 시뮬레이션은 유지하되, 중력만 끄고 초기 속도를 위로 주어 살짝 띄우기
 				PrimComp->SetSimulatePhysics(false);
 
-				// 목표 높이 (현재 높이 + 250) 설정
-				HoverTargetZ = PrimComp->GetComponentLocation().Z + 250.f;
+				// 목표 높이 (현재 높이 + 개별 설정된 떠오르는 높이) 설정
+				HoverTargetZ = PrimComp->GetComponentLocation().Z + FinalLevitateZOffset;
 
 				// 짧은 주기로 부양 로직으로 이동시킴
 				GetWorld()->GetTimerManager().SetTimer(
@@ -272,12 +284,12 @@ bool UGA_Spell_Leviosa::StartLevitation()
 
 	Debug::Print(FString::Printf(TEXT("[Leviosa] Levitated %s!"), *LevitatedTarget->GetName()), FColor::Cyan);
 
-	// 지정된 지속 시간(LevitationDuration) 이후에 어빌리티를 종료하도록 타이머 설정
+	// 지정된 지속 시간(FinalLevitationDuration) 이후에 어빌리티를 종료하도록 타이머 설정
 	GetWorld()->GetTimerManager().SetTimer(
 		LevitationTimerHandle,
 		this,
 		&UGA_Spell_Leviosa::OnLevitationDurationEnded,
-		LevitationDuration,
+		FinalLevitationDuration,
 		false
 	);
 
