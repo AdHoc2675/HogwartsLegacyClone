@@ -84,10 +84,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Targeting")
 	bool TryConsumeLockedTarget(AActor*& OutTarget, FGameplayTagContainer& OutTargetTags, FVector& OutAimPoint) const;
-	
+
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Targeting")
 	bool BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverride = -1.f) const;
-	
+
+	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Facing")
+	bool GetCachedPreCastFacingTargetLocation(FVector& OutTargetLocation) const;
+
 protected:
 	virtual void ActivateAbility(
 		const FGameplayAbilitySpecHandle Handle,
@@ -163,11 +166,10 @@ protected:
 protected:
 	bool IsTargetBlocked(AActor* Target, const FGameplayTagContainer& Blocked) const;
 	bool HasAllRequiredTags(AActor* Target, const FGameplayTagContainer& Required) const;
-	
-	
+
 protected:
 	virtual bool ShouldApplyCastingActiveTag() const;
-	
+
 protected:
 	// =========================
 	// Pre-Cast Facing
@@ -199,8 +201,15 @@ protected:
 	UPROPERTY(Transient)
 	TObjectPtr<const UGameplayAbility> CachedFacingAbilityForSafety = nullptr;
 
+	UPROPERTY(Transient)
+	FVector CachedPreCastFacingTargetLocation = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
+	bool bHasCachedPreCastFacingTargetLocation = false;
+
 protected:
 	virtual bool TryBuildPreCastFacingTargetLocation(FVector& OutTargetLocation) const;
+
 	bool TryBeginPreCastFacing(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
@@ -233,4 +242,5 @@ protected:
 	 * 기본값 true.
 	 */
 	virtual bool ShouldDeferCastUntilFacingFinished() const;
+	
 };

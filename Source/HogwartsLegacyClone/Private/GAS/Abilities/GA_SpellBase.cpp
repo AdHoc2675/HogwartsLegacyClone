@@ -8,11 +8,15 @@
 
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/PlayerCameraManager.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Component/LockOnComponent.h"
 #include "TimerManager.h"
+#include "CollisionQueryParams.h"
 
 UGA_SpellBase::UGA_SpellBase()
 {
@@ -21,7 +25,7 @@ UGA_SpellBase::UGA_SpellBase()
 	// 따라서 별도의 정책 변경은 하지 않고 GA_Base의 기본 정책을 사용한다.
 
 	bWarnIfDefinitionMissing = true;
-	bRequireFacingBeforeCast=true;
+	bRequireFacingBeforeCast = true;
 }
 
 UDA_SpellDefinition* UGA_SpellBase::GetSpellDefinition() const
@@ -74,6 +78,9 @@ UDA_SpellDefinition* UGA_SpellBase::GetSpellDefinitionOrWarn() const
 		*SpellID.ToString()
 	);
 
+	/*
+	Debug::Print(Msg);
+	*/
 	return nullptr;
 }
 
@@ -207,6 +214,12 @@ bool UGA_SpellBase::BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverr
 		return false;
 	}
 
+	UWorld* World = Avatar->GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
 	APawn* Pawn = Cast<APawn>(Avatar);
 	if (!Pawn)
 	{
@@ -219,11 +232,61 @@ bool UGA_SpellBase::BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverr
 		return false;
 	}
 
-	const float UseRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
+	const float RequestedRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
+
+	// 센터에임 목표점은 "카메라가 실제로 보고 있는 월드 지점"을 구하는 용도이므로
+	// 근거리 스킬 사거리 그대로 쓰면 3인칭 카메라-캐릭터 사이 점이 잡힐 수 있다.
+	// 따라서 최소 트레이스 길이를 충분히 길게 보장한다.
+	const float UseRange = FMath::Max(RequestedRange, 5000.f);
+
 	const FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
 	const FVector CamForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
 
-	OutAimPoint = CamLoc + (CamForward * UseRange);
+	const FVector TraceStart = CamLoc;
+	const FVector TraceEnd = TraceStart + (CamForward * UseRange);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(HOG_SpellBase_FallbackAimTrace), false);
+	QueryParams.AddIgnoredActor(Avatar);
+
+	FHitResult HitResult;
+	const bool bHit = World->LineTraceSingleByChannel(
+		HitResult,
+		TraceStart,
+		TraceEnd,
+		ECC_Visibility,
+		QueryParams
+	);
+
+	if (bHit)
+	{
+		OutAimPoint = HitResult.ImpactPoint;
+	}
+	else
+	{
+		OutAimPoint = TraceEnd;
+	}
+
+	/*
+	Debug::Print(FString::Printf(
+		TEXT("[SpellBase] FallbackAim | CamLoc=%s | TraceEnd=%s | OutAimPoint=%s | Hit=%d"),
+		*CamLoc.ToString(),
+		*TraceEnd.ToString(),
+		*OutAimPoint.ToString(),
+		bHit ? 1 : 0
+	));
+	*/
+
+	return true;
+}
+
+bool UGA_SpellBase::GetCachedPreCastFacingTargetLocation(FVector& OutTargetLocation) const
+{
+	if (!bHasCachedPreCastFacingTargetLocation)
+	{
+		return false;
+	}
+
+	OutTargetLocation = CachedPreCastFacingTargetLocation;
 	return true;
 }
 
@@ -262,6 +325,8 @@ void UGA_SpellBase::EndAbility(
 
 	bWaitingForPreCastFacing = false;
 	PreCastFacingElapsed = 0.f;
+	bHasCachedPreCastFacingTargetLocation = false;
+	CachedPreCastFacingTargetLocation = FVector::ZeroVector;
 
 	if (ShouldApplyCastingActiveTag())
 	{
@@ -430,55 +495,61 @@ bool UGA_SpellBase::ShouldApplyCastingActiveTag() const
 
 bool UGA_SpellBase::TryBuildPreCastFacingTargetLocation(FVector& OutTargetLocation) const
 {
-	AActor* LockedTarget =nullptr;
+	AActor* LockedTarget = nullptr;
 	FGameplayTagContainer LockedTargetTags;
 	FVector AimPoint = FVector::ZeroVector;
-	
+
 	if (TryConsumeLockedTarget(LockedTarget, LockedTargetTags, AimPoint))
 	{
-		OutTargetLocation=AimPoint.IsNearlyZero()
-		?LockedTarget->GetActorLocation()
-		:AimPoint;
-		
-		return true;		
+		OutTargetLocation = AimPoint.IsNearlyZero()
+			? LockedTarget->GetActorLocation()
+			: AimPoint;
+
+		return true;
 	}
-	
+
 	if (BuildFallbackAimPoint(AimPoint))
 	{
 		OutTargetLocation = AimPoint;
 		return true;
 	}
-	
+
 	return false;
-	
 }
 
-bool UGA_SpellBase::TryBeginPreCastFacing(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+bool UGA_SpellBase::TryBeginPreCastFacing(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
 	if (!bRequireFacingBeforeCast)
 	{
 		return false;
 	}
-	
+
 	if (!ShouldDeferCastUntilFacingFinished())
 	{
 		return false;
 	}
-	
+
 	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
 	if (!PlayerCharacter)
 	{
 		return false;
 	}
-	
+
 	FVector TargetLocation = FVector::ZeroVector;
 	if (!TryBuildPreCastFacingTargetLocation(TargetLocation))
 	{
+		bHasCachedPreCastFacingTargetLocation = false;
+		CachedPreCastFacingTargetLocation = FVector::ZeroVector;
 		return false;
 	}
-	
+
+	CachedPreCastFacingTargetLocation = TargetLocation;
+	bHasCachedPreCastFacingTargetLocation = true;
+
 	PlayerCharacter->BeginForcedFacingToLocation(TargetLocation);
 
 	if (PlayerCharacter->IsForcedFacingFinished())
@@ -486,7 +557,7 @@ bool UGA_SpellBase::TryBeginPreCastFacing(const FGameplayAbilitySpecHandle Handl
 		PlayerCharacter->StopForcedFacing();
 		return false;
 	}
-	
+
 	CachedFacingHandle = Handle;
 	CachedFacingActivationInfo = ActivationInfo;
 	CachedFacingAbilityForSafety = this;
@@ -515,7 +586,7 @@ void UGA_SpellBase::TickPreCastFacing()
 	{
 		return;
 	}
-	
+
 	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
 	if (!PlayerCharacter)
 	{
@@ -523,14 +594,14 @@ void UGA_SpellBase::TickPreCastFacing()
 		{
 			World->GetTimerManager().ClearTimer(PreCastFacingTimerHandle);
 		}
-		
-		bWaitingForPreCastFacing=false;
+
+		bWaitingForPreCastFacing = false;
 		return;
 	}
-	
-	PreCastFacingElapsed+=PreCastFacingPollInterval;
-	
-	if (PlayerCharacter->IsForcedFacingFinished()||PreCastFacingElapsed>=PreCastFacingTimeout)
+
+	PreCastFacingElapsed += PreCastFacingPollInterval;
+
+	if (PlayerCharacter->IsForcedFacingFinished() || PreCastFacingElapsed >= PreCastFacingTimeout)
 	{
 		if (UWorld* World = GetWorld())
 		{
@@ -549,11 +620,13 @@ void UGA_SpellBase::TickPreCastFacing()
 	}
 }
 
-void UGA_SpellBase::OnPreCastFacingFinished(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+void UGA_SpellBase::OnPreCastFacingFinished(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
-	//파생 ability 에서 override
+	// 파생 ability 에서 override
 }
 
 bool UGA_SpellBase::ShouldDeferCastUntilFacingFinished() const

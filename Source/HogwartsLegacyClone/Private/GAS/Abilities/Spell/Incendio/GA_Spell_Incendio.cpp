@@ -160,7 +160,7 @@ void UGA_Spell_Incendio::FireIncendio()
 
 	FVector ConeForward = AvatarForward;
 
-	//락온 대상이 있으면  대상을 그대로 사용
+	// 락온 대상이 있으면 대상을 그대로 사용
 	if (bLockedTargetUsed && IsValid(LockedTarget))
 	{
 		const FVector TargetLoc = LockedTarget->GetActorLocation();
@@ -170,53 +170,71 @@ void UGA_Spell_Incendio::FireIncendio()
 		{
 			ConeForward = AvatarForward;
 		}
+
+		/*
+		if (bDrawDebugLine)
+		{
+			Debug::Print(FString::Printf(
+				TEXT("[Incendio] LockOn | Target=%s | AvatarLoc=%s | ConeForward=%s"),
+				*GetNameSafe(LockedTarget),
+				*AvatarLoc.ToString(),
+				*ConeForward.ToString()
+			));
+		}
+		*/
 	}
-	
-	// 1-B) 락온 대상이 없으면: 카메라 CenterAim 기준 방향 사용
+	// 락온 대상이 없으면:
+	// Pre-Cast Facing 단계에서 실제로 회전에 사용한 목표점을 우선 사용한다.
 	else
 	{
-		FVector FallbackForward = FVector::ZeroVector;
+		FVector CachedFacingTarget = FVector::ZeroVector;
+		bool bUseCachedFacingTarget = GetCachedPreCastFacingTargetLocation(CachedFacingTarget);
 
-		APawn* Pawn = Cast<APawn>(Avatar);
-		if (Pawn)
+		if (!bUseCachedFacingTarget)
 		{
-			APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-			if (PC && PC->PlayerCameraManager)
+			// 안전장치: 캐시가 없으면 기존 fallback aim point 사용
+			bUseCachedFacingTarget = BuildFallbackAimPoint(CachedFacingTarget, ConeRange);
+		}
+
+		if (bUseCachedFacingTarget)
+		{
+			const FVector ToAim = (CachedFacingTarget - AvatarLoc).GetSafeNormal();
+
+			if (!ToAim.IsNearlyZero())
 			{
-				FallbackForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
+				ConeForward = ToAim;
+			}
+			else
+			{
+				ConeForward = AvatarForward;
 			}
 		}
-
-		// 카메라 Forward를 못 가져왔으면 AimPoint 참고
-		if (FallbackForward.IsNearlyZero() && !AimPoint.IsNearlyZero())
+		else
 		{
-			FallbackForward = (AimPoint - AvatarLoc).GetSafeNormal();
+			ConeForward = AvatarForward;
 		}
 
-		// 여전히 실패하면 캐릭터 Forward
-		if (FallbackForward.IsNearlyZero())
+		// Incendio는 전방 Cone 느낌 유지가 중요하므로 지면 기준으로 눕힌다.
+		ConeForward = FVector(ConeForward.X, ConeForward.Y, 0.f).GetSafeNormal();
+
+		if (ConeForward.IsNearlyZero())
 		{
-			FallbackForward = AvatarForward;
+			ConeForward = AvatarForward;
 		}
 
-		// 핵심:
-		// 카메라가 바닥을 보고 있어도 Incendio는 "전방으로 퍼지는" 느낌을 유지해야 하므로
-		// 아래 방향 성분은 제거한다.
-		if (FallbackForward.Z < 0.f)
+		/*
+		if (bDrawDebugLine)
 		{
-			FallbackForward.Z = 0.f;
+			Debug::Print(FString::Printf(
+				TEXT("[Incendio] NoLock | CachedFacingTarget=%s | AvatarLoc=%s | AvatarForward=%s | ConeForward=%s | UsedCached=%d"),
+				*CachedFacingTarget.ToString(),
+				*AvatarLoc.ToString(),
+				*AvatarForward.ToString(),
+				*ConeForward.ToString(),
+				bUseCachedFacingTarget ? 1 : 0
+			));
 		}
-
-		// XY 기준으로 다시 정규화
-		FallbackForward = FVector(FallbackForward.X, FallbackForward.Y, 0.f).GetSafeNormal();
-
-		// 정규화 실패 시 캐릭터 전방 사용
-		if (FallbackForward.IsNearlyZero())
-		{
-			FallbackForward = AvatarForward;
-		}
-
-		ConeForward = FallbackForward;
+		*/
 	}
 
 	// 원뿔 시작점을 캐릭터 바로 앞쪽으로 약간 이동
@@ -251,7 +269,7 @@ void UGA_Spell_Incendio::FireIncendio()
 		CandidateSphere,
 		QueryParams
 	);
-	
+
 	// ==============================
 	// 2-B) VFX 스폰 위치/회전 결정
 	// ==============================
@@ -264,7 +282,7 @@ void UGA_Spell_Incendio::FireIncendio()
 	// ==============================
 	if (FireVFX)
 	{
-		const FVector VFXScale(3.0f, 1.5f, 1.5f);
+		const FVector VFXScale(4.0f, 2.0f, 6.0f);
 
 		UNiagaraComponent* SpawnedNiagara = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 			World,
@@ -291,6 +309,7 @@ void UGA_Spell_Incendio::FireIncendio()
 		UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, ConeOrigin);
 	}
 
+	/*
 	if (bDrawDebugLine)
 	{
 		const float DebugDuration = 2.0f;
@@ -316,12 +335,10 @@ void UGA_Spell_Incendio::FireIncendio()
 		{
 			// 좌/우 경계
 			const FVector LeftBoundaryDir =
-				(ConeForward * FMath::Cos(ConeHalfAngleRad) - RightVector * FMath::Sin(ConeHalfAngleRad)).
-				GetSafeNormal();
+				(ConeForward * FMath::Cos(ConeHalfAngleRad) - RightVector * FMath::Sin(ConeHalfAngleRad)).GetSafeNormal();
 
 			const FVector RightBoundaryDir =
-				(ConeForward * FMath::Cos(ConeHalfAngleRad) + RightVector * FMath::Sin(ConeHalfAngleRad)).
-				GetSafeNormal();
+				(ConeForward * FMath::Cos(ConeHalfAngleRad) + RightVector * FMath::Sin(ConeHalfAngleRad)).GetSafeNormal();
 
 			// 상/하 경계
 			const FVector UpBoundaryDir =
@@ -437,6 +454,7 @@ void UGA_Spell_Incendio::FireIncendio()
 			}
 		}
 	}
+	*/
 
 	if (!bHit)
 	{
