@@ -38,6 +38,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	UInputAction* IA_Jump;
 
+	/** 상호작용 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	UInputAction* IA_Interact;
+
 	/** Ability 입력 (Tag 기반) */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TMap<FGameplayTag, UInputAction*> AbilityInputActions;

@@ -11,6 +11,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/HOG_PlayerState.h"
 
+#include "Interactable/InteractableInterface.h"
+#include "Kismet/KismetSystemLibrary.h"
+
 #include "UObject/ConstructorHelpers.h"
 #include "Core/HOG_GameplayTags.h"
 #include "HOGDebugHelper.h"
@@ -270,6 +273,45 @@ void APlayerCharacterBase::Input_JumpStarted()
 void APlayerCharacterBase::Input_JumpCompleted()
 {
 	StopJumping();
+}
+
+void APlayerCharacterBase::Input_Interact()
+{
+	// 캐릭터 기준 전방으로 탐색
+	FVector StartLoc = GetActorLocation();
+	FVector EndLoc = StartLoc + (GetActorForwardVector() * 300.0f); // 전방 300 유닛(3M) 앞까지 탐색
+
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this); // 자기 자신은 무시
+
+	FHitResult HitResult;
+
+	// 디버그 드로우 모드로 선과 맞은 지점을 그려줌
+	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+		this, StartLoc, EndLoc,
+		50.0f, // 상호작용 탐색 구체 반지름
+		TraceTypeQuery1, // Visibility 채널
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration, // 디버그 선 그리기 (5초 유지)
+		HitResult, true
+	);
+
+	if (bHit && HitResult.GetActor())
+	{
+		AActor* HitActor = HitResult.GetActor();
+
+		// 맞은 대상이 UInteractableInterface를 상속받았는지 확인 (C++ 상자 베이스)
+		if (HitActor->Implements<UInteractableInterface>())
+		{
+			// 대상이 현재 상호작용 가능한 상태인지 확인
+			if (IInteractableInterface::Execute_CanInteract(HitActor, this))
+			{
+				// 상호작용 실행
+				IInteractableInterface::Execute_Interact(HitActor, this);
+			}
+		}
+	}
 }
 
 void APlayerCharacterBase::Input_AbilityInputPressed(FGameplayTag InputTag)
