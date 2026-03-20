@@ -36,6 +36,10 @@ class HOGWARTSLEGACYCLONE_API AHOG_PlayerController : public APlayerController
 public:
 	AHOG_PlayerController();
 
+	// 상호작용이나 보상으로 마법을 해금할 때 UI를 업데이트
+	UFUNCTION(BlueprintCallable, Category = "HOG|UI")
+	void UnlockSpellUI(FGameplayTag SpellID);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -46,6 +50,10 @@ protected:
 	/** BP에서 지정할 InputConfig (DA_InputConfig) */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Input")
 	TObjectPtr<UDA_InputConfig> InputConfig;
+
+	/** 시작 시 기본으로 해금되어 있을 마법 목록 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HOG|Spell")
+	TArray<FGameplayTag> InitialUnlockedSpells;
 
 	/** MappingContext 우선순위(기본 0) */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Input")
@@ -92,6 +100,9 @@ private:
 	/** Jump */
 	void OnJumpStarted();
 	void OnJumpCompleted();
+
+	/** Interact */
+	void OnInteractStarted();
 
 private:
 	// Ability Action -> Tag 역조회 캐시

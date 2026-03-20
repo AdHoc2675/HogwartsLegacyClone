@@ -38,6 +38,13 @@ void AHOG_PlayerController::BeginPlay()
 	DamageNumberPool = NewObject<UDamageNumberPool>(this);
 	DamageNumberPool->InitPool(this, DamageNumberWidgetClass);
 	
+	for (const FGameplayTag& SpellTag : InitialUnlockedSpells)
+	{
+		if (SpellTag.IsValid())
+		{
+			UnlockSpellUI(SpellTag);
+		}
+	}
 }
 
 void AHOG_PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -169,6 +176,12 @@ void AHOG_PlayerController::BindDefaultActions()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[HOG_PC] IA_Jump is null."));
 	}
+
+	// Interact
+	if (InputConfig->IA_Interact)
+	{
+		EIC->BindAction(InputConfig->IA_Interact, ETriggerEvent::Started, this, &AHOG_PlayerController::OnInteractStarted);
+	}
 }
 
 void AHOG_PlayerController::BindAbilityActions()
@@ -231,6 +244,15 @@ void AHOG_PlayerController::OnJumpCompleted()
 	}
 }
 
+void AHOG_PlayerController::OnInteractStarted()
+{
+	if (APlayerCharacterBase* PC = GetPlayerCharacterBase())
+	{
+		
+		PC->Input_Interact();
+	}
+}
+
 void AHOG_PlayerController::OnAbilityActionStarted(const FInputActionInstance& Instance)
 {
 	const UInputAction* SourceAction = Instance.GetSourceAction();
@@ -270,5 +292,13 @@ void AHOG_PlayerController::HandleAbilityReleased(FGameplayTag InputTag)
 	if (APlayerCharacterBase* PC = GetPlayerCharacterBase())
 	{
 		PC->Input_AbilityInputReleased(InputTag);
+	}
+}
+
+void AHOG_PlayerController::UnlockSpellUI(FGameplayTag SpellID)
+{
+	if (WidgetController)
+	{
+		WidgetController->UnlockSpellSlot(SpellID);
 	}
 }

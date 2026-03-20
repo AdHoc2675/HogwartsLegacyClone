@@ -43,6 +43,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void Input_JumpCompleted();
 
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void Input_Interact();
+
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void Input_AbilityInputPressed(FGameplayTag InputTag);
 
