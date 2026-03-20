@@ -9,6 +9,7 @@
 #include "AbilitySystemComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Interactable/InteractableLevitatable.h"
 #include "DrawDebugHelpers.h"
 
 UGA_Spell_Leviosa::UGA_Spell_Leviosa()
@@ -230,13 +231,28 @@ bool UGA_Spell_Leviosa::StartLevitation()
 	}
 
 	// 3. 물리 엔진을 이용해 강제로 위로 띄우기 설정
+	
+	// 기본값은 어빌리티에 설정된 값을 사용
+	float FinalRiseDuration = LevitationDuration;
+	float FinalHoverDuration = LevitationHoverDuration; // 추가된 체공 시간 초기화
+	float FinalLevitateZOffset = 250.f;
+
+	// 대상이 InteractableLevitatable라면 개별 설정된 값을 덮어씌움
+	if (AInteractableLevitatable* LevitatableObj = Cast<AInteractableLevitatable>(LevitatedTarget))
+	{
+		FinalRiseDuration = LevitatableObj->GetLevitateDuration();
+		FinalLevitateZOffset = LevitatableObj->GetLevitateHeight();
+		FinalHoverDuration = LevitatableObj->GetLevitateHoverDuration(); // 체공 시간 덮어쓰기
+	}
+
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(LevitatedTarget))
 	{
 		if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
 		{
 			MoveComp->GravityScale = 0.0f;                // 중력 무시
 			MoveComp->SetMovementMode(MOVE_Flying);      // 낙하 방지
-			MoveComp->Velocity = FVector(0.f, 0.f, 250.f); // 위로 살짝 띄우기
+			// 캐릭터의 경우 Velocity로 위로 미는 방식
+			MoveComp->Velocity = FVector(0.f, 0.f, FinalLevitateZOffset); // 위로 살짝 띄우기
 		}
 	}
 	else
@@ -250,14 +266,17 @@ bool UGA_Spell_Leviosa::StartLevitation()
 			{
 				HoverTargetComp = PrimComp;
 
-
 				// 물리 시뮬레이션은 유지하되, 중력만 끄고 초기 속도를 위로 주어 살짝 띄우기
 				PrimComp->SetSimulatePhysics(false);
 
-				// 목표 높이 (현재 높이 + 250) 설정
-				HoverTargetZ = PrimComp->GetComponentLocation().Z + 250.f;
+				// 목표 높이 설정
+				HoverInitialZ = PrimComp->GetComponentLocation().Z;
+				HoverTargetZ = HoverInitialZ + FinalLevitateZOffset;
+				
+				// 보간을 위한 시간 초기화
+				HoverElapsedTime = 0.0f;
+				CurrentLevitateDuration = FMath::Max(0.1f, FinalRiseDuration); // 시간 0 방어 코드
 
-				// 짧은 주기로 부양 로직으로 이동시킴
 				GetWorld()->GetTimerManager().SetTimer(
 					HoverTimerHandle,
 					this,
@@ -272,12 +291,14 @@ bool UGA_Spell_Leviosa::StartLevitation()
 
 	Debug::Print(FString::Printf(TEXT("[Leviosa] Levitated %s!"), *LevitatedTarget->GetName()), FColor::Cyan);
 
-	// 지정된 지속 시간(LevitationDuration) 이후에 어빌리티를 종료하도록 타이머 설정
+	// 부유가 끝난 직후 + 체공 시간(HoverDuration)을 모두 버틴 뒤 어빌리티를 종료하도록 함
+	float TotalLevitationTime = FinalRiseDuration + FinalHoverDuration;
+
 	GetWorld()->GetTimerManager().SetTimer(
 		LevitationTimerHandle,
 		this,
 		&UGA_Spell_Leviosa::OnLevitationDurationEnded,
-		LevitationDuration,
+		TotalLevitationTime, 
 		false
 	);
 
@@ -368,19 +389,27 @@ void UGA_Spell_Leviosa::UpdateHovering()
 		return;
 	}
 
+	// 타이머 주기(0.01f)만큼 경과 시간 증가
+	HoverElapsedTime += 0.01f;
+	
+	// 전체 지속 시간 대비 진행도 (0.0 ~ 1.0)
+	float Alpha = FMath::Clamp(HoverElapsedTime / CurrentLevitateDuration, 0.0f, 1.0f);
+
 	// 현재 위치
 	FVector CurrentLoc = HoverTargetComp->GetComponentLocation();
 
-	// 목표 위치
-	FVector TargetLoc = CurrentLoc;
-	TargetLoc.Z = HoverTargetZ;
+	// 시간에 기반해 Z축 위치 계산 (InterpEaseOut 활용하여 위로 갈수록 살짝 부드러워지게 적용, 원치 않으면 단순 Lerp 사용 가능)
+	float EasedAlpha = FMath::InterpEaseOut(0.0f, 1.0f, Alpha, 2.0f);
+	float NewZ = FMath::Lerp(HoverInitialZ, HoverTargetZ, EasedAlpha);
 
-	// Z축으로 부드럽게 이동 (보간) - InterpSpeed(3.0f 등) 조절로 상승 속도 제어 가능
-	// 델타 타임은 타이머 반복 주기 0.02f 사용
-	FVector NewLoc = FMath::VInterpTo(CurrentLoc, TargetLoc, 0.02f, 3.0f);
+	CurrentLoc.Z = NewZ;
 
-	// 컴포넌트의 위치를 강제로 이동 (물리가 꺼져있으므로 이대로 쭉 밀고 올라감 - 플레이어도 함께 밀려 올라감)
-	HoverTargetComp->SetWorldLocation(NewLoc);
+	// 컴포넌트의 위치를 강제로 이동
+	HoverTargetComp->SetWorldLocation(CurrentLoc);
 
-	// 만약 목표 높이에 거의 다 도달했으면 타이머를 끄고 멈추게 할 수도 있음
+	// 목표 높이에 도달했으면 상승(업데이트) 정지, 마법 종료(OnLevitationDurationEnded) 때까지 공중에 머무름
+	if (Alpha >= 1.0f)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(HoverTimerHandle);
+	}
 }

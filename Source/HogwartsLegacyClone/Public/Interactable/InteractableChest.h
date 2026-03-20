@@ -22,9 +22,6 @@ protected:
 	virtual void HandleInteract(AActor* Interactor) override;
 
 public:
-	// 타겟 애니메이션 연출
-	UFUNCTION(BlueprintImplementableEvent, Category="Interaction")
-	void PlayOpenAnimation();
 
 protected:
 	// 상자 메쉬
