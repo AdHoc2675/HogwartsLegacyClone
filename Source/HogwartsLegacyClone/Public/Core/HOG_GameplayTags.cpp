@@ -91,5 +91,8 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Goblin, "Unit.Enemy.Goblin")
 	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Troll, "Unit.Enemy.Troll")
 	UE_DEFINE_GAMEPLAY_TAG(Unit_Enemy_Dementor, "Unit.Enemy.Dementor")
+	
+	//Minimap Tags
+	UE_DEFINE_GAMEPLAY_TAG(Minimap_Enemy_Goblin, "Minimap.Enemy.Goblin")
 
 }
