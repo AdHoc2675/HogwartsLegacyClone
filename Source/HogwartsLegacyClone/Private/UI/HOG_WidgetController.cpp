@@ -9,6 +9,7 @@
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Component/LockOnComponent.h"
 #include "Component/SpellComponent.h"
+#include "Core/HOG_GameplayTags.h"
 #include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "GameFramework/HOG_PlayerController.h"
 #include "GameFramework/HOG_PlayerState.h"
@@ -187,13 +188,14 @@ void UHOG_WidgetController::UnBindLockOnComponent()
 	LockOnComponent = nullptr;
 }
 
-void UHOG_WidgetController::HandleLockOn(AActor* Target)
+void UHOG_WidgetController::HandleLockOn(const FLockOnTargetResult& TargetResult)
 {
-	if (!Target || !EnemyHUD) return;
-
+	if (!EnemyHUD || !TargetResult.TargetActor) return;
+	if (!TargetResult.TargetTags.HasTag(HOGGameplayTags::Team_Enemy)) return;
+	
 	ClearEnemyBinding();
 
-	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Target);
+	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(TargetResult.TargetActor);
 	if (!ASI) return;
 
 	UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent();
@@ -207,7 +209,7 @@ void UHOG_WidgetController::HandleLockOn(AActor* Target)
 
 	EnemyHUD->SetEnemyHp(CurHp, MaxHp);
 	
-	AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(Target);
+	AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(TargetResult.TargetActor);
 	if (Enemy && Enemy->GetEnemyConfig())
 	{
 		EnemyHUD->SetEnemyName(Enemy->GetEnemyConfig()->EnemyName);
@@ -215,7 +217,7 @@ void UHOG_WidgetController::HandleLockOn(AActor* Target)
 	EnemyHUD->SetVisibility(ESlateVisibility::Visible);
 }
 
-void UHOG_WidgetController::HandleLockOnReleased(AActor* Target)
+void UHOG_WidgetController::HandleLockOnReleased(const FLockOnTargetResult& TargetResult)
 {
 	ClearEnemyBinding();
 

@@ -16,6 +16,7 @@ class AHOG_PlayerController;
 class USpellComponent;
 class AHOG_PlayerState;
 class UMinimapWidget;
+struct FLockOnTargetResult;
 /**
  * 
  */
@@ -66,8 +67,8 @@ private:
 	
 	void BindLockOnComponent(APlayerCharacterBase* PlayerCharacter);
 	void UnBindLockOnComponent();
-	void HandleLockOn(AActor* Target);
-	void HandleLockOnReleased(AActor* Target);
+	void HandleLockOn(const FLockOnTargetResult& TargetResult);
+	void HandleLockOnReleased(const FLockOnTargetResult& Target);
 	void BindEnemyASC(UAbilitySystemComponent* TargetASC);
 	void ClearEnemyBinding();
 	void OnEnemyHpChanged(const FOnAttributeChangeData& Data);
