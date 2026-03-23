@@ -21,6 +21,8 @@
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
 
+#include "Components/AudioComponent.h"
+
 UGA_Spell_Accio::UGA_Spell_Accio()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -72,9 +74,16 @@ void UGA_Spell_Accio::ExecuteAccioCast(
 
 	ACharacter* Character = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
 
+	// 목소리 사운드 재생
 	if (CastVoiceSound && Character)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, Character->GetActorLocation());
+	}
+
+	// 시전 사운드 재생
+	if (CastSound && Character)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CastSound, Character->GetActorLocation());
 	}
 
 	if (Character && Character->GetMesh() && CastMontage)
@@ -293,6 +302,12 @@ bool UGA_Spell_Accio::FireAccio()
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, OriginalTarget->GetActorLocation());
 	}
 
+	// 당기는 시점에 오디오 컴포넌트 부착 및 재생 시작 ===
+	if (PullSound && IsValid(TargetToMove))
+	{
+		PullAudioComponent = UGameplayStatics::SpawnSoundAttached(PullSound, TargetToMove->GetRootComponent());
+	}
+
 	// 물체의 성질에 따라 중력 무시 처리 세팅
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 	{
@@ -420,6 +435,13 @@ void UGA_Spell_Accio::EndAbility(
 	bool bWasCancelled)
 {
 	if (UWorld* World = GetWorld()) World->GetTimerManager().ClearTimer(PullTimerHandle);
+
+	// === 추가: 어빌리티 종료 시 당기기 소리 강제 종료 ===
+	if (PullAudioComponent)
+	{
+		PullAudioComponent->Stop();
+		PullAudioComponent = nullptr;
+	}
 
 	if (IsValid(TargetToMove))
 	{
