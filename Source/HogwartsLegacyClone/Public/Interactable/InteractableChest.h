@@ -25,7 +25,7 @@ protected:
 	virtual void HandleInteract(AActor* Interactor) override;
 
 public:
-	UPROPERTY(BlueprintReadOnly, Category = "Interaction")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Interaction")
 	bool bIsOpen = false;
 
 protected:
@@ -53,11 +53,11 @@ protected:
 
 	// ======== 시청각 피드백 연출 ========
 
-	/** 보상 획득 시 재생될 파티클 효과 (빛줄기 등) */
+	/** 보상 획득 시 재생될 파티클 효과 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Reward|Feedback")
 	TObjectPtr<UNiagaraSystem> RewardVFX;
 
-	/** 보상 획득 시 들릴 효과음 (띠링~ 등) */
+	/** 보상 획득 시 들릴 효과음 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Reward|Feedback")
 	TObjectPtr<USoundBase> RewardSound;
 };
