@@ -241,32 +241,32 @@ bool UGA_Spell_Protego::TryTriggerCounterStupefy(AActor* AttackerActor)
 {
 	if (!IsValid(AttackerActor))
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | AttackerActor invalid"), FColor::Red);
+		//Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | AttackerActor invalid"), FColor::Red);
 		return false;
 	}
 
 	if (!CounterStupefyAbilityClass)
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | CounterStupefyAbilityClass is null"), FColor::Red);
+		//Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | CounterStupefyAbilityClass is null"), FColor::Red);
 		return false;
 	}
 
 	if (!CanTriggerCounterStupefyFromAttacker(AttackerActor))
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy skipped | Attacker is not enemy-like | Attacker=%s"),
-				*GetNameSafe(AttackerActor)
-			),
-			FColor::Yellow
-		);
+		// Debug::Print(
+		// 	FString::Printf(
+		// 		TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy skipped | Attacker is not enemy-like | Attacker=%s"),
+		// 		*GetNameSafe(AttackerActor)
+		// 	),
+		// 	FColor::Yellow
+		// );
 		return false;
 	}
 
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	if (!ASC)
 	{
-		Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | ASC missing"), FColor::Red);
+		//Debug::Print(TEXT("[GA_Spell_Protego] TryTriggerCounterStupefy failed | ASC missing"), FColor::Red);
 		return false;
 	}
 

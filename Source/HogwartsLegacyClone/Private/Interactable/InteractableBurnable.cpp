@@ -55,10 +55,10 @@ void AInteractableBurnable::HandleInteract(AActor* Interactor)
 	}
 
 	const FString InteractorName = Interactor ? Interactor->GetName() : TEXT("Unknown");
-	Debug::Print(
-		FString::Printf(TEXT("[Burnable] %s에 마법이 적중하여 점화 (By %s)"), *GetName(), *InteractorName),
-		FColor::Orange
-	);
+	// Debug::Print(
+	// 	FString::Printf(TEXT("[Burnable] %s에 마법이 적중하여 점화 (By %s)"), *GetName(), *InteractorName),
+	// 	FColor::Orange
+	// );
 
 	if (FireVFXComp)
 	{
@@ -84,14 +84,14 @@ void AInteractableBurnable::HandleReceiveInteractionTag(AActor* Interactor, FGam
 	}
 
 	const FString InteractorName = Interactor ? Interactor->GetName() : TEXT("Unknown");
-	Debug::Print(
-		FString::Printf(
-			TEXT("[Burnable] %s가 Burn 태그 신호를 받아 점화 (By %s)"),
-			*GetName(),
-			*InteractorName
-		),
-		FColor::Orange
-	);
+	// Debug::Print(
+	// 	FString::Printf(
+	// 		TEXT("[Burnable] %s가 Burn 태그 신호를 받아 점화 (By %s)"),
+	// 		*GetName(),
+	// 		*InteractorName
+	// 	),
+	// 	FColor::Orange
+	// );
 
 	if (FireVFXComp)
 	{

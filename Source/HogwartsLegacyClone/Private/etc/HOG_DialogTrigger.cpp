@@ -35,7 +35,7 @@ void AHOG_DialogTrigger::OnOverlapBegin(
 	const FHitResult& SweepResult)
 
 {
-	Debug::Print(TEXT("DialogTrigger: OnOverlapBegin called"), FColor::Green);
+	//Debug::Print(TEXT("DialogTrigger: OnOverlapBegin called"), FColor::Green);
 	
 	// 1회성인데 이미 실행되었다면 무시
 	if (bTriggerOnce && bHasTriggered)

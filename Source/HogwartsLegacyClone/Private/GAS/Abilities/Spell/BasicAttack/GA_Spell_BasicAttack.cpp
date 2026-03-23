@@ -125,7 +125,9 @@ void UGA_Spell_BasicAttack::PlayComboMontageOrFire(const FGameplayAbilityActorIn
 
 	// 현재 단계: 각 타 시작 즉시 타격 처리
 	// 나중에 AttackHit Notify로 분리 가능
-	FireHitScan(ActorInfo);
+	//FireHitScan(ActorInfo);
+	SpawnBasicAttackActor();
+	
 }
 
 bool UGA_Spell_BasicAttack::TryPlayCurrentComboMontage(const FGameplayAbilityActorInfo* ActorInfo)
@@ -217,7 +219,8 @@ void UGA_Spell_BasicAttack::TryAdvanceComboFromBranchPoint()
 		return;
 	}
 
-	FireHitScan(CurrentActorInfo);
+	//FireHitScan(CurrentActorInfo);
+	SpawnBasicAttackActor();
 }
 
 void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -255,7 +258,8 @@ void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrup
 			return;
 		}
 
-		FireHitScan(CurrentActorInfo);
+		//FireHitScan(CurrentActorInfo);
+		SpawnBasicAttackActor();
 		return;
 	}
 
@@ -347,6 +351,18 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 				ShootDirection = ToAim;
 			}
 		}
+	}
+	
+	/* =========================
+	   4타 강화 데미지 결정
+	========================= */
+
+	float FinalProjectileDamage = ProjectileDamage;
+
+	// 0=1타, 1=2타, 2=3타, 3=4타
+	if (CurrentComboStep == 3)
+	{
+		FinalProjectileDamage = FourthComboProjectileDamage;
 	}
 
 	/* =========================

@@ -60,7 +60,7 @@ void AInteractableLevitatable::HandleInteract(AActor* Interactor)
 		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::State_Spell_Leviosa_Levitated);
 	}
 
-	Debug::Print(TEXT("[Levitatable] 마법 적중, 부유 시작"), FColor::Cyan);
+	//Debug::Print(TEXT("[Levitatable] 마법 적중, 부유 시작"), FColor::Cyan);
 
 	if (MagicAuraVFXComp)
 	{

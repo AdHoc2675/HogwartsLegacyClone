@@ -2,13 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Core/HOG_Struct.h"
 #include "BasicAttackActor.generated.h"
 
 class USphereComponent;
 class UProjectileMovementComponent;
 class UNiagaraComponent;
 class UNiagaraSystem;
+class UPrimitiveComponent;
 
 UCLASS()
 class HOGWARTSLEGACYCLONE_API ABasicAttackActor : public AActor
@@ -20,70 +20,9 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-
-protected:
-
-	/* ==============================
-	   Components
-	================================ */
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="BasicAttack|Component")
-	TObjectPtr<USphereComponent> CollisionSphere;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="BasicAttack|Component")
-	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="BasicAttack|Component")
-	TObjectPtr<UNiagaraComponent> TrailNiagara;
-
-	/* ==============================
-	   Runtime Data
-	================================ */
-
-	UPROPERTY()
-	TObjectPtr<AActor> SourceActor;
-
-	UPROPERTY()
-	TObjectPtr<AActor> TargetActor;
-
-	bool bHasHit = false;
+	virtual void Tick(float DeltaTime) override;
 
 public:
-
-	/* ==============================
-	   Tuning
-	================================ */
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Damage")
-	float Damage = 10.f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
-	float InitialSpeed = 4500.f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
-	float MaxSpeed = 4500.f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
-	bool bRotationFollowsVelocity = true;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
-	bool bIsHomingProjectile = true;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
-	float HomingAccelerationMagnitude = 15000.f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Life")
-	float LifeSeconds = 3.f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|VFX")
-	TObjectPtr<UNiagaraSystem> ImpactNiagara;
-
-public:
-
-	/* ==============================
-	   Setup
-	================================ */
-
 	void InitProjectile(
 		AActor* InSourceActor,
 		AActor* InTargetActor,
@@ -93,11 +32,6 @@ public:
 	void FireToDirection(const FVector& InDirection);
 
 protected:
-
-	/* ==============================
-	   Hit Handling
-	================================ */
-
 	UFUNCTION()
 	void OnOverlap(
 		UPrimitiveComponent* OverlappedComp,
@@ -109,6 +43,101 @@ protected:
 	);
 
 	void HandleHitActor(AActor* HitActor, const FHitResult& HitResult);
-
 	void DestroyProjectile();
+
+	FVector GetBeamStartLocation() const;
+	void UpdateBeamVFX();
+
+protected:
+	/* ==============================
+	   Components
+	================================ */
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="BasicAttack")
+	TObjectPtr<USphereComponent> CollisionSphere;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="BasicAttack")
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="BasicAttack")
+	TObjectPtr<UNiagaraComponent> TrailNiagara;
+
+	/* ==============================
+	   VFX
+	================================ */
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> ImpactNiagara;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
+	FName BeamStartParameterName = TEXT("BeamStart");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
+	FName BeamEndParameterName = TEXT("BeamEnd");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
+	FName BeamLengthParameterName = TEXT("BeamLength");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
+	FName BeamDirectionParameterName = TEXT("BeamDirection");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="VFX")
+	FName BeamMidPointParameterName = TEXT("BeamMidPoint");
+
+	/* ==============================
+	   Projectile
+	================================ */
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
+	float InitialSpeed = 3000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
+	float MaxSpeed = 3000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
+	float LifeSeconds = 3.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
+	bool bRotationFollowsVelocity = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
+	bool bIsHomingProjectile = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile", meta=(EditCondition="bIsHomingProjectile"))
+	float HomingAccelerationMagnitude = 12000.f;
+
+	// 데미지를 주지 못하고 이 거리 이상 날아가면 삭제
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Projectile")
+	float MaxTravelDistance = 2000.f;
+
+	/* ==============================
+	   Runtime
+	================================ */
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Runtime")
+	TObjectPtr<AActor> SourceActor;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Runtime")
+	TObjectPtr<AActor> TargetActor;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Runtime")
+	float Damage = 0.f;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Runtime")
+	bool bHasHit = false;
+
+	// 실제 발사 시작 위치
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Runtime")
+	FVector SpawnLocation = FVector::ZeroVector;
+
+	// 실제 발사 시작 여부
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Runtime")
+	bool bHasSpawnLocation = false;
+
+	/* ==============================
+	   Socket
+	================================ */
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Socket")
+	FName WandSocketName = TEXT("RightHandWandSocket");
 };

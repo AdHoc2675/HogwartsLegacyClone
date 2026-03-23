@@ -29,7 +29,7 @@ void UHOG_WidgetController::Init(AHOG_PlayerController* InPlayerController, APla
 
 	if (!PlayerState)
 	{
-		Debug::Print("No Exist Player State In UHOG_WidgetController");
+		//Debug::Print("No Exist Player State In UHOG_WidgetController");
 		return;
 	}
 

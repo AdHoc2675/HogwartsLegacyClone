@@ -146,11 +146,11 @@ void UGA_Spell_Leviosa::ExecuteLeviosaCast(
 	if (IsValid(AcquiredTarget))
 	{
 		LevitatedTarget = AcquiredTarget;
-		Debug::Print(FString::Printf(TEXT("[Leviosa] Target Acquired: %s"), *LevitatedTarget->GetName()), FColor::Cyan);
+		//Debug::Print(FString::Printf(TEXT("[Leviosa] Target Acquired: %s"), *LevitatedTarget->GetName()), FColor::Cyan);
 	}
 	else
 	{
-		Debug::Print(TEXT("[Leviosa] No valid Target. (Casting empty)"), FColor::Yellow);
+		//Debug::Print(TEXT("[Leviosa] No valid Target. (Casting empty)"), FColor::Yellow);
 	}
 
 	// 3. 캐스팅 애니메이션 실행 및 로직 발동
@@ -183,7 +183,7 @@ bool UGA_Spell_Leviosa::StartLevitation()
 {
 	if (!IsValid(LevitatedTarget))
 	{
-		Debug::Print(TEXT("[Leviosa] No valid target to levitate."), FColor::Yellow);
+		//Debug::Print(TEXT("[Leviosa] No valid target to levitate."), FColor::Yellow);
 		return false;
 	}
 
@@ -289,7 +289,7 @@ bool UGA_Spell_Leviosa::StartLevitation()
 		}
 	}
 
-	Debug::Print(FString::Printf(TEXT("[Leviosa] Levitated %s!"), *LevitatedTarget->GetName()), FColor::Cyan);
+	//Debug::Print(FString::Printf(TEXT("[Leviosa] Levitated %s!"), *LevitatedTarget->GetName()), FColor::Cyan);
 
 	// 부유가 끝난 직후 + 체공 시간(HoverDuration)을 모두 버틴 뒤 어빌리티를 종료하도록 함
 	float TotalLevitationTime = FinalRiseDuration + FinalHoverDuration;

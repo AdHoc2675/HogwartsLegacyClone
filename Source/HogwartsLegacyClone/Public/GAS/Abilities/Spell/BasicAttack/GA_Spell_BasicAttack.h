@@ -87,6 +87,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
 	float ProjectileDamage = 10.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	float FourthComboProjectileDamage = 20.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
 	float ProjectileSpawnForwardOffset = 100.f;

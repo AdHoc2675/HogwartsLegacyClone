@@ -114,7 +114,7 @@ void UGA_Spell_Accio::InputPressed(const FGameplayAbilitySpecHandle Handle, cons
 	// 끌어당기고 있는 대상이 있다면 유저의 판단으로 강제 종료
 	if (IsValid(TargetToMove))
 	{
-		Debug::Print(TEXT("[Accio] Canceled by Toggle Input."), FColor::Yellow);
+		//Debug::Print(TEXT("[Accio] Canceled by Toggle Input."), FColor::Yellow);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 	}
 }
@@ -196,7 +196,7 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (!IsValid(AcquiredTarget)) 
 	{
-		Debug::Print(TEXT("[Accio] No Pullable Target Found."), FColor::Yellow);
+		//Debug::Print(TEXT("[Accio] No Pullable Target Found."), FColor::Yellow);
 		return false;
 	}
 
@@ -239,10 +239,10 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (!bCanBeMovedByAccioTag)
 	{
-		Debug::Print(
-			FString::Printf(TEXT("[Accio] Target is targetable but not movable by Accio tag: %s"), *GetNameSafe(AcquiredTarget)),
-			FColor::Red
-		);
+		// Debug::Print(
+		// 	FString::Printf(TEXT("[Accio] Target is targetable but not movable by Accio tag: %s"), *GetNameSafe(AcquiredTarget)),
+		// 	FColor::Red
+		// );
 		return false;
 	}
 
@@ -272,11 +272,11 @@ bool UGA_Spell_Accio::FireAccio()
 			// 플레이어가 밟고 있는 발판이 타겟을 향해 이동
 			TargetToMove = CurrentFloorActor;
 			PullDestination = AcquiredTarget;
-			Debug::Print(TEXT("[Accio] Platform -> Target Pulling!"), FColor::Magenta);
+			//Debug::Print(TEXT("[Accio] Platform -> Target Pulling!"), FColor::Magenta);
 		}
 		else
 		{
-			Debug::Print(TEXT("[Accio] Cannot pull Accio Target directly. Get on a platform first!"), FColor::Red);
+			//Debug::Print(TEXT("[Accio] Cannot pull Accio Target directly. Get on a platform first!"), FColor::Red);
 			return false;
 		}
 	}
@@ -285,7 +285,7 @@ bool UGA_Spell_Accio::FireAccio()
 		// [규칙 1 & Default] 발판이든 적군이든 어떤 물체든 나(플레이어)를 향해 당김
 		TargetToMove = AcquiredTarget;
 		PullDestination = Avatar;
-		Debug::Print(FString::Printf(TEXT("[Accio] Pulling %s to Avatar"), *TargetToMove->GetName()), FColor::Cyan);
+		//Debug::Print(FString::Printf(TEXT("[Accio] Pulling %s to Avatar"), *TargetToMove->GetName()), FColor::Cyan);
 	}
 
 	if (AccioVFX && IsValid(OriginalTarget))
