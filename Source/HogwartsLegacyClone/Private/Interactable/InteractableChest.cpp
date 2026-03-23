@@ -11,6 +11,9 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/HOG_PlayerController.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+
 AInteractableChest::AInteractableChest()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -38,21 +41,22 @@ void AInteractableChest::HandleInteract(AActor* Interactor)
 		AbilitySystemComponent->AddLooseGameplayTag(HOGGameplayTags::Interactable_Chest_Opened);
 	}
 
+	bIsOpen = true;
 
-	if (BaseMesh && OpenMontage)
-	{
-		if (UAnimInstance* AnimInstance = BaseMesh->GetAnimInstance())
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("AnimInstance 찾음! 몽타주 재생 시도"));
-			AnimInstance->Montage_Play(OpenMontage, 1.0f);
-		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("AnimInstance가 없습니다! AnimBP 세팅 필요"));
-		}
-	}
+	//if (BaseMesh && OpenMontage)
+	//{
+	//	if (UAnimInstance* AnimInstance = BaseMesh->GetAnimInstance())
+	//	{
+	//		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("AnimInstance 찾음! 몽타주 재생 시도"));
+	//		AnimInstance->Montage_Play(OpenMontage, 1.0f);
+	//	}
+	//	else
+	//	{
+	//		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("AnimInstance가 없습니다! AnimBP 세팅 필요"));
+	//	}
+	//}
 
-	// -------------------------------------------------------------
+// -------------------------------------------------------------
 // 아이템(스펠) 지급 및 UI 해금 처리
 // -------------------------------------------------------------
 	if (SpellAbilityClass && SpellInputTag.IsValid() && SpellIDTag.IsValid() && Interactor)
@@ -79,5 +83,20 @@ void AInteractableChest::HandleInteract(AActor* Interactor)
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("[%s] 마법 획득 및 해금 완료!"), *SpellIDTag.ToString()));
 			}
 		}
+	}
+
+	// 2. === 시청각 피드백 연출 ===
+	FVector EffectLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f); // 상자 살짝 위
+
+	// 파티클 터스리기
+	if (RewardVFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, RewardVFX, EffectLocation);
+	}
+
+	// 사운드 재생
+	if (RewardSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, RewardSound, EffectLocation);
 	}
 }

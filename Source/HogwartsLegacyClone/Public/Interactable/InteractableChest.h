@@ -7,6 +7,8 @@
 class USkeletalMeshComponent;
 class UAnimMontage;
 class UGameplayAbility;
+class UNiagaraSystem;
+class USoundBase;
 
 UCLASS()
 class HOGWARTSLEGACYCLONE_API AInteractableChest : public AInteractableBase
@@ -23,6 +25,8 @@ protected:
 	virtual void HandleInteract(AActor* Interactor) override;
 
 public:
+	UPROPERTY(BlueprintReadOnly, Category = "Interaction")
+	bool bIsOpen = false;
 
 protected:
 	// 상자 메쉬
@@ -46,4 +50,14 @@ protected:
 	// UI 자물쇠 아이콘을 풀 스펠 ID (예: Spell.Leviosa)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Reward")
 	FGameplayTag SpellIDTag;
+
+	// ======== 시청각 피드백 연출 ========
+
+	/** 보상 획득 시 재생될 파티클 효과 (빛줄기 등) */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Reward|Feedback")
+	TObjectPtr<UNiagaraSystem> RewardVFX;
+
+	/** 보상 획득 시 들릴 효과음 (띠링~ 등) */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Reward|Feedback")
+	TObjectPtr<USoundBase> RewardSound;
 };
