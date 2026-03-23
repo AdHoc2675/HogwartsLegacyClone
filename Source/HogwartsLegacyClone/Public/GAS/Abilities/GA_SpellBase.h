@@ -11,6 +11,7 @@ class UDA_SpellDefinition;
 class APlayerCharacterBase;
 class ULockOnComponent;
 class USpellComponent;
+class UNiagaraSystem;
 
 /**
  * UGA_SpellBase
@@ -48,18 +49,9 @@ public:
 	UGA_SpellBase();
 
 public:
-	/**
-	 * SpellID
-	 * - 이 Ability가 담당하는 스펠의 고유 ID.
-	 * - 예: Spell.Accio, Spell.Stupefy ...
-	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell")
 	FGameplayTag SpellID;
 
-	/**
-	 * bWarnIfDefinitionMissing
-	 * - Definition 조회 실패 시 경고 메시지 출력 여부
-	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Debug")
 	bool bWarnIfDefinitionMissing = true;
 
@@ -106,60 +98,30 @@ protected:
 		bool bWasCancelled) override;
 
 protected:
-	/**
-	 * SpellComponent 접근
-	 * - CurrentActorInfo -> PlayerState -> SpellComponent
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
 	USpellComponent* GetSpellComponent() const;
 
-	/**
-	 * 기본 시전 요청 생성
-	 * - SpellID
-	 * - CastContext
-	 * - Definition의 CooldownSeconds
-	 * 를 채워서 반환
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
 	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const;
 
-	/**
-	 * 시전 가능 여부 검사
-	 * - SpellComponent 없으면 실패
-	 * - SpellComponent 있으면 CanCastSpell 호출
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
 	FSpellCastCheckResult CheckCanCastSpell(ESpellCastContext CastContext) const;
 
-	/**
-	 * 시전 실패 알림
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
-	void NotifySpellCastFailedResult(const FSpellCastRequest& CastRequest,
-	                                 const FSpellCastCheckResult& CheckResult) const;
+	void NotifySpellCastFailedResult(
+		const FSpellCastRequest& CastRequest,
+		const FSpellCastCheckResult& CheckResult
+	) const;
 
-	/**
-	 * 시전 성공 알림
-	 * - 실제 효과 적용이 성공한 뒤 파생 Ability에서 호출
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
 	void NotifySpellCastSucceeded(ESpellCastContext CastContext) const;
 
-	/**
-	 * 일반 시전 준비 여부 검사
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
 	bool CanCastAsNormal(FSpellCastCheckResult& OutCheckResult) const;
 
-	/**
-	 * 패링 반격 시전 준비 여부 검사
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
 	bool CanCastAsParryCounter(FSpellCastCheckResult& OutCheckResult) const;
 
-	/**
-	 * 특수 무료 시전 준비 여부 검사
-	 */
 	UFUNCTION(BlueprintCallable, Category="HOG|Spell|Runtime")
 	bool CanCastAsSpecialFreeCast(FSpellCastCheckResult& OutCheckResult) const;
 
@@ -219,17 +181,6 @@ protected:
 
 	void TickPreCastFacing();
 
-	/**
-	 * 파생 Ability가 Override 해서,
-	 * "회전 완료 후 이어서 실행할 실제 본문"을 구현한다.
-	 *
-	 * 사용법:
-	 * - 파생 ActivateAbility 시작부에서 Super::ActivateAbility(...)
-	 * - 그 다음 if (TryBeginPreCastFacing(...)) return;
-	 * - 아니면 기존 본문 계속 실행
-	 *
-	 * 회전 대기 후에는 이 함수가 자동 호출된다.
-	 */
 	virtual void OnPreCastFacingFinished(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
@@ -237,10 +188,45 @@ protected:
 		const FGameplayEventData* TriggerEventData
 	);
 
-	/**
-	 * 파생 Ability가 "지금은 회전 대기 시작만 하고, 나중에 OnPreCastFacingFinished에서 본문 실행" 구조인지 여부.
-	 * 기본값 true.
-	 */
 	virtual bool ShouldDeferCastUntilFacingFinished() const;
-	
+
+protected:
+	// =========================
+	// LineTrace Beam VFX Queue
+	// =========================
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> QueuedLineTraceBeamVFX = nullptr;
+
+	UPROPERTY(Transient)
+	FVector QueuedLineTraceBeamTargetLocation = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
+	FName QueuedBeamStartSocketName = NAME_None;
+
+	UPROPERTY(Transient)
+	FName QueuedBeamStartParamName = TEXT("BeamStart");
+
+	UPROPERTY(Transient)
+	FName QueuedBeamEndParamName = TEXT("BeamEnd");
+
+	UPROPERTY(Transient)
+	FName QueuedBeamLengthParamName = TEXT("BeamLength");
+
+	void QueueLineTraceSpellVFX(
+	UNiagaraSystem* InVFX,
+	const FVector& InTargetLocation,
+	FName InStartSocketName = TEXT("RightHandWandSocket"),
+	FName InBeamStartParam = TEXT("BeamStart"),
+	FName InBeamEndParam = TEXT("BeamEnd"),
+	FName InBeamLengthParam = TEXT("BeamLength")
+);
+
+	void ClearQueuedLineTraceSpellVFX();
+
+	bool SpawnQueuedLineTraceSpellVFX();
+
+	void RegisterCastNotifyToOwner();
+
+public:
+	virtual void HandleCastNotify();
 };

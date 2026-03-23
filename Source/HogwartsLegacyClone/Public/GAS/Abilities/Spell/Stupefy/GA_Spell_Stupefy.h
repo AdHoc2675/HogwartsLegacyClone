@@ -8,11 +8,17 @@
 class UGameplayEffect;
 class AActor;
 class UAnimMontage;
+class UNiagaraSystem;
 
 /**
  * Stupefy
- * - 일반 시전: LockOn 타겟 대상 즉시 명중, 기절상태 부여 및 데미지 / 쿨타임 진행
- * - 패링 반격: 일반시전 시 진행되는 쿨타임과 무관하게 즉시 시전
+ * - 일반 시전: LockOn 타겟 대상 명중, 데미지 적용
+ * - 패링 반격: 일반 시전 쿨타임과 무관하게 즉시 발동 가능
+ *
+ * 현재 구조:
+ * - Ability 활성화 시 타겟/AimPoint를 먼저 계산
+ * - Commit 이후 빔 VFX 요청을 큐에 넣고 몽타주 재생
+ * - 실제 빔 스폰 / 판정 적용은 AnimNotify(AN_SpawnVFX) 시점에 처리
  *
  * 슬로우 모션은 Ability에서 직접 처리하지 않고,
  * ANS_Stupefy_Slowmotion 에서 처리한다.
@@ -96,8 +102,6 @@ protected:
 	/**
 	 * 패링 반격 연출용 ANS 이름 메모용
 	 * 실제 참조/실행은 애니메이션 쪽에서 처리
-	 * 나중에 애니메이션에 ANS_Stupefy_Slowmotion 만든다음 이걸로 slowmotion 주면 됨
-	 * 
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Anim")
 	FName ParrySlowMotionANSName = TEXT("ANS_Stupefy_Slowmotion");
@@ -115,12 +119,12 @@ protected:
 	TObjectPtr<AActor> PendingForcedTarget = nullptr;
 
 	/**
- * Stupefy 캐스팅 몽타주
- * - 연출용 재생
- * - 실제 판정은 ExecuteStupefyCast()에서 즉시 처리
- */
+	 * Stupefy 캐스팅 몽타주
+	 * - 연출용 재생
+	 * - 실제 빔/VFX/판정은 Notify 시점에 처리
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Anim")
-	TObjectPtr<UAnimMontage> CastMontage;
+	TObjectPtr<UAnimMontage> CastMontage = nullptr;
 
 protected:
 	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const override;
@@ -148,4 +152,35 @@ protected:
 
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+protected:
+	/** 라인트레이스 주문용 빔 VFX */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> LineTraceBeamVFX = nullptr;
+
+	/** 빔 시작 소켓 이름 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX")
+	FName BeamStartSocketName = TEXT("RightHandWandSocket");
+
+protected:
+	/**
+	 * Notify 시점까지 실제 적용 데이터를 보관
+	 */
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> PendingResolvedTargetActor = nullptr;
+
+	UPROPERTY(Transient)
+	FGameplayTagContainer PendingResolvedTargetTags;
+
+	UPROPERTY(Transient)
+	FVector PendingResolvedAimPoint = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
+	ESpellCastContext PendingResolvedCastContext = ESpellCastContext::Normal;
+
+	UPROPERTY(Transient)
+	bool bCastNotifyHandled = false;
+
+protected:
+	virtual void HandleCastNotify() override;
 };
