@@ -15,6 +15,7 @@ class APlayerCharacterBase;
 class AHOG_PlayerController;
 class USpellComponent;
 class AHOG_PlayerState;
+class UMinimapWidget;
 /**
  * 
  */
@@ -24,7 +25,7 @@ class HOGWARTSLEGACYCLONE_API UHOG_WidgetController : public UObject
 	GENERATED_BODY()
 
 public:
-	void Init(AHOG_PlayerController* InPlayerController, APlayerCharacterBase* InPlayerCharacter, TSubclassOf<UHOGPlayerHUDBase> InPlayerHUDClass, TSubclassOf<UHOGEnemyHUDBase> InEnemyHUDClass);
+	void Init(AHOG_PlayerController* InPlayerController, APlayerCharacterBase* InPlayerCharacter, TSubclassOf<UHOGPlayerHUDBase> InPlayerHUDClass, TSubclassOf<UHOGEnemyHUDBase> InEnemyHUDClass, TSubclassOf<UMinimapWidget> InMinimapClass);
 	void UnlockSpellSlot(FGameplayTag SpellID);
 	void Shutdown();
 	
@@ -84,4 +85,16 @@ private:
 	TSubclassOf<UHOGEnemyHUDBase> EnemyHUDClass;
 	
 	FDelegateHandle EnemyHPDelegateHandle;
+	
+	// ===== MiniMap =====
+	void CreateMiniMapWidget( AHOG_PlayerController* InPlayerController, 
+	APlayerCharacterBase* InPlayerCharacter);
+	
+	void ShutdownMiniMapWidget();
+	
+	UPROPERTY()
+	TSubclassOf<UMinimapWidget> MinimapWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UMinimapWidget> MinimapWidget;
 };

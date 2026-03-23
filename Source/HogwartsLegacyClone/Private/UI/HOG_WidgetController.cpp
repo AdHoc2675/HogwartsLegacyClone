@@ -13,11 +13,14 @@
 #include "GameFramework/HOG_PlayerController.h"
 #include "GameFramework/HOG_PlayerState.h"
 #include "GAS/Attributes/HOGAttributeSet.h"
+#include "Minimap/MinimapCaptureComponent.h"
+#include "Minimap/MinimapWidget.h"
 #include "UI/Enemy/HOGEnemyHUDBase.h"
 
 void UHOG_WidgetController::Init(AHOG_PlayerController* InPlayerController, APlayerCharacterBase* InPlayerCharacter,
                                  TSubclassOf<UHOGPlayerHUDBase> InPlayerHUDClass,
-                                 TSubclassOf<UHOGEnemyHUDBase> InEnemyHUDClass)
+                                 TSubclassOf<UHOGEnemyHUDBase> InEnemyHUDClass,
+                                 TSubclassOf<UMinimapWidget> InMinimapClass)
 {
 	if (!InPlayerController || !InPlayerCharacter) return;
 
@@ -29,7 +32,7 @@ void UHOG_WidgetController::Init(AHOG_PlayerController* InPlayerController, APla
 
 	if (!PlayerState)
 	{
-		//Debug::Print("No Exist Player State In UHOG_WidgetController");
+		Debug::Print("No Exist Player State In UHOG_WidgetController");
 		return;
 	}
 
@@ -41,6 +44,9 @@ void UHOG_WidgetController::Init(AHOG_PlayerController* InPlayerController, APla
 	CreateEnemyWidget(InPlayerController);
 
 	BindLockOnComponent(InPlayerCharacter);
+	
+	MinimapWidgetClass = InMinimapClass;
+	CreateMiniMapWidget(InPlayerController, InPlayerCharacter);
 }
 
 void UHOG_WidgetController::UnlockSpellSlot(FGameplayTag SpellID)
@@ -249,10 +255,36 @@ void UHOG_WidgetController::OnEnemyHpChanged(const FOnAttributeChangeData& Data)
 	EnemyHUD->SetEnemyHp(Data.NewValue, MaxHp);
 }
 
+void UHOG_WidgetController::CreateMiniMapWidget( AHOG_PlayerController* InPlayerController, 
+	APlayerCharacterBase* InPlayerCharacter)
+{
+	if (!InPlayerController || !InPlayerCharacter || !MinimapWidgetClass) return;
+
+	UMinimapCaptureComponent* Capture = 
+		InPlayerCharacter->FindComponentByClass<UMinimapCaptureComponent>();
+	if (!Capture) return;
+
+	MinimapWidget = CreateWidget<UMinimapWidget>(InPlayerController, MinimapWidgetClass);
+	if (!MinimapWidget) return;
+
+	MinimapWidget->AddToViewport();
+	MinimapWidget->InitializeMiniMap(Capture);
+}
+
+void UHOG_WidgetController::ShutdownMiniMapWidget()
+{
+	if (MinimapWidget)
+	{
+		MinimapWidget->ShutdownMiniMap();
+		MinimapWidget = nullptr;
+	}
+}
+
 void UHOG_WidgetController::Shutdown()
 {
 	UnBindSpellComponent();
 	UnbindPlayerHP();
 	UnBindLockOnComponent();
-	ClearEnemyBinding(); 
+	ClearEnemyBinding();
+	ShutdownMiniMapWidget();
 }

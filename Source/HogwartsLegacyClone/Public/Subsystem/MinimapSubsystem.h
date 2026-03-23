@@ -13,9 +13,6 @@
  * 
  */
 
-//struct FMinimapMarkerResult;
-//struct FMinimapMarkerData;
-
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMinimapMarkerAdded, const FMinimapMarkerData&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMinimapMarkerRemoved, const FGuid&);
 
@@ -42,7 +39,7 @@ public:
 	// 반환
 	bool TryGetMarkerLocation(const FGuid& MarkerID, FVector& OutLocation) const;
 	bool TryGetMarkerTag(const FGuid& MarkerID, FGameplayTag& OutTag) const;
-	bool TryGetMarkerIcon(const FGuid& MarkerID, TSoftObjectPtr<UTexture2D>& OutIcon) const;
+	bool TryGetMarkerData(const FGuid& MarkerID, FMinimapMarkerData& OutData) const;
 	
 	// 델리게이트
 	FOnMinimapMarkerAdded OnMarkerAdded;

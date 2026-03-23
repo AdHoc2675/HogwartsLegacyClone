@@ -22,12 +22,12 @@ void UMinimapWidget::InitializeMiniMap(UMinimapCaptureComponent* InCaptureCompon
 	if (!Subsystem) return;
 
 	MinimapIconOverlay = NewObject<UMinimapIconOverlay>(this);
+	
 	MinimapIconOverlay->Initialize(
-		MinimapCanvas,
-		Subsystem,
-		InCaptureComponent,
-		DefaultIconMap,
-		IconSize);
+	MinimapCanvas,
+	Subsystem,
+	InCaptureComponent,
+	DefaultIconMap);
 }
 
 void UMinimapWidget::ShutdownMiniMap()
@@ -51,7 +51,18 @@ void UMinimapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
 	if (!CaptureComponent.IsValid()) return;
-
+	
+	AActor* Owner = CaptureComponent->GetOwner();
+	if (Owner && PlayerIcon)
+	{
+		FVector Velocity = Owner->GetVelocity();
+		if (Velocity.SizeSquared2D() > KINDA_SMALL_NUMBER)
+		{
+			float MoveYaw = Velocity.ToOrientationRotator().Yaw;
+			PlayerIcon->SetRenderTransformAngle(MoveYaw);
+		}
+	}
+	
 	TimeSinceLastUpdate += InDeltaTime;
 	if (TimeSinceLastUpdate < UIUpdateInterval) return;
 	TimeSinceLastUpdate = 0.f;

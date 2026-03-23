@@ -4,6 +4,20 @@
 #include "GameplayTagContainer.h"
 #include "MinimapData.generated.h"
 
+
+USTRUCT(BlueprintType)
+struct FMinimapIconInfo
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UTexture2D> IconTexture;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FVector2D IconSize = FVector2D::ZeroVector;
+	
+};
+
 // 마커 데이터
 USTRUCT(BlueprintType)
 struct FMinimapMarkerData
@@ -23,6 +37,9 @@ struct FMinimapMarkerData
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftObjectPtr<UTexture2D> IconTexture;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FMinimapIconInfo IconInfo;
 	
 	// 마커 대상
 	TWeakObjectPtr<AActor> TrackedActor;

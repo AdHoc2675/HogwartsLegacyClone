@@ -94,8 +94,8 @@ void UMinimapMarkerComponent::UnRegisterFromSubSystem()
 
 	UMinimapSubsystem* Subsystem = World->GetSubsystem<UMinimapSubsystem>();
 	if (!Subsystem) return;
-
-	//Subsystem->UnregisterMarker(MarkerID);
+	
+	Subsystem->UnregisterMarker(MarkerId);
 }
 
 FMinimapMarkerData UMinimapMarkerComponent::BuildMakerData() const
@@ -106,7 +106,7 @@ FMinimapMarkerData UMinimapMarkerComponent::BuildMakerData() const
 	Data.MarkerID = MarkerId;
 	Data.MarkerTag = MarkerTag;
 	Data.WorldLocation = Owner ? Owner->GetActorLocation() : FVector::ZeroVector;
-	Data.IconTexture = IconTexture;
+	Data.IconInfo = IconInfo;
 	Data.TrackedActor = Owner;
 
 	return Data;
@@ -121,7 +121,7 @@ void UMinimapMarkerComponent::CreateArrivalTrigger()
 	if (!ArrivalTrigger) return;
 
 	ArrivalTrigger->SetSphereRadius(ArrivalRadius);
-	ArrivalTrigger->SetCollisionProfileName("OverlapOnlyPawn");
+	ArrivalTrigger->SetCollisionProfileName("OverlapAllDynamic");
 	ArrivalTrigger->SetGenerateOverlapEvents(true);
 
 	ArrivalTrigger->AttachToComponent(

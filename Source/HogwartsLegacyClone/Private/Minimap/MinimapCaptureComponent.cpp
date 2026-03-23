@@ -12,6 +12,7 @@ UMinimapCaptureComponent::UMinimapCaptureComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
+	bWantsInitializeComponent = true; 
 	
 }
 
@@ -48,7 +49,6 @@ void UMinimapCaptureComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	CreateRenderTarget();
 	InitializeCaptureCamera();
 
 	if (AActor* Owner = GetOwner())
@@ -79,6 +79,12 @@ void UMinimapCaptureComponent::TickComponent(float DeltaTime, enum ELevelTick Ti
 
 	TimeSinceLastCapture = 0.f;
 	TryUpdateCapture();
+}
+
+void UMinimapCaptureComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
+	CreateRenderTarget();
 }
 
 void UMinimapCaptureComponent::InitializeCaptureCamera()

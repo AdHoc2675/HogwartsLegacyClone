@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "MinimapData.h"
 #include "Components/ActorComponent.h"
 #include "MinimapMarkerComponent.generated.h"
 
@@ -33,9 +34,9 @@ protected:
 	// 마커 태그 설정
 	UPROPERTY(EditAnywhere, Category = "Minimap")
 	FGameplayTag MarkerTag;
-
+	
 	UPROPERTY(EditAnywhere, Category = "Minimap")
-	TSoftObjectPtr<UTexture2D> IconTexture;
+	FMinimapIconInfo IconInfo;
 
 	// 도착 감지 트리거가 필요시
 	UPROPERTY(EditAnywhere, Category = "Minimap")

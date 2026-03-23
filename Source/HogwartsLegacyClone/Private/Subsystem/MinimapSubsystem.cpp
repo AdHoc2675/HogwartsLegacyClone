@@ -138,17 +138,14 @@ bool UMinimapSubsystem::TryGetMarkerTag(const FGuid& MarkerID, FGameplayTag& Out
 	return true;
 }
 
-bool UMinimapSubsystem::TryGetMarkerIcon(const FGuid& MarkerID, TSoftObjectPtr<UTexture2D>& OutIcon) const
+
+bool UMinimapSubsystem::TryGetMarkerData(const FGuid& MarkerID, FMinimapMarkerData& OutData) const
 {
 	const FMinimapMarkerData Found = MarkerMap.FindRef(MarkerID);
 
-	if (!Found.IsValid())
-	{
-		OutIcon = nullptr;
-		return false;
-	}
+	if (!Found.IsValid()) return false;
 
-	OutIcon = Found.IconTexture;
+	OutData = Found;
 	return true;
 }
 

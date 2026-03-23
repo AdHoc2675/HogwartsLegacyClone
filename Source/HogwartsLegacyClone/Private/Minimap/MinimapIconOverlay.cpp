@@ -9,14 +9,12 @@
 #include "Components/Image.h"
 
 void UMinimapIconOverlay::Initialize(UCanvasPanel* InCanvas, UMinimapSubsystem* InSubsystem,
-                                     UMinimapCaptureComponent* InCapture, const TMap<FGameplayTag, TSoftObjectPtr<UTexture2D>>& InIconMap,
-                                     FVector2D InIconSize)
+                                     UMinimapCaptureComponent* InCapture, const TMap<FGameplayTag, FMinimapIconInfo>& InMinimapIconInfo)
 {
 	IconCanvas = InCanvas;
 	Subsystem = InSubsystem;
 	CaptureComponent = InCapture;
-	DefaultIconMap = InIconMap;
-	IconSize = InIconSize;
+	DefaultIconMap = InMinimapIconInfo;
 	
 	BindDelegates();
 	
@@ -27,17 +25,11 @@ void UMinimapIconOverlay::Initialize(UCanvasPanel* InCanvas, UMinimapSubsystem* 
 		
 		for (const FGuid& ID : ExistingIDs)
 		{
-			FGameplayTag Tag;
-			Subsystem->TryGetMarkerTag(ID, Tag);
-			
-			TSoftObjectPtr<UTexture2D> Icon;
-			Subsystem->TryGetMarkerIcon(ID, Icon);
-			
 			FMinimapMarkerData Data;
-			Data.MarkerID = ID;
-			Data.MarkerTag = Tag;
-			Data.IconTexture = Icon;
-			CreateMarkerIcon(Data);
+			if (Subsystem->TryGetMarkerData(ID, Data))
+			{
+				CreateMarkerIcon(Data);
+			}
 		}
 	}
 }
@@ -101,16 +93,21 @@ void UMinimapIconOverlay::CreateMarkerIcon(const FMinimapMarkerData& MarkerData)
 	UImage* IconWidget = NewObject<UImage>(IconCanvas.Get());
 	if (!IconWidget) return;
 	
-	if (UTexture2D* Texture = ResolveIconTexture(MarkerData.IconTexture, MarkerData.MarkerTag))
+	FMinimapIconInfo Resolved = ResolveIconInfo(MarkerData.IconInfo, MarkerData.MarkerTag);
+
+	if (!Resolved.IconTexture.IsNull())
 	{
-		IconWidget->SetBrushFromTexture(Texture);
+		if (UTexture2D* Tex = Resolved.IconTexture.LoadSynchronous())
+		{
+			IconWidget->SetBrushFromTexture(Tex);
+		}
 	}
-	
+
 	IconCanvas->AddChild(IconWidget);
-	
+
 	if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(IconWidget->Slot))
 	{
-		Slot->SetSize(IconSize);
+		Slot->SetSize(Resolved.IconSize);
 		Slot->SetAlignment(FVector2D(0.5f, 0.5f));
 	}
 
@@ -147,22 +144,40 @@ void UMinimapIconOverlay::SetIconPosition(UImage* IconWidget, const FVector2D& N
 	Slot->SetPosition(Position);
 }
 
-UTexture2D* UMinimapIconOverlay::ResolveIconTexture(const TSoftObjectPtr<UTexture2D>& MarkerIcon,
+FMinimapIconInfo  UMinimapIconOverlay::ResolveIconInfo(const FMinimapIconInfo& MarkerIconInfo,
 	const FGameplayTag& MarkerTag) const
 {
-	if (!MarkerIcon.IsNull())
-	{
-		return MarkerIcon.LoadSynchronous();
-	}
+	FMinimapIconInfo Result = MarkerIconInfo;
 	
-	for (const auto& Pair : DefaultIconMap)
+	bool bNeedTexture = Result.IconTexture.IsNull();
+	bool bNeedSize = Result.IconSize.IsZero();
+	
+	if (bNeedTexture || bNeedSize)
 	{
-		if (MarkerTag.MatchesTag(Pair.Key) && !Pair.Value.IsNull())
+		for (const auto& Pair : DefaultIconMap)
 		{
-			return Pair.Value.LoadSynchronous();
+			if (!MarkerTag.MatchesTag(Pair.Key)) continue;
+			
+			if (bNeedTexture && !Pair.Value.IconTexture.IsNull())
+			{
+				Result.IconTexture = Pair.Value.IconTexture;
+				bNeedTexture = false;
+			}
+			
+			if (bNeedSize && !Pair.Value.IconSize.IsZero())
+			{
+				Result.IconSize = Pair.Value.IconSize;
+				bNeedSize = false;
+			}
+			
+			if (!bNeedSize && !bNeedTexture) break;
 		}
 	}
-	return nullptr;
+	if (Result.IconSize.IsZero())
+	{
+		Result.IconSize = FVector2D(30.f ,30.f);
+	}
+	return Result;
 }
 
 void UMinimapIconOverlay::HandleMarkerAdded(const FMinimapMarkerData& MarkerData)

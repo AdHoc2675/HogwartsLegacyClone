@@ -9,6 +9,7 @@
 #include "HOG_PlayerController.generated.h"
 
 
+class UMinimapWidget;
 class UDA_InputConfig;
 class UInputMappingContext;
 class UInputAction;
@@ -119,6 +120,9 @@ public:
 	UDamageNumberPool* GetDamageNumberPool() const { return DamageNumberPool; }
 
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UMinimapWidget> MinimapWidgetClass;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
 

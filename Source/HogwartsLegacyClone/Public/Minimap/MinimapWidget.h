@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "MinimapData.h"
 #include "Blueprint/UserWidget.h"
 #include "MinimapWidget.generated.h"
 
@@ -14,6 +15,7 @@ class UMinimapCaptureComponent;
 /**
  * 
  */
+
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UMinimapWidget : public UUserWidget
 {
@@ -37,11 +39,8 @@ protected:
 	TObjectPtr<UImage> PlayerIcon;
 
 	UPROPERTY(EditDefaultsOnly, Category ="Minimap|Icons")
-	TMap<FGameplayTag, TSoftObjectPtr<UTexture2D>> DefaultIconMap;
-
-	UPROPERTY(EditDefaultsOnly, Category ="Minimap|Icons")
-	FVector2D IconSize = FVector2D(24.f, 24.f);
-
+	TMap<FGameplayTag, FMinimapIconInfo> DefaultIconMap;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Minimap")
 	TObjectPtr<UMaterialInterface> MinimapMaterial;
 	

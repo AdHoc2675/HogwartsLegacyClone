@@ -31,7 +31,7 @@ void AHOG_PlayerController::BeginPlay()
 	WidgetController = NewObject<UHOG_WidgetController>(this);
 	if (APlayerCharacterBase* PC = GetPlayerCharacterBase())
 	{
-		WidgetController->Init(this, PC, PlayerHUDClass, EnemyHUDClass);
+		WidgetController->Init(this, PC, PlayerHUDClass, EnemyHUDClass, MinimapWidgetClass);
 	}
 	
 	// 데미지 넘버 풀 생성

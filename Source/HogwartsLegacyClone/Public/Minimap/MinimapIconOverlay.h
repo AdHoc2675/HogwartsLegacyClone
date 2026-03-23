@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "UObject/NoExportTypes.h"
+#include "MinimapData.h"
+
 #include "MinimapIconOverlay.generated.h"
 
-struct FMinimapMarkerData;
 class UImage;
 class UTexture2D;
 class UCanvasPanel;
@@ -27,8 +27,7 @@ public:
 		UCanvasPanel* InCanvas,
 		UMinimapSubsystem* InSubsystem,
 		UMinimapCaptureComponent* InCapture,
-		const TMap<FGameplayTag, TSoftObjectPtr<UTexture2D>>& InIconMap,
-		FVector2D InIconSize);
+		const TMap<FGameplayTag, FMinimapIconInfo>& InMinimapIconInfo);
 
 	void ShutDown();
 	void UpdatePositions();
@@ -38,7 +37,7 @@ private:
 	void RemoveMarkerIcon(const FGuid& MarkerID);
 	void SetIconPosition(UImage* IconWidget, const FVector2D& NormalizedPosition);
 	
-	UTexture2D* ResolveIconTexture(const TSoftObjectPtr<UTexture2D>& MarkerIcon, const FGameplayTag& MarkerTag) const;
+	FMinimapIconInfo ResolveIconInfo(const FMinimapIconInfo& MarkerIconInfo, const FGameplayTag& MarkerTag) const;
 	void HandleMarkerAdded(const FMinimapMarkerData& MarkerData);
 	void HandleMarkerRemoved(const FGuid& MarkerID);
 	
@@ -52,7 +51,5 @@ private:
 	UPROPERTY()
 	TMap<FGuid, TObjectPtr<UImage>> IconWidgetMap;
 	
-	TMap<FGameplayTag, TSoftObjectPtr<UTexture2D>> DefaultIconMap;
-	FVector2D IconSize = FVector2D(24.f, 24.f);
-	
+	TMap<FGameplayTag, FMinimapIconInfo> DefaultIconMap;
 };
