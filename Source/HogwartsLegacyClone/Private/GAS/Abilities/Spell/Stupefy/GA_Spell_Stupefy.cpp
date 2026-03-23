@@ -11,10 +11,10 @@
 #include "HOGDebugHelper.h"
 
 #include "GameFramework/Actor.h"
+#include "GameFramework/Character.h"
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
-#include "GameFramework/Character.h"
 
 UGA_SpellStupefy::UGA_SpellStupefy()
 {
@@ -25,7 +25,7 @@ FSpellCastRequest UGA_SpellStupefy::BuildSpellCastRequest(ESpellCastContext Cast
 {
 	FSpellCastRequest Request = Super::BuildSpellCastRequest(CastContext);
 
-	// 패링 반격 Stupefy만 쿨타임 체크 무시 + 발동 후 쿨타임 시작
+	// 패링 반격은 쿨타임 무시
 	if (CastContext == ESpellCastContext::ParryCounter)
 	{
 		Request.bForceIgnoreCooldownCheck = true;
@@ -45,7 +45,7 @@ bool UGA_SpellStupefy::CheckCooldown(
 	{
 		return true;
 	}
-	
+
 	return Super::CheckCooldown(Handle, ActorInfo, OptionalRelevantTags);
 }
 
@@ -57,7 +57,7 @@ void UGA_SpellStupefy::ActivateAbility(
 )
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
+
 	FGameplayTagContainer RelevantTags;
 	if (!CheckCooldown(Handle, ActorInfo, &RelevantTags))
 	{
@@ -65,6 +65,7 @@ void UGA_SpellStupefy::ActivateAbility(
 		return;
 	}
 
+	// 프리 캐스트 페이싱
 	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
 	{
 		return;
@@ -104,7 +105,6 @@ void UGA_SpellStupefy::ExecuteStupefyCast(
 		CanCastAsSpecialFreeCast(CheckResult);
 		break;
 
-	case ESpellCastContext::Normal:
 	default:
 		CanCastAsNormal(CheckResult);
 		break;
@@ -135,25 +135,69 @@ void UGA_SpellStupefy::ExecuteStupefyCast(
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
-	
+
+	// -------------------------
+	// Notify용 데이터 저장
+	// -------------------------
+	PendingResolvedCastContext = CastContext;
+	PendingResolvedTargetActor = TargetActor;
+	PendingResolvedTargetTags = TargetTags;
+	PendingResolvedAimPoint = AimPoint;
+	bCastNotifyHandled = false;
+
+	// -------------------------
+	// Beam VFX 큐 등록
+	// -------------------------
+	QueueLineTraceSpellVFX(
+		LineTraceBeamVFX,
+		AimPoint,
+		BeamStartSocketName,
+		TEXT("BeamStart"),
+		TEXT("BeamEnd"),
+		TEXT("BeamLength")
+	);
+
+	// Notify가 이 Ability 호출 가능하도록 등록
+	RegisterCastNotifyToOwner();
+
+	// -------------------------
+	// 몽타주 재생
+	// -------------------------
 	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
 	if (Character && Character->GetMesh() && CastMontage)
 	{
 		if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
 		{
-			const float MontageDuration = AnimInstance->Montage_Play(CastMontage, 1.0f);
-			if (MontageDuration > 0.f)
+			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.0f);
+			if (Duration > 0.f)
 			{
 				FOnMontageEnded EndDelegate;
 				EndDelegate.BindUObject(this, &UGA_SpellStupefy::OnMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
+				return;
 			}
 		}
 	}
 
-	// 슬로우 모션은 Ability에서 직접 처리하지 않음.
-	// 패링 반격 연출은 애니메이션의 ANS_Stupefy_Slowmotion 에서 처리.
-	const bool bApplied = ApplyStupefyToTarget(CastContext, TargetActor, TargetTags);
+	// fallback (몽타주 없을 때)
+	HandleCastNotify();
+}
+
+void UGA_SpellStupefy::HandleCastNotify()
+{
+	if (bCastNotifyHandled)
+	{
+		return;
+	}
+
+	bCastNotifyHandled = true;
+
+	const bool bApplied = ApplyStupefyToTarget(
+		PendingResolvedCastContext,
+		PendingResolvedTargetActor,
+		PendingResolvedTargetTags
+	);
+
 	if (!bApplied)
 	{
 		ResetPendingCastData();
@@ -161,7 +205,7 @@ void UGA_SpellStupefy::ExecuteStupefyCast(
 		return;
 	}
 
-	NotifySpellCastSucceeded(CastContext);
+	NotifySpellCastSucceeded(PendingResolvedCastContext);
 
 	ResetPendingCastData();
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
@@ -178,8 +222,9 @@ void UGA_SpellStupefy::PrepareCastContext(
 
 ESpellCastContext UGA_SpellStupefy::ResolveCastContextAndConsume()
 {
-	const ESpellCastContext ResolvedContext = PendingCastContext;
-	return ResolvedContext;
+	const ESpellCastContext Resolved = PendingCastContext;
+	PendingCastContext = ESpellCastContext::Normal;
+	return Resolved;
 }
 
 bool UGA_SpellStupefy::ResolveTargetForCast(
@@ -193,30 +238,16 @@ bool UGA_SpellStupefy::ResolveTargetForCast(
 	OutTargetTags.Reset();
 	OutAimPoint = FVector::ZeroVector;
 
-	// 패링 반격: 강제 타겟 우선
 	if (InCastContext == ESpellCastContext::ParryCounter)
 	{
 		if (IsValid(PendingForcedTarget) && DoesTargetMeetRequirements(PendingForcedTarget))
 		{
 			OutTarget = PendingForcedTarget;
-			OutAimPoint = PendingForcedTarget->GetActorLocation();
-
-			if (PendingForcedTarget->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
-			{
-				if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(PendingForcedTarget))
-				{
-					if (UAbilitySystemComponent* TargetASC = ASI->GetAbilitySystemComponent())
-					{
-						TargetASC->GetOwnedGameplayTags(OutTargetTags);
-					}
-				}
-			}
-
+			OutAimPoint = PendingForcedTarget->GetActorLocation() + FVector(0,0,60);
 			return true;
 		}
 	}
 
-	// 일반 시전 / fallback
 	return TryConsumeLockedTarget(OutTarget, OutTargetTags, OutAimPoint);
 }
 
@@ -231,103 +262,91 @@ bool UGA_SpellStupefy::ApplyStupefyToTarget(
 		return false;
 	}
 
-	AActor* SourceActor = GetAvatarActorFromActorInfo();
-	if (!IsValid(SourceActor))
-	{
-		return false;
-	}
-
 	UCombatComponent* CombatComp = TargetActor->FindComponentByClass<UCombatComponent>();
 	if (!CombatComp)
 	{
 		return false;
 	}
 
-	FDamageRequest DamageRequest;
-	DamageRequest.SourceActor = SourceActor;
-	DamageRequest.TargetActor = TargetActor;
-	DamageRequest.InstigatorActor = SourceActor;
-	DamageRequest.DamageCauser = SourceActor;
-	DamageRequest.BaseDamage = GetBaseDamage();
-	DamageRequest.SourceTags = FGameplayTagContainer();
-	DamageRequest.TargetTags = TargetTags;
+	FDamageRequest Request;
+	Request.SourceActor = GetAvatarActorFromActorInfo();
+	Request.TargetActor = TargetActor;
+	Request.BaseDamage = GetBaseDamage();
+	Request.TargetTags = TargetTags;
 
-	FDamageResult DamageResult = CombatComp->ApplyDamageRequest(DamageRequest);
+	FDamageResult Result = CombatComp->ApplyDamageRequest(Request);
 
-	if (!DamageResult.bWasApplied)
+	if (!Result.bWasApplied)
 	{
 		return false;
 	}
 
-	const bool bStunApplied = ApplyStunEffectToTarget(TargetActor);
+	if (InCastContext == ESpellCastContext::ParryCounter)
+	{
+		ApplyStunEffectToTarget(TargetActor);
+	}
 
-	// 데미지가 이미 적용됐다면 스킬 자체는 성공으로 본다.
 	return true;
 }
 
 bool UGA_SpellStupefy::ApplyStunEffectToTarget(AActor* TargetActor)
 {
-	if (!IsValid(TargetActor))
+	if (!IsValid(TargetActor) || !StunEffectClass)
 	{
 		return false;
 	}
 
-	if (!StunEffectClass)
+	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(TargetActor);
+	if (!ASI)
 	{
 		return false;
 	}
 
-	if (!TargetActor->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
-	{
-		return false;
-	}
-
-	IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(TargetActor);
-	if (!TargetASI)
-	{
-		return false;
-	}
-
-	UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
-	if (!TargetASC)
-	{
-		return false;
-	}
-
+	UAbilitySystemComponent* TargetASC = ASI->GetAbilitySystemComponent();
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
-	if (!SourceASC)
+
+	if (!TargetASC || !SourceASC)
 	{
 		return false;
 	}
 
-	FGameplayEffectContextHandle EffectContext = SourceASC->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
+	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+	FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(StunEffectClass, GetAbilityLevel(), Context);
 
-	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(StunEffectClass, GetAbilityLevel(), EffectContext);
-	if (!SpecHandle.IsValid())
+	if (!Spec.IsValid())
 	{
 		return false;
 	}
 
-	const FActiveGameplayEffectHandle ActiveGEHandle = SourceASC->ApplyGameplayEffectSpecToTarget(
-		*SpecHandle.Data.Get(),
-		TargetASC
-	);
-
-	const bool bApplied = ActiveGEHandle.WasSuccessfullyApplied();
-
-	return bApplied;
+	return SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC).WasSuccessfullyApplied();
 }
 
 void UGA_SpellStupefy::ResetPendingCastData()
 {
 	PendingCastContext = ESpellCastContext::Normal;
 	PendingForcedTarget = nullptr;
+
+	PendingResolvedCastContext = ESpellCastContext::Normal;
+	PendingResolvedTargetActor = nullptr;
+	PendingResolvedTargetTags.Reset();
+	PendingResolvedAimPoint = FVector::ZeroVector;
+
+	bCastNotifyHandled = false;
 }
 
 void UGA_SpellStupefy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	// 현재 방식은 몽타주가 연출용이므로
-	// 종료 시 별도 판정 처리는 하지 않는다.
-	// 필요해지면 이후 Notify 기반으로 전환 가능.
+	if (bCastNotifyHandled)
+	{
+		return;
+	}
+
+	if (bInterrupted)
+	{
+		ResetPendingCastData();
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		return;
+	}
+
+	HandleCastNotify();
 }

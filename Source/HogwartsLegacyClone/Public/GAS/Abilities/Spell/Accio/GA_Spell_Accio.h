@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GAS/Abilities/GA_SpellBase.h"
@@ -9,6 +7,7 @@
 class UAnimMontage;
 class USoundBase;
 class UNiagaraSystem;
+class UAudioComponent;
 
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Accio : public UGA_SpellBase
@@ -58,6 +57,18 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Sound")
 	TObjectPtr<USoundBase> CastVoiceSound;
+
+	// 마법 시전 시 나는 마법 이펙트 사운드
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Sound")
+	TObjectPtr<USoundBase> CastSound;
+
+	// 대상을 당기는 동안 나는 루프 사운드
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Sound")
+	TObjectPtr<USoundBase> PullSound;
+
+	// 진행 중인 당기기 사운드를 끄기 위한 컴포넌트
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> PullAudioComponent;
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
 	TObjectPtr<UNiagaraSystem> AccioVFX;

@@ -4,8 +4,9 @@
 #include "GameplayTagContainer.h"
 #include "GameplayEffectTypes.h"
 #include "Core/HOG_Enum.h"
-
 #include "HOG_Struct.generated.h"
+
+class UNiagaraSystem;
 
 USTRUCT(BlueprintType)
 struct HOGWARTSLEGACYCLONE_API FDamageRequest
@@ -162,4 +163,33 @@ public:
 	 */
 	UPROPERTY(BlueprintReadOnly, Category="Spell")
 	FGameplayTag BlockingTag;
+};
+
+
+USTRUCT(BlueprintType)
+struct HOGWARTSLEGACYCLONE_API FQueuedSpellVFXData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bPending = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UNiagaraSystem> NiagaraSystem = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector TargetLocation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName StartSocketName = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName BeamStartParameterName = TEXT("BeamStart");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName BeamEndParameterName = TEXT("BeamEnd");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName BeamLengthParameterName = TEXT("BeamLength");
 };

@@ -4,6 +4,7 @@
 #include "Character/BaseCharacter.h"
 #include "GameplayTagContainer.h"
 #include "InputActionValue.h"
+#include "Core/HOG_Struct.h"
 #include "PlayerCharacterBase.generated.h"
 
 class USpringArmComponent;
@@ -13,6 +14,8 @@ class UHOGAbilitySystemComponent;
 class UStaticMeshComponent;
 class USkeletalMeshComponent;
 class UAbilitySystemComponent;
+class UNiagaraSystem;
+class UGA_SpellBase;
 
 /**
  * 플레이어 캐릭터 베이스
@@ -193,4 +196,29 @@ public:
 	bool CanQueueNextCombo() const { return bCanQueueNextCombo; }
 
 #pragma endregion
+	
+	
+public:
+	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
+	void QueueSpellVFX(const FQueuedSpellVFXData& InVFXData);
+
+	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
+	bool ConsumeAndSpawnQueuedSpellVFX();
+	
+protected:
+	UPROPERTY(Transient)
+	FQueuedSpellVFXData QueuedSpellVFXData;
+	
+protected:
+	UPROPERTY(Transient)
+	TObjectPtr<UGA_SpellBase> QueuedCastNotifyAbility = nullptr;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
+	void QueueCastNotifyAbility(UGA_SpellBase* InAbility);
+
+	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
+	void ConsumeCastNotifyAbility();
+	
+	
 };

@@ -18,6 +18,14 @@
 #include "Core/HOG_GameplayTags.h"
 #include "HOGDebugHelper.h"
 
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+
+#include "Components/SkeletalMeshComponent.h"
+#include "Core/HOG_Struct.h"
+#include "GAS/Abilities/GA_SpellBase.h"
+
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -387,4 +395,98 @@ void APlayerCharacterBase::SetWandVisible(bool bVisible)
 void APlayerCharacterBase::SetCanQueueNextCombo(bool bInCanQueue)
 {
 	bCanQueueNextCombo = bInCanQueue;
+}
+
+void APlayerCharacterBase::QueueSpellVFX(const FQueuedSpellVFXData& InVFXData)
+{
+	QueuedSpellVFXData = InVFXData;
+	QueuedSpellVFXData.bPending = true;
+}
+
+bool APlayerCharacterBase::ConsumeAndSpawnQueuedSpellVFX()
+{
+	if (!QueuedSpellVFXData.bPending)
+	{
+		return false;
+	}
+
+	if (!QueuedSpellVFXData.NiagaraSystem)
+	{
+		QueuedSpellVFXData = FQueuedSpellVFXData();
+		return false;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!MeshComp)
+	{
+		QueuedSpellVFXData = FQueuedSpellVFXData();
+		return false;
+	}
+
+	FVector StartLocation = GetActorLocation();
+	FRotator SpawnRotation = GetActorRotation();
+
+	if (QueuedSpellVFXData.StartSocketName != NAME_None &&
+		MeshComp->DoesSocketExist(QueuedSpellVFXData.StartSocketName))
+	{
+		StartLocation = MeshComp->GetSocketLocation(QueuedSpellVFXData.StartSocketName);
+	}
+
+	SpawnRotation = (QueuedSpellVFXData.TargetLocation - StartLocation).Rotation();
+
+	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		QueuedSpellVFXData.NiagaraSystem,
+		StartLocation,
+		SpawnRotation,
+		FVector(1.f),
+		true,   // AutoDestroy
+		true,   // AutoActivate
+		ENCPoolMethod::None,
+		true
+	);
+
+	if (NiagaraComp)
+	{
+		NiagaraComp->SetVectorParameter(
+			QueuedSpellVFXData.BeamStartParameterName,
+			StartLocation
+		);
+
+		NiagaraComp->SetVectorParameter(
+			QueuedSpellVFXData.BeamEndParameterName,
+			QueuedSpellVFXData.TargetLocation
+		);
+
+		const float BeamLength = FVector::Distance(StartLocation, QueuedSpellVFXData.TargetLocation);
+
+		NiagaraComp->SetFloatParameter(
+			QueuedSpellVFXData.BeamLengthParameterName,
+			BeamLength
+		);
+	}
+
+	QueuedSpellVFXData = FQueuedSpellVFXData();
+	return NiagaraComp != nullptr;
+}
+
+void APlayerCharacterBase::QueueCastNotifyAbility(UGA_SpellBase* InAbility)
+{
+	QueuedCastNotifyAbility = InAbility;
+}
+
+void APlayerCharacterBase::ConsumeCastNotifyAbility()
+{
+	if (!QueuedCastNotifyAbility)
+	{
+		return;
+	}
+
+	UGA_SpellBase* Ability = QueuedCastNotifyAbility;
+	QueuedCastNotifyAbility = nullptr;
+
+	if (IsValid(Ability))
+	{
+		Ability->HandleCastNotify();
+	}
 }

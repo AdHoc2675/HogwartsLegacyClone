@@ -17,6 +17,13 @@
 #include "Component/LockOnComponent.h"
 #include "TimerManager.h"
 #include "CollisionQueryParams.h"
+#include "Core/HOG_Struct.h"
+
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/Character.h"
 
 UGA_SpellBase::UGA_SpellBase()
 {
@@ -175,51 +182,47 @@ bool UGA_SpellBase::TryConsumeLockedTarget(
 		return false;
 	}
 
-	FLockOnTargetResult LockedResult;
-	const bool bHasLockedTarget = LockOn->TryGetLockedTargetResult(LockedResult);
-
-	if (!bHasLockedTarget || !IsValid(LockedResult.TargetActor))
+	AActor* LockedTarget = LockOn->GetCurrentTarget();
+	if (!IsValid(LockedTarget))
 	{
 		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
-	if (!DoesTargetMeetRequirements(LockedResult.TargetActor))
+	if (!DoesTargetMeetRequirements(LockedTarget))
 	{
-		OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
-			? LockedResult.TargetActor->GetActorLocation()
-			: LockedResult.AimPoint;
+		BuildFallbackAimPoint(OutAimPoint, Def->CastRange);
 		return false;
 	}
 
-	OutTarget = LockedResult.TargetActor;
-	OutTargetTags = LockedResult.TargetTags;
-	OutAimPoint = LockedResult.AimPoint.IsNearlyZero()
-		? LockedResult.TargetActor->GetActorLocation()
-		: LockedResult.AimPoint;
+	OutTarget = LockedTarget;
+	OutAimPoint = LockedTarget->GetActorLocation();
+
+	if (LockedTarget->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
+	{
+		IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(LockedTarget);
+		if (ASI)
+		{
+			if (UAbilitySystemComponent* TargetASC = ASI->GetAbilitySystemComponent())
+			{
+				TargetASC->GetOwnedGameplayTags(OutTargetTags);
+			}
+		}
+	}
 
 	return true;
 }
 
 bool UGA_SpellBase::BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverride) const
 {
+	OutAimPoint = FVector::ZeroVector;
+
 	if (!CurrentActorInfo)
 	{
 		return false;
 	}
 
 	AActor* Avatar = CurrentActorInfo->AvatarActor.Get();
-	if (!Avatar)
-	{
-		return false;
-	}
-
-	UWorld* World = Avatar->GetWorld();
-	if (!World)
-	{
-		return false;
-	}
-
 	APawn* Pawn = Cast<APawn>(Avatar);
 	if (!Pawn)
 	{
@@ -232,50 +235,33 @@ bool UGA_SpellBase::BuildFallbackAimPoint(FVector& OutAimPoint, float RangeOverr
 		return false;
 	}
 
-	const float RequestedRange = (RangeOverride > 0.f) ? RangeOverride : GetCastRange();
+	const FVector CameraLoc = PC->PlayerCameraManager->GetCameraLocation();
+	const FVector CameraForward = PC->PlayerCameraManager->GetActorForwardVector();
 
-	// 센터에임 목표점은 "카메라가 실제로 보고 있는 월드 지점"을 구하는 용도이므로
-	// 근거리 스킬 사거리 그대로 쓰면 3인칭 카메라-캐릭터 사이 점이 잡힐 수 있다.
-	// 따라서 최소 트레이스 길이를 충분히 길게 보장한다.
-	const float UseRange = FMath::Max(RequestedRange, 5000.f);
+	float TraceDistance = RangeOverride;
+	if (TraceDistance <= 0.f)
+	{
+		TraceDistance = GetCastRange();
+	}
 
-	const FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
-	const FVector CamForward = PC->PlayerCameraManager->GetActorForwardVector().GetSafeNormal();
+	// 근거리 주문이어도 카메라-캐릭터 사이의 짧은 점을 잡지 않도록 최소값 보장
+	TraceDistance = FMath::Max(TraceDistance, 5000.f);
 
-	const FVector TraceStart = CamLoc;
-	const FVector TraceEnd = TraceStart + (CamForward * UseRange);
+	const FVector TraceStart = CameraLoc;
+	const FVector TraceEnd = TraceStart + (CameraForward * TraceDistance);
 
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(HOG_SpellBase_FallbackAimTrace), false);
-	QueryParams.AddIgnoredActor(Avatar);
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(SpellBaseFallbackAim), false, Avatar);
 
-	FHitResult HitResult;
-	const bool bHit = World->LineTraceSingleByChannel(
-		HitResult,
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit,
 		TraceStart,
 		TraceEnd,
 		ECC_Visibility,
-		QueryParams
+		Params
 	);
 
-	if (bHit)
-	{
-		OutAimPoint = HitResult.ImpactPoint;
-	}
-	else
-	{
-		OutAimPoint = TraceEnd;
-	}
-
-	/*
-	Debug::Print(FString::Printf(
-		TEXT("[SpellBase] FallbackAim | CamLoc=%s | TraceEnd=%s | OutAimPoint=%s | Hit=%d"),
-		*CamLoc.ToString(),
-		*TraceEnd.ToString(),
-		*OutAimPoint.ToString(),
-		bHit ? 1 : 0
-	));
-	*/
-
+	OutAimPoint = bHit ? Hit.ImpactPoint : TraceEnd;
 	return true;
 }
 
@@ -298,16 +284,6 @@ void UGA_SpellBase::ActivateAbility(
 )
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	if (ShouldApplyCastingActiveTag())
-	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-		{
-			ASC->AddLooseGameplayTag(
-				FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
-			);
-		}
-	}
 }
 
 void UGA_SpellBase::EndAbility(
@@ -327,16 +303,7 @@ void UGA_SpellBase::EndAbility(
 	PreCastFacingElapsed = 0.f;
 	bHasCachedPreCastFacingTargetLocation = false;
 	CachedPreCastFacingTargetLocation = FVector::ZeroVector;
-
-	if (ShouldApplyCastingActiveTag())
-	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-		{
-			ASC->RemoveLooseGameplayTag(
-				FGameplayTag::RequestGameplayTag(TEXT("State.Casting.Active"))
-			);
-		}
-	}
+	CachedFacingAbilityForSafety = nullptr;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -521,19 +488,21 @@ bool UGA_SpellBase::TryBeginPreCastFacing(
 	const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,
-	const FGameplayEventData* TriggerEventData)
+	const FGameplayEventData* TriggerEventData
+)
 {
 	if (!bRequireFacingBeforeCast)
 	{
 		return false;
 	}
 
-	if (!ShouldDeferCastUntilFacingFinished())
+	if (bWaitingForPreCastFacing)
 	{
-		return false;
+		return true;
 	}
 
-	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
 	if (!PlayerCharacter)
 	{
 		return false;
@@ -542,8 +511,6 @@ bool UGA_SpellBase::TryBeginPreCastFacing(
 	FVector TargetLocation = FVector::ZeroVector;
 	if (!TryBuildPreCastFacingTargetLocation(TargetLocation))
 	{
-		bHasCachedPreCastFacingTargetLocation = false;
-		CachedPreCastFacingTargetLocation = FVector::ZeroVector;
 		return false;
 	}
 
@@ -551,12 +518,6 @@ bool UGA_SpellBase::TryBeginPreCastFacing(
 	bHasCachedPreCastFacingTargetLocation = true;
 
 	PlayerCharacter->BeginForcedFacingToLocation(TargetLocation);
-
-	if (PlayerCharacter->IsForcedFacingFinished())
-	{
-		PlayerCharacter->StopForcedFacing();
-		return false;
-	}
 
 	CachedFacingHandle = Handle;
 	CachedFacingActivationInfo = ActivationInfo;
@@ -567,7 +528,6 @@ bool UGA_SpellBase::TryBeginPreCastFacing(
 
 	if (UWorld* World = GetWorld())
 	{
-		World->GetTimerManager().ClearTimer(PreCastFacingTimerHandle);
 		World->GetTimerManager().SetTimer(
 			PreCastFacingTimerHandle,
 			this,
@@ -577,17 +537,22 @@ bool UGA_SpellBase::TryBeginPreCastFacing(
 		);
 	}
 
-	return true;
+	return ShouldDeferCastUntilFacingFinished();
 }
 
 void UGA_SpellBase::TickPreCastFacing()
 {
 	if (!bWaitingForPreCastFacing)
 	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(PreCastFacingTimerHandle);
+		}
 		return;
 	}
 
-	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
 	if (!PlayerCharacter)
 	{
 		if (UWorld* World = GetWorld())
@@ -624,7 +589,8 @@ void UGA_SpellBase::OnPreCastFacingFinished(
 	const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,
-	const FGameplayEventData* TriggerEventData)
+	const FGameplayEventData* TriggerEventData
+)
 {
 	// 파생 ability 에서 override
 }
@@ -632,4 +598,124 @@ void UGA_SpellBase::OnPreCastFacingFinished(
 bool UGA_SpellBase::ShouldDeferCastUntilFacingFinished() const
 {
 	return true;
+}
+
+void UGA_SpellBase::QueueLineTraceSpellVFX(
+	UNiagaraSystem* InVFX,
+	const FVector& InTargetLocation,
+	FName InStartSocketName,
+	FName InBeamStartParam,
+	FName InBeamEndParam,
+	FName InBeamLengthParam
+)
+{
+	if (!InVFX)
+	{
+		return;
+	}
+
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
+	if (!PlayerCharacter)
+	{
+		return;
+	}
+
+	FQueuedSpellVFXData VFXData;
+	VFXData.bPending = true;
+	VFXData.NiagaraSystem = InVFX;
+	VFXData.TargetLocation = InTargetLocation;
+	VFXData.StartSocketName = InStartSocketName;
+	VFXData.BeamStartParameterName = InBeamStartParam;
+	VFXData.BeamEndParameterName = InBeamEndParam;
+	VFXData.BeamLengthParameterName = InBeamLengthParam;
+
+	PlayerCharacter->QueueSpellVFX(VFXData);
+}
+
+void UGA_SpellBase::ClearQueuedLineTraceSpellVFX()
+{
+	QueuedLineTraceBeamVFX = nullptr;
+	QueuedLineTraceBeamTargetLocation = FVector::ZeroVector;
+	QueuedBeamStartSocketName = NAME_None;
+	QueuedBeamStartParamName = TEXT("BeamStart");
+	QueuedBeamEndParamName = TEXT("BeamEnd");
+	QueuedBeamLengthParamName = TEXT("BeamLength");
+}
+
+bool UGA_SpellBase::SpawnQueuedLineTraceSpellVFX()
+{
+	if (!QueuedLineTraceBeamVFX)
+	{
+		return false;
+	}
+
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	ACharacter* Character = Cast<ACharacter>(Avatar);
+	if (!Character)
+	{
+		ClearQueuedLineTraceSpellVFX();
+		return false;
+	}
+
+	USkeletalMeshComponent* MeshComp = Character->GetMesh();
+	if (!MeshComp)
+	{
+		ClearQueuedLineTraceSpellVFX();
+		return false;
+	}
+
+	FVector StartLocation = Character->GetActorLocation();
+
+	if (QueuedBeamStartSocketName != NAME_None &&
+		MeshComp->DoesSocketExist(QueuedBeamStartSocketName))
+	{
+		StartLocation = MeshComp->GetSocketLocation(QueuedBeamStartSocketName);
+	}
+
+	const FRotator SpawnRotation =
+		(QueuedLineTraceBeamTargetLocation - StartLocation).Rotation();
+
+	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		Character->GetWorld(),
+		QueuedLineTraceBeamVFX,
+		StartLocation,
+		SpawnRotation,
+		FVector(1.f),
+		true,
+		true,
+		ENCPoolMethod::None,
+		true
+	);
+
+	if (NiagaraComp)
+	{
+		NiagaraComp->SetVectorParameter(QueuedBeamStartParamName, StartLocation);
+		NiagaraComp->SetVectorParameter(QueuedBeamEndParamName, QueuedLineTraceBeamTargetLocation);
+		NiagaraComp->SetFloatParameter(
+			QueuedBeamLengthParamName,
+			FVector::Distance(StartLocation, QueuedLineTraceBeamTargetLocation)
+		);
+	}
+
+	ClearQueuedLineTraceSpellVFX();
+	return NiagaraComp != nullptr;
+}
+
+void UGA_SpellBase::RegisterCastNotifyToOwner()
+{
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
+	if (!PlayerCharacter)
+	{
+		return;
+	}
+
+	PlayerCharacter->QueueCastNotifyAbility(this);
+}
+
+void UGA_SpellBase::HandleCastNotify()
+{
+	// 기본 SpellBase는 공용 베이스.
+	// 실제 판정/추가 처리(예: Stupefy 데미지 적용)는 파생 클래스에서 override 한다.
 }
