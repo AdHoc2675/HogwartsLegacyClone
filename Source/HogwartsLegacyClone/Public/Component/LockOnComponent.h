@@ -8,7 +8,7 @@
 #include "LockOnComponent.generated.h"
 
 // 락온된 대상이 변경이 된 경우
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnLockOnTargetChanged, AActor*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnLockOnTargetChanged, const FLockOnTargetResult&);
 
 class UAbilitySystemComponent;
 class UPrimitiveComponent;

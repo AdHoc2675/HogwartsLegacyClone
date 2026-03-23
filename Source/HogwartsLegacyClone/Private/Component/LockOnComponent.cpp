@@ -19,6 +19,7 @@
 #include "CollisionShape.h"
 
 #include "HOGDebugHelper.h"
+#include "Core/HOG_GameplayTags.h"
 
 ULockOnComponent::ULockOnComponent()
 {
@@ -205,7 +206,7 @@ void ULockOnComponent::ClearCurrentTarget()
 	if (CurrentTargetActor.Get() != nullptr)
 	{
 		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, false);
-		OnLockOnReleased.Broadcast(CurrentTargetActor.Get());
+		OnLockOnReleased.Broadcast(CurrentTargetResult);
 	}
 
 	CurrentTargetActor = nullptr;
@@ -239,7 +240,7 @@ void ULockOnComponent::SetCurrentTarget(AActor* NewTarget, const FLockOnTargetRe
 	if (CurrentTargetActor.Get() != nullptr)
 	{
 		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, true);
-		OnLockOnTarget.Broadcast(CurrentTargetActor.Get());
+		OnLockOnTarget.Broadcast(CurrentTargetResult);
 	}
 }
 
