@@ -20,6 +20,7 @@ class UDA_EnemyConfigBase;
 class UHOGAttributeSet;
 class AController;
 class UBehaviorTree;
+class UDamageNumberPool;
 /**
  * 
  */
@@ -106,6 +107,9 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
+	
+	UPROPERTY()
+	TWeakObjectPtr<UDamageNumberPool> DamageNumberPool;
 	
 	float LastDamageNumberZ = 0.f;
 	float DamageNumberSpacing = 20.f;

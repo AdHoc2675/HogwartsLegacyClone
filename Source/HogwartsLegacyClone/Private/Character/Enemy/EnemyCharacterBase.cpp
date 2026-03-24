@@ -1,17 +1,13 @@
 #include "Character/Enemy/EnemyCharacterBase.h"
 
-#include "HOGDebugHelper.h"
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
 #include "Components/CapsuleComponent.h"
-#include "Components/TextBlock.h"
-#include "Components/WidgetComponent.h"
 #include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "GAS/Attributes/HOGAttributeSet.h"
 #include "Core/HOG_GameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/HOG_PlayerController.h"
 #include "Pool/DamageNumberPool.h"
-#include "UI/DamageNumberWidget.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -89,7 +85,7 @@ void AEnemyCharacterBase::RemoveGameplayTag(FGameplayTag Tag)
 void AEnemyCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-
+	
 	BindDamageDelegate();
 	InitializeAbilitySystem();
 }
@@ -260,13 +256,16 @@ void AEnemyCharacterBase::OnHealthChangedInternal(const FOnAttributeChangeData& 
 
 void AEnemyCharacterBase::SpawnDamageNumber(float Damage)
 {
-	AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(GetWorld()->GetFirstPlayerController());
-	if (!PC) return;
+	if (!DamageNumberPool.IsValid())
+	{
+		AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(GetWorld()->GetFirstPlayerController());
+		if (!PC) return;
+        
+		DamageNumberPool = PC->GetDamageNumberPool();
+	}
 
-	UDamageNumberPool* Pool = PC->GetDamageNumberPool();
+	if (!DamageNumberPool.IsValid()) return;
 
-	if (!Pool) return;
-	
 	float MeshHeight = GetMesh()->Bounds.BoxExtent.Z;
 	float BaseHeight = MeshHeight * 0.5f;
 	
@@ -293,7 +292,7 @@ void AEnemyCharacterBase::SpawnDamageNumber(float Damage)
 	FVector Offset = FVector(FMath::RandRange(-30.f, 30.f), 0.f, BaseHeight + LastDamageNumberZ);
 
 	FVector WorldLocation = GetMesh()->Bounds.Origin + Offset;
-	Pool->ShowDamage(Damage,WorldLocation);
+	DamageNumberPool->ShowDamage(Damage,WorldLocation);
 }
 
 void AEnemyCharacterBase::BindDamageDelegate()
