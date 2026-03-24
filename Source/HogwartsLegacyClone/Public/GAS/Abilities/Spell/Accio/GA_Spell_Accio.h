@@ -8,6 +8,7 @@ class UAnimMontage;
 class USoundBase;
 class UNiagaraSystem;
 class UAudioComponent;
+class UNiagaraComponent;
 
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Accio : public UGA_SpellBase
@@ -53,25 +54,49 @@ protected:
 protected:
 	// ====== Accio 설정 ======
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
-	TObjectPtr<UAnimMontage> CastMontage;
+	TObjectPtr<UAnimMontage> CastMontage = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
+	FName StartSectionName = TEXT("Start");
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
+	FName HoldSectionName = TEXT("Hold");
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
+	FName EndSectionName = TEXT("End");
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Sound")
-	TObjectPtr<USoundBase> CastVoiceSound;
+	TObjectPtr<USoundBase> CastVoiceSound = nullptr;
 
 	// 마법 시전 시 나는 마법 이펙트 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Sound")
-	TObjectPtr<USoundBase> CastSound;
+	TObjectPtr<USoundBase> CastSound = nullptr;
 
 	// 대상을 당기는 동안 나는 루프 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Sound")
-	TObjectPtr<USoundBase> PullSound;
+	TObjectPtr<USoundBase> PullSound = nullptr;
 
 	// 진행 중인 당기기 사운드를 끄기 위한 컴포넌트
 	UPROPERTY(Transient)
-	TObjectPtr<UAudioComponent> PullAudioComponent;
+	TObjectPtr<UAudioComponent> PullAudioComponent = nullptr;
+
+	// 지속형 빔 Accio VFX
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
+	TObjectPtr<UNiagaraSystem> AccioVFX = nullptr;
+
+	// 빔 시작 소켓
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
+	FName BeamStartSocketName = TEXT("RightHandWandSocket");
+
+	// Niagara 파라미터 이름
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
+	FName BeamStartParamName = TEXT("BeamStart");
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
-	TObjectPtr<UNiagaraSystem> AccioVFX;
+	FName BeamEndParamName = TEXT("BeamEnd");
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Visual")
+	FName BeamLengthParamName = TEXT("BeamLength");
 
 	// 대상에 따른 끌어당기기 속도 세분화
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
@@ -86,15 +111,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Move")
 	float StopDistance = 150.f;
 
+protected:
 	// ====== 런타임 상태 ======
 	UPROPERTY(Transient)
-	TObjectPtr<AActor> OriginalTarget; // 마법을 맞춘 대상(이펙트 스폰용)
+	TObjectPtr<AActor> OriginalTarget = nullptr; // 마법을 맞춘 대상(이펙트 기준점용)
 
 	UPROPERTY(Transient)
-	TObjectPtr<AActor> TargetToMove; // 실제로 이동할 대상 (적재물, 발판 등)
+	TObjectPtr<AActor> TargetToMove = nullptr; // 실제로 이동할 대상 (적재물, 발판 등)
 
 	UPROPERTY(Transient)
-	TObjectPtr<AActor> PullDestination; // 도착 지점 (보통 플레이어지만, 타겟 지점일 수 있음)
+	TObjectPtr<AActor> PullDestination = nullptr; // 도착 지점 (보통 플레이어지만, 타겟 지점일 수 있음)
 
 	FTimerHandle PullTimerHandle;
 
@@ -103,6 +129,23 @@ protected:
 
 	// 현재 적용 중인 당기기 속도
 	float CurrentPullSpeed = 0.f;
+
+	// Notify 중복 호출 방지
+	UPROPERTY(Transient)
+	bool bCastNotifyHandled = false;
+
+	// 지속형 빔 컴포넌트
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraComponent> ActiveBeamVFXComponent = nullptr;
+	
+	UPROPERTY(Transient)
+	bool bPendingMontageEndTransition = false;
+
+	UPROPERTY(Transient)
+	bool bPendingEndAbilityReplicate = false;
+
+	UPROPERTY(Transient)
+	bool bPendingEndAbilityWasCancelled = false;
 	
 protected:
 	virtual void OnPreCastFacingFinished(
@@ -118,4 +161,20 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData
 	);
+
+protected:
+	virtual void HandleCastNotify() override;
+
+protected:
+	bool SpawnPersistentBeamVFX();
+	void UpdatePersistentBeamVFX();
+	void ClearPersistentBeamVFX();
+
+	bool GetCurrentBeamStartLocation(FVector& OutStartLocation) const;
+	bool GetCurrentBeamEndLocation(FVector& OutEndLocation) const;
+	
+	bool TryJumpMontageToSection(FName SectionName) const;
+	void BeginMontageEndTransition(bool bReplicateEndAbility, bool bWasCancelled);
+	void FinishAccioAbilityEnd(bool bReplicateEndAbility, bool bWasCancelled);
+	
 };

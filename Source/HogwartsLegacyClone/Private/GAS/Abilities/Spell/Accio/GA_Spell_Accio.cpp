@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#include "GAS/Abilities/Spell/Accio/GA_Spell_Accio.h"
+﻿#include "GAS/Abilities/Spell/Accio/GA_Spell_Accio.h"
 
 #include "HOGDebugHelper.h"
 #include "Core/HOG_GameplayTags.h"
@@ -16,12 +14,16 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
 
 #include "Components/AudioComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 
 UGA_Spell_Accio::UGA_Spell_Accio()
 {
@@ -35,16 +37,18 @@ void UGA_Spell_Accio::ActivateAbility(
 	const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
+
 	FGameplayTagContainer RelevantTags;
 	if (!CheckCooldown(Handle, ActorInfo, &RelevantTags))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		Debug::Print(TEXT("[Accio] CheckCooldown Failed"));
+		FinishAccioAbilityEnd(true, false);
 		return;
 	}
 
 	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
 	{
+		Debug::Print(TEXT("[Accio] Waiting PreCastFacing"));
 		return;
 	}
 
@@ -57,6 +61,7 @@ void UGA_Spell_Accio::OnPreCastFacingFinished(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
+	Debug::Print(TEXT("[Accio] OnPreCastFacingFinished"));
 	ExecuteAccioCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
@@ -66,79 +71,368 @@ void UGA_Spell_Accio::ExecuteAccioCast(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
+	bCastNotifyHandled = false;
+	bPendingMontageEndTransition = false;
+	bPendingEndAbilityReplicate = false;
+	bPendingEndAbilityWasCancelled = false;
+
+	ClearPersistentBeamVFX();
+
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		Debug::Print(TEXT("[Accio] CommitAbility Failed"));
+		FinishAccioAbilityEnd(true, true);
 		return;
 	}
 
+	Debug::Print(TEXT("[Accio] ExecuteAccioCast Committed"));
+
 	ACharacter* Character = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
 
-	// 목소리 사운드 재생
 	if (CastVoiceSound && Character)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, Character->GetActorLocation());
 	}
 
-	// 시전 사운드 재생
 	if (CastSound && Character)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CastSound, Character->GetActorLocation());
 	}
 
+	RegisterCastNotifyToOwner();
+	Debug::Print(TEXT("[Accio] RegisterCastNotifyToOwner"));
+
 	if (Character && Character->GetMesh() && CastMontage)
 	{
-		UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
-		if (AnimInstance)
+		if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
 		{
-			const float Duration = AnimInstance->Montage_Play(CastMontage, 3.f);
+			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.0f);
 			if (Duration > 0.f)
 			{
+				Debug::Print(TEXT("[Accio] CastMontage Play Success"));
+
 				FOnMontageEnded EndDelegate;
 				EndDelegate.BindUObject(this, &UGA_Spell_Accio::OnMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
 
-				// 타겟이 없으면 즉시 어빌리티 종료
-				if (!FireAccio())
-				{
-					EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-				}
-				// 성공했다면 EndAbility를 부르지 않음
+				const bool bJumpedStart = TryJumpMontageToSection(StartSectionName);
+				Debug::Print(FString::Printf(TEXT("[Accio] Jump Start Result = %d"), bJumpedStart ? 1 : 0));
 				return;
 			}
 		}
 	}
 
-	if (!FireAccio())
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-	}
+	Debug::Print(TEXT("[Accio] Montage Fallback -> HandleCastNotify"));
+	HandleCastNotify();
 }
 
-// 마법 시전 중 다시 Accio 키를 눌렀을 때의 (토글 오프) 로직
-void UGA_Spell_Accio::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+void UGA_Spell_Accio::InputPressed(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo)
 {
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 
-	// 끌어당기고 있는 대상이 있다면 유저의 판단으로 강제 종료
+	Debug::Print(TEXT("[Accio] InputPressed"));
+
 	if (IsValid(TargetToMove))
 	{
-		//Debug::Print(TEXT("[Accio] Canceled by Toggle Input."), FColor::Yellow);
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		Debug::Print(TEXT("[Accio] InputPressed -> BeginMontageEndTransition"));
+		BeginMontageEndTransition(true, false);
 	}
+}
+
+void UGA_Spell_Accio::HandleCastNotify()
+{
+	Debug::Print(TEXT("[Accio] HandleCastNotify Called"));
+
+	if (bCastNotifyHandled)
+	{
+		Debug::Print(TEXT("[Accio] HandleCastNotify Ignored AlreadyHandled"));
+		return;
+	}
+
+	bCastNotifyHandled = true;
+
+	if (!FireAccio())
+	{
+		Debug::Print(TEXT("[Accio] FireAccio Failed"));
+		FinishAccioAbilityEnd(true, false);
+		return;
+	}
+
+	Debug::Print(TEXT("[Accio] FireAccio Success"));
+
+	const bool bBeamSpawned = SpawnPersistentBeamVFX();
+	Debug::Print(FString::Printf(TEXT("[Accio] SpawnPersistentBeamVFX = %d"), bBeamSpawned ? 1 : 0));
+
+	const bool bJumpedHold = TryJumpMontageToSection(HoldSectionName);
+	Debug::Print(FString::Printf(TEXT("[Accio] Jump Hold Result = %d"), bJumpedHold ? 1 : 0));
+}
+
+bool UGA_Spell_Accio::TryJumpMontageToSection(FName SectionName) const
+{
+	if (SectionName.IsNone() || !CastMontage)
+	{
+		Debug::Print(TEXT("[Accio] TryJumpMontageToSection Failed | Section None or CastMontage Null"));
+		return false;
+	}
+
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (!Character || !Character->GetMesh())
+	{
+		Debug::Print(TEXT("[Accio] TryJumpMontageToSection Failed | Character/Mesh Null"));
+		return false;
+	}
+
+	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		Debug::Print(TEXT("[Accio] TryJumpMontageToSection Failed | AnimInstance Null"));
+		return false;
+	}
+
+	Debug::Print(FString::Printf(
+		TEXT("[Accio] Montage_IsPlaying = %d | Try Section = %s"),
+		AnimInstance->Montage_IsPlaying(CastMontage) ? 1 : 0,
+		*SectionName.ToString()
+	));
+
+	if (!AnimInstance->Montage_IsPlaying(CastMontage))
+	{
+		return false;
+	}
+
+	AnimInstance->Montage_JumpToSection(SectionName, CastMontage);
+
+	Debug::Print(FString::Printf(TEXT("[Accio] JumpToSection Success : %s"), *SectionName.ToString()));
+	return true;
+}
+
+void UGA_Spell_Accio::BeginMontageEndTransition(bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Debug::Print(TEXT("[Accio] BeginMontageEndTransition Called"));
+
+	if (bPendingMontageEndTransition)
+	{
+		Debug::Print(TEXT("[Accio] BeginMontageEndTransition Ignored AlreadyPending"));
+		return;
+	}
+
+	bPendingMontageEndTransition = true;
+	bPendingEndAbilityReplicate = bReplicateEndAbility;
+	bPendingEndAbilityWasCancelled = bWasCancelled;
+
+	const bool bJumped = TryJumpMontageToSection(EndSectionName);
+	Debug::Print(FString::Printf(TEXT("[Accio] Jump End Result = %d"), bJumped ? 1 : 0));
+
+	if (!bJumped)
+	{
+		Debug::Print(TEXT("[Accio] End Section Jump Failed -> FinishAccioAbilityEnd"));
+		FinishAccioAbilityEnd(bReplicateEndAbility, bWasCancelled);
+	}
+}
+
+void UGA_Spell_Accio::FinishAccioAbilityEnd(bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Debug::Print(FString::Printf(
+		TEXT("[Accio] FinishAccioAbilityEnd | Rep=%d | Cancel=%d"),
+		bReplicateEndAbility ? 1 : 0,
+		bWasCancelled ? 1 : 0
+	));
+
+	EndAbility(
+		CurrentSpecHandle,
+		CurrentActorInfo,
+		CurrentActivationInfo,
+		bReplicateEndAbility,
+		bWasCancelled
+	);
+}
+
+bool UGA_Spell_Accio::SpawnPersistentBeamVFX()
+{
+	ClearPersistentBeamVFX();
+
+	if (!AccioVFX)
+	{
+		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | AccioVFX Null"));
+		return false;
+	}
+
+	FVector StartLocation = FVector::ZeroVector;
+	FVector EndLocation = FVector::ZeroVector;
+
+	if (!GetCurrentBeamStartLocation(StartLocation))
+	{
+		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | StartLocation Invalid"));
+		return false;
+	}
+
+	if (!GetCurrentBeamEndLocation(EndLocation))
+	{
+		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | EndLocation Invalid"));
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | World Null"));
+		return false;
+	}
+
+	const FRotator SpawnRotation = (EndLocation - StartLocation).Rotation();
+
+	ActiveBeamVFXComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		World,
+		AccioVFX,
+		StartLocation,
+		SpawnRotation,
+		FVector(1.f),
+		true,
+		true,
+		ENCPoolMethod::None,
+		true
+	);
+
+	if (!ActiveBeamVFXComponent)
+	{
+		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | Niagara Spawn Null"));
+		return false;
+	}
+
+	ActiveBeamVFXComponent->SetVectorParameter(BeamStartParamName, StartLocation);
+	ActiveBeamVFXComponent->SetVectorParameter(BeamEndParamName, EndLocation);
+	ActiveBeamVFXComponent->SetFloatParameter(
+		BeamLengthParamName,
+		FVector::Distance(StartLocation, EndLocation)
+	);
+
+	return true;
+}
+
+void UGA_Spell_Accio::UpdatePersistentBeamVFX()
+{
+	if (!ActiveBeamVFXComponent)
+	{
+		return;
+	}
+
+	FVector StartLocation = FVector::ZeroVector;
+	FVector EndLocation = FVector::ZeroVector;
+
+	if (!GetCurrentBeamStartLocation(StartLocation) || !GetCurrentBeamEndLocation(EndLocation))
+	{
+		Debug::Print(TEXT("[Accio] UpdatePersistentBeamVFX Invalid Start/End -> Clear"));
+		ClearPersistentBeamVFX();
+		return;
+	}
+
+	ActiveBeamVFXComponent->SetWorldLocation(StartLocation);
+	ActiveBeamVFXComponent->SetWorldRotation((EndLocation - StartLocation).Rotation());
+
+	ActiveBeamVFXComponent->SetVectorParameter(BeamStartParamName, StartLocation);
+	ActiveBeamVFXComponent->SetVectorParameter(BeamEndParamName, EndLocation);
+	ActiveBeamVFXComponent->SetFloatParameter(
+		BeamLengthParamName,
+		FVector::Distance(StartLocation, EndLocation)
+	);
+}
+
+void UGA_Spell_Accio::ClearPersistentBeamVFX()
+{
+	if (ActiveBeamVFXComponent)
+	{
+		ActiveBeamVFXComponent->Deactivate();
+		ActiveBeamVFXComponent->DestroyComponent();
+		ActiveBeamVFXComponent = nullptr;
+	}
+}
+
+bool UGA_Spell_Accio::GetCurrentBeamStartLocation(FVector& OutStartLocation) const
+{
+	OutStartLocation = FVector::ZeroVector;
+
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	ACharacter* Character = Cast<ACharacter>(Avatar);
+	if (!Character)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* MeshComp = Character->GetMesh();
+	if (!MeshComp)
+	{
+		return false;
+	}
+
+	if (BeamStartSocketName != NAME_None && MeshComp->DoesSocketExist(BeamStartSocketName))
+	{
+		OutStartLocation = MeshComp->GetSocketLocation(BeamStartSocketName);
+	}
+	else
+	{
+		OutStartLocation = Character->GetActorLocation();
+	}
+
+	return true;
+}
+
+bool UGA_Spell_Accio::GetCurrentBeamEndLocation(FVector& OutEndLocation) const
+{
+	OutEndLocation = FVector::ZeroVector;
+
+	if (IsValid(TargetToMove))
+	{
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
+		{
+			OutEndLocation = TargetCharacter->GetActorLocation();
+			return true;
+		}
+
+		TArray<UPrimitiveComponent*> PrimitiveComps;
+		TargetToMove->GetComponents<UPrimitiveComponent>(PrimitiveComps);
+
+		for (UPrimitiveComponent* PrimComp : PrimitiveComps)
+		{
+			if (PrimComp && PrimComp->IsSimulatingPhysics())
+			{
+				OutEndLocation = PrimComp->GetComponentLocation();
+				return true;
+			}
+		}
+
+		OutEndLocation = TargetToMove->GetActorLocation();
+		return true;
+	}
+
+	if (IsValid(OriginalTarget))
+	{
+		OutEndLocation = OriginalTarget->GetActorLocation();
+		return true;
+	}
+
+	return false;
 }
 
 bool UGA_Spell_Accio::FireAccio()
 {
+	Debug::Print(TEXT("[Accio] FireAccio Enter"));
+
 	AActor* Avatar = GetAvatarActorFromActorInfo();
-	if (!Avatar) return false;
+	if (!Avatar)
+	{
+		Debug::Print(TEXT("[Accio] FireAccio Failed | Avatar Null"));
+		return false;
+	}
 
 	FGameplayTagContainer TargetTags;
 	FVector AimPoint;
 	AActor* AcquiredTarget = nullptr;
 
-	// 1. LockOn 컴포넌트를 이용해 타겟팅하거나 정면 트레이스 수행
-	bool bHasTarget = TryConsumeLockedTarget(AcquiredTarget, TargetTags, AimPoint);
+	const bool bHasTarget = TryConsumeLockedTarget(AcquiredTarget, TargetTags, AimPoint);
+	Debug::Print(FString::Printf(TEXT("[Accio] TryConsumeLockedTarget HasTarget=%d"), bHasTarget ? 1 : 0));
 
 	if (!IsValid(AcquiredTarget))
 	{
@@ -146,93 +440,96 @@ bool UGA_Spell_Accio::FireAccio()
 		if (World)
 		{
 			FVector StartLoc = Avatar->GetActorLocation();
-			FVector TargetLoc = AimPoint.IsNearlyZero() ? StartLoc + (Avatar->GetActorForwardVector() * GetCastRange()) : AimPoint;
+			FVector TargetLoc = AimPoint.IsNearlyZero()
+				                    ? StartLoc + (Avatar->GetActorForwardVector() * GetCastRange())
+				                    : AimPoint;
 
-			// 탐지 반경
-			float SweepRadius = 50.f; 
-			FCollisionShape SphereShape = FCollisionShape::MakeSphere(SweepRadius);
+			const float SweepRadius = 50.f;
+			const FCollisionShape SphereShape = FCollisionShape::MakeSphere(SweepRadius);
 			FCollisionQueryParams Params(SCENE_QUERY_STAT(AccioTrace), false, Avatar);
 
-			// ======== [디버그 드로우: 트레이스 출발선과 도착구형] ========
 			DrawDebugLine(World, StartLoc, TargetLoc, FColor::Green, false, 2.0f, 0, 2.0f);
 			DrawDebugSphere(World, StartLoc, SweepRadius, 16, FColor::Green, false, 2.0f);
 			DrawDebugSphere(World, TargetLoc, SweepRadius, 16, FColor::Green, false, 2.0f);
-			// =========================================================
 
-			// 바닥 등에 막히는 현상 방지를 위해 MultiSweep으로 변경
 			TArray<FHitResult> HitResults;
-			bool bHit = World->SweepMultiByChannel(HitResults, StartLoc, TargetLoc, FQuat::Identity, ECC_Visibility, SphereShape, Params);
+			const bool bHit = World->SweepMultiByChannel(
+				HitResults,
+				StartLoc,
+				TargetLoc,
+				FQuat::Identity,
+				ECC_Visibility,
+				SphereShape,
+				Params
+			);
 
 			if (bHit)
 			{
 				for (const FHitResult& Hit : HitResults)
 				{
-					// ======== [디버그 드로우: 스캔에 걸린 모든 지점 빨간 점] ========
 					DrawDebugPoint(World, Hit.ImpactPoint, 15.f, FColor::Red, false, 2.0f);
-					// =============================================================
 
 					AActor* HitActor = Hit.GetActor();
-					if (!IsValid(HitActor) || HitActor == Avatar) continue;
+					if (!IsValid(HitActor) || HitActor == Avatar)
+					{
+						continue;
+					}
 
-					UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(HitActor);
-					bool bIsTargetNode = TargetASC && TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
+					UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
+						HitActor);
+					const bool bIsTargetNode = TargetASC && TargetASC->HasMatchingGameplayTag(
+						HOGGameplayTags::Interactable_AccioTarget);
 
-					// == Root가 아니더라도 물리가 켜진 컴포넌트가 있는지 검사 ==
 					bool bIsSimulatingPhysics = false;
 					TArray<UPrimitiveComponent*> PrimitiveComps;
 					HitActor->GetComponents<UPrimitiveComponent>(PrimitiveComps);
-					for(UPrimitiveComponent* PrimComp : PrimitiveComps)
+
+					for (UPrimitiveComponent* PrimComp : PrimitiveComps)
 					{
-						if (PrimComp->IsSimulatingPhysics())
+						if (PrimComp && PrimComp->IsSimulatingPhysics())
 						{
 							bIsSimulatingPhysics = true;
 							break;
 						}
 					}
 
-					bool bIsMovable = HitActor->IsA<ACharacter>() || bIsSimulatingPhysics;
+					const bool bIsMovable = HitActor->IsA<ACharacter>() || bIsSimulatingPhysics;
 
 					if (bIsTargetNode || bIsMovable)
 					{
 						AcquiredTarget = HitActor;
-						DrawDebugBox(World, AcquiredTarget->GetActorLocation(), FVector(60.f), FColor::Cyan, false, 2.0f);
-						break; 
+						DrawDebugBox(World, AcquiredTarget->GetActorLocation(), FVector(60.f), FColor::Cyan, false,
+						             2.0f);
+						break;
 					}
 				}
 			}
 		}
 	}
 
-	if (!IsValid(AcquiredTarget)) 
+	if (!IsValid(AcquiredTarget))
 	{
-		//Debug::Print(TEXT("[Accio] No Pullable Target Found."), FColor::Yellow);
+		Debug::Print(TEXT("[Accio] FireAccio Failed | No AcquiredTarget"));
 		return false;
 	}
 
 	OriginalTarget = AcquiredTarget;
 	TargetToMove = nullptr;
 	PullDestination = nullptr;
-	bIsPullingInteractable = false; // 기본값 초기화
+	bIsPullingInteractable = false;
 	CurrentPullSpeed = DefaultPullSpeed;
 
-	// 플레이어가 현재 어떤 바닥을 밟고 있는지 확인
 	ACharacter* AvatarChar = Cast<ACharacter>(Avatar);
 	UPrimitiveComponent* MovementBase = AvatarChar ? AvatarChar->GetCharacterMovement()->GetMovementBase() : nullptr;
 	AActor* CurrentFloorActor = MovementBase ? MovementBase->GetOwner() : nullptr;
 
-	// ASC를 가져와서 태그 검사
 	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(AcquiredTarget);
-	bool bIsHitTarget = TargetASC && TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
+	const bool bIsHitTarget = TargetASC && TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
 
 	UAbilitySystemComponent* FloorASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CurrentFloorActor);
-	bool bIsStandingOnPlatform = FloorASC && FloorASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
-	
-	// =========================
-	// 최소 수정:
-	// "타겟팅은 됐지만 Accio로 실제 이동 가능한 대상은 아닌 경우" 차단
-	// 예: Rideable 같은 다른 Interactable 태그만 있고,
-	//     Accio 관련 태그/Enemy 태그는 없는 경우
-	// =========================
+	const bool bIsStandingOnPlatform = FloorASC && FloorASC->HasMatchingGameplayTag(
+		HOGGameplayTags::Interactable_AccioPlatform);
+
 	bool bCanBeMovedByAccioTag = false;
 
 	if (TargetASC)
@@ -248,115 +545,103 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (!bCanBeMovedByAccioTag)
 	{
-		// Debug::Print(
-		// 	FString::Printf(TEXT("[Accio] Target is targetable but not movable by Accio tag: %s"), *GetNameSafe(AcquiredTarget)),
-		// 	FColor::Red
-		// );
+		Debug::Print(TEXT("[Accio] FireAccio Failed | Target Not Movable By Accio Tag"));
 		return false;
 	}
 
-	// [대상 식별] 적(Enemy)인지, 상호작용 물체(Interactable)인지 판별
 	if (TargetASC)
 	{
-		// 태그 계층구조를 활용해 "Interactable" 하위 태그가 있는지, "Unit.Enemy" 하위 태그가 있는지 확인
 		if (TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform) ||
-	TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget))
+			TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget))
 		{
 			bIsPullingInteractable = true;
-			CurrentPullSpeed = InteractablePullSpeed; // 물체/발판 등은 부드럽게
+			CurrentPullSpeed = InteractablePullSpeed;
 		}
-		else if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Unit.Enemy"))) || 
-				 TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Enemy))
+		else if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Unit.Enemy"))) ||
+			TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Enemy))
 		{
 			bIsPullingInteractable = false;
-			CurrentPullSpeed = EnemyPullSpeed; // 적은 빠르고 강렬하게 당김
+			CurrentPullSpeed = EnemyPullSpeed;
 		}
 	}
 
-	// [규칙 2] 맞춘 대상이 'AccioTarget' 이고, 밟고 있는 바닥이 'AccioPlatform' 일 때
 	if (bIsHitTarget)
 	{
 		if (bIsStandingOnPlatform)
 		{
-			// 플레이어가 밟고 있는 발판이 타겟을 향해 이동
 			TargetToMove = CurrentFloorActor;
 			PullDestination = AcquiredTarget;
-			//Debug::Print(TEXT("[Accio] Platform -> Target Pulling!"), FColor::Magenta);
 		}
 		else
 		{
-			//Debug::Print(TEXT("[Accio] Cannot pull Accio Target directly. Get on a platform first!"), FColor::Red);
+			Debug::Print(TEXT("[Accio] FireAccio Failed | Need Platform First"));
 			return false;
 		}
 	}
 	else
 	{
-		// [규칙 1 & Default] 발판이든 적군이든 어떤 물체든 나(플레이어)를 향해 당김
 		TargetToMove = AcquiredTarget;
 		PullDestination = Avatar;
-		//Debug::Print(FString::Printf(TEXT("[Accio] Pulling %s to Avatar"), *TargetToMove->GetName()), FColor::Cyan);
 	}
 
-	if (AccioVFX && IsValid(OriginalTarget))
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AccioVFX, OriginalTarget->GetActorLocation());
-	}
-
-	// 당기는 시점에 오디오 컴포넌트 부착 및 재생 시작 ===
-	if (PullSound && IsValid(TargetToMove))
+	if (PullSound && IsValid(TargetToMove) && TargetToMove->GetRootComponent())
 	{
 		PullAudioComponent = UGameplayStatics::SpawnSoundAttached(PullSound, TargetToMove->GetRootComponent());
 	}
 
-	// 물체의 성질에 따라 중력 무시 처리 세팅
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 	{
 		TargetCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 	}
-	//IsSimulatingPhysics()인 구체적 컴포넌트를 찾아서 중력 설정 ==
 	else
 	{
 		TArray<UPrimitiveComponent*> PrimitiveComps;
 		TargetToMove->GetComponents<UPrimitiveComponent>(PrimitiveComps);
-		for(UPrimitiveComponent* MovePrimComp : PrimitiveComps)
+
+		for (UPrimitiveComponent* MovePrimComp : PrimitiveComps)
 		{
-			if (MovePrimComp->IsSimulatingPhysics())
+			if (MovePrimComp && MovePrimComp->IsSimulatingPhysics())
 			{
-				UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
-				bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
+				UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
+					TargetToMove);
+				const bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(
+					HOGGameplayTags::Interactable_AccioPlatform);
 
 				if (!bIsPlatform)
 				{
 					MovePrimComp->SetEnableGravity(false);
 				}
-				break; // 보통 물리 컴포넌트는 하나만 조작하므로 찾으면 break
+				break;
 			}
 		}
 	}
 
 	GetWorld()->GetTimerManager().SetTimer(PullTimerHandle, this, &UGA_Spell_Accio::UpdatePulling, 0.02f, true);
+	Debug::Print(TEXT("[Accio] FireAccio Success | PullTimer Started"));
 	return true;
 }
 
 void UGA_Spell_Accio::UpdatePulling()
 {
+	UpdatePersistentBeamVFX();
+
 	if (!IsValid(TargetToMove) || !IsValid(PullDestination))
 	{
+		Debug::Print(TEXT("[Accio] UpdatePulling Invalid Target/Destination"));
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		BeginMontageEndTransition(true, false);
 		return;
 	}
 
-	// 1. 목적지(DestLoc) 계산: 
-	// 타겟팅 된 목적지 객체도 물리에 의해(혹은 루트 분리로) 이동했을 가능성을 대비해 메쉬 위치 우선 탐색
 	FVector DestLoc = PullDestination->GetActorLocation();
 	if (!PullDestination->IsA<ACharacter>())
 	{
 		TArray<UPrimitiveComponent*> DestPrimComps;
 		PullDestination->GetComponents<UPrimitiveComponent>(DestPrimComps);
+
 		for (UPrimitiveComponent* PrimComp : DestPrimComps)
 		{
-			if (PrimComp->IsA<UStaticMeshComponent>() || PrimComp->IsSimulatingPhysics())
+			if (PrimComp && (PrimComp->IsA<UStaticMeshComponent>() || PrimComp->IsSimulatingPhysics()))
 			{
 				DestLoc = PrimComp->GetComponentLocation();
 				break;
@@ -364,8 +649,6 @@ void UGA_Spell_Accio::UpdatePulling()
 		}
 	}
 
-	// 2. 당겨지는 객체(MoveLoc) 위치 계산:
-	// 물리를 시뮬레이션 중인 구체적인 자식 컴포넌트를 찾아 실제 이동한 컴포넌트 위치를 가져옴
 	FVector MoveLoc = TargetToMove->GetActorLocation();
 	UPrimitiveComponent* ActualMoveComp = nullptr;
 
@@ -373,22 +656,25 @@ void UGA_Spell_Accio::UpdatePulling()
 	{
 		TArray<UPrimitiveComponent*> MovePrimComps;
 		TargetToMove->GetComponents<UPrimitiveComponent>(MovePrimComps);
+
 		for (UPrimitiveComponent* MovePrimComp : MovePrimComps)
 		{
-			if (MovePrimComp->IsSimulatingPhysics())
+			if (MovePrimComp && MovePrimComp->IsSimulatingPhysics())
 			{
-				MoveLoc = MovePrimComp->GetComponentLocation(); // 갱신된 현재 위치
+				MoveLoc = MovePrimComp->GetComponentLocation();
 				ActualMoveComp = MovePrimComp;
 				break;
 			}
 		}
 	}
 
-	// 거리 계산 및 정지 처리
-	float Distance = FVector::Dist2D(DestLoc, MoveLoc);
+	const float Distance = FVector::Dist2D(DestLoc, MoveLoc);
+	//Debug::Print(FString::Printf(TEXT("[Accio] Distance = %.2f | StopDistance = %.2f"), Distance, StopDistance));
 
 	if (Distance <= StopDistance)
 	{
+		Debug::Print(TEXT("[Accio] Reached StopDistance -> BeginMontageEndTransition"));
+
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
@@ -399,16 +685,15 @@ void UGA_Spell_Accio::UpdatePulling()
 		{
 			ActualMoveComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 		}
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+
+		BeginMontageEndTransition(true, false);
 		return;
 	}
 
-	// 방향 연산
 	FVector Direction = (DestLoc - MoveLoc);
 	Direction.Z = 0.f;
-	FVector PullDirection = Direction.GetSafeNormal();
+	const FVector PullDirection = Direction.GetSafeNormal();
 
-	// 속도 적용
 	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 	{
 		TargetCharacter->GetCharacterMovement()->Velocity = PullDirection * CurrentPullSpeed;
@@ -421,9 +706,34 @@ void UGA_Spell_Accio::UpdatePulling()
 
 void UGA_Spell_Accio::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (bInterrupted || !IsValid(TargetToMove))
+	Debug::Print(TEXT("[Accio] OnMontageEnded Called"));
+
+	if (bInterrupted)
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
+		Debug::Print(TEXT("[Accio] OnMontageEnded Interrupted"));
+		FinishAccioAbilityEnd(true, true);
+		return;
+	}
+
+	if (!bCastNotifyHandled)
+	{
+		Debug::Print(TEXT("[Accio] OnMontageEnded Fallback -> HandleCastNotify"));
+		HandleCastNotify();
+		return;
+	}
+
+	if (bPendingMontageEndTransition)
+	{
+		Debug::Print(TEXT("[Accio] OnMontageEnded PendingEndTransition -> FinishAccioAbilityEnd"));
+
+		const bool bReplicate = bPendingEndAbilityReplicate;
+		const bool bWasCancelled = bPendingEndAbilityWasCancelled;
+
+		bPendingMontageEndTransition = false;
+		bPendingEndAbilityReplicate = false;
+		bPendingEndAbilityWasCancelled = false;
+
+		FinishAccioAbilityEnd(bReplicate, bWasCancelled);
 	}
 }
 
@@ -434,9 +744,15 @@ void UGA_Spell_Accio::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	if (UWorld* World = GetWorld()) World->GetTimerManager().ClearTimer(PullTimerHandle);
+	Debug::Print(TEXT("[Accio] EndAbility Enter"));
 
-	// === 추가: 어빌리티 종료 시 당기기 소리 강제 종료 ===
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(PullTimerHandle);
+	}
+
+	ClearPersistentBeamVFX();
+
 	if (PullAudioComponent)
 	{
 		PullAudioComponent->Stop();
@@ -449,33 +765,41 @@ void UGA_Spell_Accio::EndAbility(
 		{
 			TargetCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 		}
-		// == 종료 시 물리/중력 복구 대상 ==
 		else
 		{
 			TArray<UPrimitiveComponent*> PrimitiveComps;
 			TargetToMove->GetComponents<UPrimitiveComponent>(PrimitiveComps);
-			for(UPrimitiveComponent* MovePrimComp : PrimitiveComps)
+
+			for (UPrimitiveComponent* MovePrimComp : PrimitiveComps)
 			{
-				if (MovePrimComp->IsSimulatingPhysics())
+				if (MovePrimComp && MovePrimComp->IsSimulatingPhysics())
 				{
-					UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
-					bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
-					
+					UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
+						TargetToMove);
+					const bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(
+						HOGGameplayTags::Interactable_AccioPlatform);
+
 					if (!bIsPlatform)
 					{
 						MovePrimComp->SetEnableGravity(true);
 					}
-					
+
 					MovePrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 					break;
 				}
 			}
 		}
-
-		TargetToMove = nullptr;
-		PullDestination = nullptr;
-		OriginalTarget = nullptr;
 	}
+
+	TargetToMove = nullptr;
+	PullDestination = nullptr;
+	OriginalTarget = nullptr;
+	bCastNotifyHandled = false;
+	bPendingMontageEndTransition = false;
+	bPendingEndAbilityReplicate = false;
+	bPendingEndAbilityWasCancelled = false;
+	bIsPullingInteractable = false;
+	CurrentPullSpeed = 0.f;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
