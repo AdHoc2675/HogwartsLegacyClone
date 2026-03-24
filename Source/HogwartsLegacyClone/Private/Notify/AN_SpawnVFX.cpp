@@ -22,7 +22,11 @@ void UAN_SpawnVFX::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* A
 		return;
 	}
 
+	// 1) 기존 라인트레이스/큐 기반 VFX 소비
 	PlayerCharacter->ConsumeAndSpawnQueuedSpellVFX();
+
+	// 2) 이번 프레임에 등록된 Spell Ability CastNotify 소비
+	PlayerCharacter->ConsumeCastNotifyAbility();
 }
 
 FString UAN_SpawnVFX::GetNotifyName_Implementation() const
