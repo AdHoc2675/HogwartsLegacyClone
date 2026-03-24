@@ -6,6 +6,7 @@
 #include "UObject/NoExportTypes.h"
 #include "DamageNumberPool.generated.h"
 
+class UDamageNumberWidget;
 /**
  * 
  */
@@ -18,17 +19,19 @@ class HOGWARTSLEGACYCLONE_API UDamageNumberPool : public UObject
 	GENERATED_BODY()
 
 public:
-	void InitPool(APlayerController* InPlayerController, TSubclassOf<UUserWidget> InWidgetClass, int32 PoolSize = 10);
-	UWidgetComponent* Acquire(USceneComponent* AttachTarget, FVector Offset);
-	void Release(UWidgetComponent* Component);
+	void InitPool(APlayerController* InPlayerController, TSubclassOf<UUserWidget> InWidgetClass, int32 PoolSize = 20);
+	
+	void ShowDamage(float Damage, FVector WorldLocation);
+	
+	void Release(UDamageNumberWidget* Widget);
 
 private:
-	UWidgetComponent* CreateWidgetComponent();
+	UDamageNumberWidget* CreateDamageNumberWidget();
 	void ExpandPool(int32 Size);
-	bool TryGetComponent(UWidgetComponent*& OutComponent);
+	bool TryGetWidget(UDamageNumberWidget*& OutWidget);
 	
 	UPROPERTY()
-	TArray<UWidgetComponent*> Pool;
+	TArray<UDamageNumberWidget*> Pool;
 	
 	UPROPERTY()
 	TSubclassOf<UUserWidget> WidgetClass;

@@ -31,7 +31,7 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HitReact")
-	float StunDuration = 1.f;
+	float StunDuration = 2.f;
 
 	UFUNCTION()
 	void OnMontageCompleted();

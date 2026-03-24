@@ -2,6 +2,8 @@
 
 
 #include "Pool/DamageNumberPool.h"
+
+#include "UI/DamageNumberWidget.h"
 #include "Components/WidgetComponent.h"
 
 void UDamageNumberPool::InitPool(APlayerController* InPlayerController, TSubclassOf<UUserWidget> InWidgetClass,
@@ -14,72 +16,60 @@ void UDamageNumberPool::InitPool(APlayerController* InPlayerController, TSubclas
 	ExpandPool(PoolSize);
 }
 
-// 풀에서 Component를 꺼내서 외부에서 정해진 위치로 설정후 반환
-UWidgetComponent* UDamageNumberPool::Acquire(USceneComponent* AttachTarget, FVector Offset)
+void UDamageNumberPool::ShowDamage(float Damage, FVector WorldLocation)
 {
-	UWidgetComponent* Component = nullptr;
-	
-	if (!TryGetComponent(Component))
+	if (!PlayerController) return;
+
+	FVector2D ScreenPosition;
+	if (PlayerController->ProjectWorldLocationToScreen(WorldLocation, ScreenPosition))
 	{
-		return nullptr;
+		UDamageNumberWidget* Widget = nullptr;
+		if (TryGetWidget(Widget))
+		{
+			Widget->FloatDamageNumber(Damage, ScreenPosition, this);
+		}
 	}
-	
-	Component->AttachToComponent(AttachTarget, FAttachmentTransformRules::KeepRelativeTransform);
+}
 
-	Component->SetRelativeLocation(Offset);
-	
-	if (!Component->IsRegistered())
+void UDamageNumberPool::Release(UDamageNumberWidget* Widget)
+{
+	if (Widget)
 	{
-		Component->Rename(nullptr, AttachTarget->GetOwner());
-		Component->RegisterComponent();
-		Component->InitWidget();
+		Pool.Push(Widget);
+	}
+}
+
+// 위젯 생성
+UDamageNumberWidget* UDamageNumberPool::CreateDamageNumberWidget()
+{
+	if (!PlayerController || !WidgetClass) return nullptr;
+
+	UDamageNumberWidget* NewWidget = CreateWidget<UDamageNumberWidget>(PlayerController, WidgetClass);
+	if (NewWidget)
+	{
+		NewWidget->AddToViewport(100);
+		NewWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
-	Component->SetVisibility(true);
-	Component->SetHiddenInGame(false);
-
-	return Component;
+	return NewWidget;
 }
 
-// Enemy에 컴포넌트를 떼어내고 Visibility false
-void UDamageNumberPool::Release(UWidgetComponent* Component)
-{
-	if (!Component) return;
-
-	Component->SetVisibility(false);
-	Component->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
-	Pool.Push(Component);
-}
-
-// 컴포넌트 생성
-UWidgetComponent* UDamageNumberPool::CreateWidgetComponent()
-{
-	UWidgetComponent* Component = NewObject<UWidgetComponent>(PlayerController);
-	Component->SetWidgetClass(WidgetClass);
-	Component->SetWidgetSpace(EWidgetSpace::Screen);
-	Component->SetDrawAtDesiredSize(true);
-	Component->SetVisibility(false);
-
-	return Component;
-}
-
-// Expand Pool size
+// 풀 사이즈 키우기
 void UDamageNumberPool::ExpandPool(int32 Size)
 {
 	for (int32 i = 0; i < Size; i++)
 	{
-		Pool.Push(CreateWidgetComponent());
+		Pool.Push(CreateDamageNumberWidget());
 	}
 }
 
-bool UDamageNumberPool::TryGetComponent(UWidgetComponent*& OutComponent)
+bool UDamageNumberPool::TryGetWidget(UDamageNumberWidget*& OutWidget)
 {
 	if (Pool.IsEmpty())
 	{
 		ExpandPool(5);
 	}
 
-	OutComponent = Pool.Pop();
-
-	return OutComponent != nullptr;
+	OutWidget = Pool.Pop();
+	return OutWidget != nullptr;
 }

@@ -7,74 +7,75 @@
 #include "AbilitySystemInterface.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Character/Enemy/Helper/AIBlackboardHelper.h"
 
 UBTTask_ActivateAbility::UBTTask_ActivateAbility()
 {
 	NodeName = "Activate Ability";
 	bNotifyTaskFinished = true;
 	bCreateNodeInstance = true;
-
-	AbilityTagKey.AddNameFilter(this,
-	                            GET_MEMBER_NAME_CHECKED(UBTTask_ActivateAbility, AbilityTagKey));
-
-	TargetActorKey.AddObjectFilter(this,
-	                               GET_MEMBER_NAME_CHECKED(UBTTask_ActivateAbility, TargetActorKey),
-	                               AActor::StaticClass());
 }
 
 EBTNodeResult::Type UBTTask_ActivateAbility::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	AAIController* AIC = OwnerComp.GetAIOwner();
 	if (!AIC) return EBTNodeResult::Failed;
-
+	
 	APawn* Pawn = AIC->GetPawn();
 	if (!Pawn) return EBTNodeResult::Failed;
-
+	
 	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Pawn);
 	if (!ASI) return EBTNodeResult::Failed;
-
+	
 	AbilitySystem = ASI->GetAbilitySystemComponent();
 	if (!AbilitySystem.IsValid()) return EBTNodeResult::Failed;
-
-	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
 	
-	// 태그를 직접 설정했으면 설정된 태그로 어빌리티 실행
+	
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!BB) return EBTNodeResult::Failed;
+	
+	// 직접 어빌리티를 부여하는 경우
 	ActiveAbilityTag = AbilityTag;
-
-	// 태그 설정이 안되어 있고 AbilityTagKey가 유효하면 Blackboard에서 읽기
-	if (!ActiveAbilityTag.IsValid() && Blackboard && AbilityTagKey.SelectedKeyName.IsValid())
+	
+	// 랜덤한 어빌리티 부여
+	FName TagName;
+	if (!ActiveAbilityTag.IsValid())
 	{
-		FName TagName = Blackboard->GetValueAsName(AbilityTagKey.SelectedKeyName);
+		TagName = UAIBlackboardHelper::GetAbilityTagName(BB);
+		
 		if (!TagName.IsNone())
 		{
 			ActiveAbilityTag = FGameplayTag::RequestGameplayTag(TagName);
 		}
 	}
-
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *TagName.ToString())
+	
 	if (!ActiveAbilityTag.IsValid()) return EBTNodeResult::Failed;
-
+	
 	FGameplayTagContainer TagContainer;
 	TagContainer.AddTag(ActiveAbilityTag);
-
-	BehaviourTree = &OwnerComp;
-	AbilityEndedHandle = AbilitySystem->OnAbilityEnded.AddUObject(this, &UBTTask_ActivateAbility::OnAbilityEnded);
-
-	bool bSuccess = AbilitySystem->TryActivateAbilitiesByTag(TagContainer);
-	if (!bSuccess) return EBTNodeResult::Failed;
 	
-	return EBTNodeResult::Succeeded;
+	BehaviourTree = &OwnerComp;
+	// 어빌리티가 종료될 때 노드 종료
+	AbilityEndedHandle = AbilitySystem->OnAbilityEnded.AddUObject(this, &UBTTask_ActivateAbility::OnAbilityEnded);
+	
+	if (!AbilitySystem->TryActivateAbilitiesByTag(TagContainer))
+	{
+		return EBTNodeResult::Failed;
+	}
+	
+	return EBTNodeResult::InProgress;
 }
 
 void UBTTask_ActivateAbility::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory,
                                              EBTNodeResult::Type TaskResult)
 {
-	
-	if (AbilitySystem.IsValid())
+	if (AbilitySystem.IsValid() && AbilityEndedHandle.IsValid())
 	{
 		AbilitySystem->OnAbilityEnded.Remove(AbilityEndedHandle);
-		AbilitySystem.Reset();
 	}
-
+	
+	AbilitySystem.Reset();
 	BehaviourTree.Reset();
 	AbilityEndedHandle.Reset();
 	ActiveAbilityTag = FGameplayTag();
@@ -99,20 +100,9 @@ void UBTTask_ActivateAbility::OnAbilityEnded(const FAbilityEndedData& AbilityEnd
 
 FString UBTTask_ActivateAbility::GetStaticDescription() const
 {
-	if (!AbilityTag.IsValid())
+	if (AbilityTag.IsValid())
 	{
-		return TEXT("Activate Ability\n[No Tag Set]");
+		return FString::Printf(TEXT("Activate Ability\n%s"), *AbilityTag.ToString());
 	}
-
-	return FString::Printf(TEXT("Activate Ability\nTag: %s"), *AbilityTag.ToString());
-}
-
-void UBTTask_ActivateAbility::InitializeFromAsset(UBehaviorTree& Asset)
-{
-	Super::InitializeFromAsset(Asset);
-	if (UBlackboardData* BBAsset = GetBlackboardAsset())
-	{
-		AbilityTagKey.ResolveSelectedKey(*BBAsset);
-		TargetActorKey.ResolveSelectedKey(*BBAsset);
-	}
+	return TEXT("Activate Ability\n[From Blackboard]");
 }

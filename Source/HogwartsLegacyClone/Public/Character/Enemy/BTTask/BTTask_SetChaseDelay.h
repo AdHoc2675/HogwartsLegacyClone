@@ -13,23 +13,20 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API UBTTask_SetChaseDelay : public UBTTaskNode
 {
 	GENERATED_BODY()
-	
+
 public:
 	UBTTask_SetChaseDelay();
-    
-	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-	virtual void InitializeFromAsset(UBehaviorTree& Asset) override;
-	virtual FString GetStaticDescription() const override;
-	virtual void OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult) override;
 
-protected:
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector ChaseDelayKey;
-    
 	UPROPERTY(EditAnywhere, Category = "DelayTime")
 	float DelayTime = 3.0f;
-	
+
+protected:
+	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+	virtual FString GetStaticDescription() const override;
+	virtual void OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory,
+	                            EBTNodeResult::Type TaskResult) override;
+
+private:
 	UPROPERTY()
 	FTimerHandle TimerHandle;
-	
 };

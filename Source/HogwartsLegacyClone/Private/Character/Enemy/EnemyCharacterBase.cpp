@@ -1,17 +1,14 @@
 #include "Character/Enemy/EnemyCharacterBase.h"
 
-#include "HOGDebugHelper.h"
+#include "Character/Enemy/Handler/EnemyDamageHandler.h"
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
 #include "Components/CapsuleComponent.h"
-#include "Components/TextBlock.h"
-#include "Components/WidgetComponent.h"
 #include "Data/Enemy/DA_EnemyConfigBase.h"
 #include "GAS/Attributes/HOGAttributeSet.h"
 #include "Core/HOG_GameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/HOG_PlayerController.h"
 #include "Pool/DamageNumberPool.h"
-#include "UI/DamageNumberWidget.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -85,39 +82,54 @@ void AEnemyCharacterBase::RemoveGameplayTag(FGameplayTag Tag)
 	}
 }
 
+void AEnemyCharacterBase::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	DamageHandler = NewObject<UEnemyDamageHandler>(this);
+	DamageHandler->Initialize(this);
+}
+
+void AEnemyCharacterBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (DamageHandler)
+	{
+		DamageHandler->Shutdown();
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 // 초기화 위치(빙의 시)
 void AEnemyCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-
-	BindDamageDelegate();
+	
 	InitializeAbilitySystem();
 }
 
 void AEnemyCharacterBase::HandleDeath_Implementation()
 {
 	Super::HandleDeath_Implementation();
-
-	// 태그 상태를 Dead로 변경
-	AddGameplayTag(HOGGameplayTags::State_Dead);
-	// Dead 상태에서의 UI, Sound etc.. 에 알림
-	OnEnemyDeath.Broadcast();
-
+	
 	// 콜리전 Disabled
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 움직임 멈춤
 	GetCharacterMovement()->StopMovementImmediately();
 	GetCharacterMovement()->DisableMovement();
+	
+	OnEnemyDeath.Broadcast();
 
-	// 모든 어빌리티 제거
 	if (AbilitySystemComponent)
 	{
-		AbilitySystemComponent->CancelAllAbilities();
+		FGameplayTagContainer DeathTag;
+		DeathTag.AddTag(HOGGameplayTags::State_Dead);
+		AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
 	}
 
 	// 현재는 Dead 상태일 경우 3초 후에 파괴
-	SetLifeSpan(LifeSpanWhenDead);
+	SetLifeSpan(3);
 }
 
 // GAS 초기화
@@ -134,50 +146,8 @@ void AEnemyCharacterBase::InitializeAbilitySystem()
 	// BaseCharacter의 TeamTag를 ASC Loose Tag로 동기화
 	SyncTeamTagToAbilitySystem();
 
-	if (AbilitySystemComponent->AbilityActorInfo.IsValid())
-	{
-		// Debug::Print(FString::Printf(
-		// 	TEXT("[EnemyCharacterBase] ASC Init Success | ASC=%s | Owner=%s | Avatar=%s"),
-		// 	*GetNameSafe(AbilitySystemComponent),
-		// 	*GetNameSafe(AbilitySystemComponent->AbilityActorInfo->OwnerActor.Get()),
-		// 	*GetNameSafe(AbilitySystemComponent->AbilityActorInfo->AvatarActor.Get())
-		// ), FColor::Green);
-	}
-	else
-	{
-		// Debug::Print(FString::Printf(
-		// 	TEXT("[EnemyCharacterBase] ASC Init FAILED | ASC=%s | ActorInfo invalid"),
-		// 	*GetNameSafe(AbilitySystemComponent)
-		// ), FColor::Red);
-	}
-
-	InitializeAttributes();
 	GiveStartupAbilities();
 	BindAttributeCallbacks();
-}
-
-// Attribute 초기화
-void AEnemyCharacterBase::InitializeAttributes()
-{
-	UDA_EnemyConfigBase* EnemyConfig = GetEnemyConfig();
-	if (!AbilitySystemComponent || !EnemyConfig || !EnemyConfig->DefaultAttributes) return;
-
-	// Effect 컨텍스트 생성
-	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
-	// 발생 주체 설정(->자기 자신)
-	Context.AddSourceObject(this);
-
-	// Effect 정보
-	FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(
-		EnemyConfig->DefaultAttributes,
-		1,
-		Context);
-
-	// Effect 적용(->자신에서 적용)
-	if (Spec.IsValid())
-	{
-		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-	}
 }
 
 // StartUp Ability 주입(데이터 어셋에 캐싱된 데이터 참조)
@@ -228,9 +198,7 @@ void AEnemyCharacterBase::OnHealthChangedInternal(const FOnAttributeChangeData& 
 {
 	// 각 Enemy에 맞는 로직 실행
 	OnHealthChanged(Data.OldValue, Data.NewValue);
-
-	// 공통로직
-
+	
 	// 피격
 	if (Data.NewValue < Data.OldValue)
 	{
@@ -239,16 +207,6 @@ void AEnemyCharacterBase::OnHealthChangedInternal(const FOnAttributeChangeData& 
 		// 데미지 받는 경우 호출
 		// Ex) UI 업데이트, Sound etc..
 		OnEnemyDamaged.Broadcast(Damage);
-
-		// 피격 Ability 실행(태그/몽타주는 어빌리티가 관리)
-		if (AbilitySystemComponent)
-		{
-			FGameplayTagContainer HitReactTag;
-			// 피격 태그 추가(제거는 피격 애니메이션이 끝나면 제거)
-			HitReactTag.AddTag(HOGGameplayTags::State_Hit);
-			// 피격 어빌리티 활성화
-			AbilitySystemComponent->TryActivateAbilitiesByTag(HitReactTag);
-		}
 	}
 
 	// 적 Die
@@ -256,48 +214,4 @@ void AEnemyCharacterBase::OnHealthChangedInternal(const FOnAttributeChangeData& 
 	{
 		Die();
 	}
-}
-
-void AEnemyCharacterBase::SpawnDamageNumber(float Damage)
-{
-	AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(GetWorld()->GetFirstPlayerController());
-	if (!PC) return;
-
-	UDamageNumberPool* Pool = PC->GetDamageNumberPool();
-
-	if (!Pool) return;
-
-	// 메시 중간 위치
-	float MeshHeight = GetMesh()->Bounds.BoxExtent.Z * 2.f;
-	float BaseHeight = MeshHeight * 0.5f;
-
-	double CurrentTime = GetWorld()->GetTimeSeconds();
-	
-	// 마지막 데미지로부터 1초 이내면 → 위로 쌓기
-	if (CurrentTime - LastDamageNumberTime < 1.0f)
-	{
-		// 이전 데미지 숫자 위에 표시되도록 간격 추가
-		LastDamageNumberZ += DamageNumberSpacing;
-	}
-	else
-	{
-		LastDamageNumberZ = 0.f;
-	}
-	// 이번 데미지 시간 기록
-	LastDamageNumberTime = CurrentTime;
-
-	FVector Offset = FVector(FMath::RandRange(-30.f, 30.f), 0.f, BaseHeight + LastDamageNumberZ);
-
-	UWidgetComponent* Component = Pool->Acquire(GetMesh(), Offset);
-	if (!Component) return;
-
-	if (UDamageNumberWidget* Widget = Cast<UDamageNumberWidget>(Component->GetWidget()))
-	{
-		Widget->FloatDamageNumber(Damage, Component, Pool);
-	}
-}
-
-void AEnemyCharacterBase::BindDamageDelegate()
-{
-	OnEnemyDamaged.AddUObject(this, &AEnemyCharacterBase::SpawnDamageNumber);
 }
