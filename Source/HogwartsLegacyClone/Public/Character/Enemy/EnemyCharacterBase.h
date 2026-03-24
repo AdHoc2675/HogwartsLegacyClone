@@ -108,6 +108,6 @@ private:
 	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
 	
 	float LastDamageNumberZ = 0.f;
-	float DamageNumberSpacing = 40.f;
+	float DamageNumberSpacing = 20.f;
 	double LastDamageNumberTime = 0.0;
 };

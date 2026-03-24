@@ -266,18 +266,22 @@ void AEnemyCharacterBase::SpawnDamageNumber(float Damage)
 	UDamageNumberPool* Pool = PC->GetDamageNumberPool();
 
 	if (!Pool) return;
-
-	// 메시 중간 위치
-	float MeshHeight = GetMesh()->Bounds.BoxExtent.Z * 2.f;
+	
+	float MeshHeight = GetMesh()->Bounds.BoxExtent.Z;
 	float BaseHeight = MeshHeight * 0.5f;
-
+	
 	double CurrentTime = GetWorld()->GetTimeSeconds();
 	
 	// 마지막 데미지로부터 1초 이내면 → 위로 쌓기
 	if (CurrentTime - LastDamageNumberTime < 1.0f)
 	{
-		// 이전 데미지 숫자 위에 표시되도록 간격 추가
 		LastDamageNumberZ += DamageNumberSpacing;
+        
+		// 최대 높이 제한 (3~4개 쌓이면 다시 처음으로)
+		if (LastDamageNumberZ > DamageNumberSpacing * 3.f)  // 3번 쌓이면
+		{
+			LastDamageNumberZ = 0.f;
+		}
 	}
 	else
 	{
@@ -288,13 +292,8 @@ void AEnemyCharacterBase::SpawnDamageNumber(float Damage)
 
 	FVector Offset = FVector(FMath::RandRange(-30.f, 30.f), 0.f, BaseHeight + LastDamageNumberZ);
 
-	UWidgetComponent* Component = Pool->Acquire(GetMesh(), Offset);
-	if (!Component) return;
-
-	if (UDamageNumberWidget* Widget = Cast<UDamageNumberWidget>(Component->GetWidget()))
-	{
-		Widget->FloatDamageNumber(Damage, Component, Pool);
-	}
+	FVector WorldLocation = GetMesh()->Bounds.Origin + Offset;
+	Pool->ShowDamage(Damage,WorldLocation);
 }
 
 void AEnemyCharacterBase::BindDamageDelegate()

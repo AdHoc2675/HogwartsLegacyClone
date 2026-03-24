@@ -18,7 +18,7 @@ class HOGWARTSLEGACYCLONE_API UDamageNumberWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void FloatDamageNumber(float Damage, UWidgetComponent* InWidgetComponent, UDamageNumberPool* InPool);
+	void FloatDamageNumber(float Damage, FVector2D ScreenPosition, UDamageNumberPool* InPool);
 
 protected:
 	UPROPERTY(meta = (BindWidget))
@@ -28,13 +28,10 @@ private:
 	void UpdateAnimation();
 	
 	UPROPERTY()
-	UWidgetComponent* WidgetComponent;
-	
-	UPROPERTY()
 	UDamageNumberPool* DamageNumberPool;
 	
 	FTimerHandle AnimTimerHandle;
-	FVector StartLocation;
+	FVector2D StartLocation;
 	float StartTime;
 	float Duration = 1.f;
 	float RiseSpeed = 80.f;
