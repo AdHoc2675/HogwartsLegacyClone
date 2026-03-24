@@ -5,120 +5,82 @@
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
+#include "Character/Enemy/Helper/AIBlackboardHelper.h"
+#include "Character/Enemy/Helper/AttackInfoProvider.h"
 
 UBTDecorator_IsInMeleeRange::UBTDecorator_IsInMeleeRange()
 {
 	NodeName = "Is In Melee Range";
 	bNotifyBecomeRelevant = true;
 	bNotifyCeaseRelevant = true;
-	FlowAbortMode = EBTFlowAbortMode::Both;
+	FlowAbortMode = EBTFlowAbortMode::LowerPriority;
 	bCreateNodeInstance = true;
-
-	TargetDistanceKey.AddFloatFilter(this,
-	                                 GET_MEMBER_NAME_CHECKED(UBTDecorator_IsInMeleeRange, TargetDistanceKey));
 }
 
 bool UBTDecorator_IsInMeleeRange::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
 {
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!BB) return false;
+
 	AAIController* AIC = OwnerComp.GetAIOwner();
-	if (!AIC)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("no AIC"));
-	}
+	if (!AIC) return false;
 
 	APawn* Pawn = AIC->GetPawn();
-	if (!Pawn)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("no Pawn"));
-		return false;
-	}
+	if (!Pawn) return false;
 
-	IIMeleeAttacker* MeleeAttacker = Cast<IIMeleeAttacker>(Pawn);
-	if (!MeleeAttacker)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("no MeleeAttacker"));
-		return false;
-	}
+	float Distance = UAIBlackboardHelper::GetTargetDistance(BB);
 
-	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
-	if (!Blackboard)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("no Blackboard"));
-		return false;
-	}
-
-	float Distance = Blackboard->GetValueAsFloat(TargetDistanceKey.SelectedKeyName);
-	
-	// 직접 태그가 있으면 그걸 사용, 없으면 BB에서 읽기
-	FName AttackTag;
-	if (DirectAttackTag.IsValid())
-	{
-		AttackTag = DirectAttackTag.GetTagName();
-		//UE_LOG(LogTemp, Warning, TEXT("Check Point : %s"), *AttackTag.ToString());
-	}
-	else
-	{
-		AttackTag = Blackboard->GetValueAsName(AttackTagKey.SelectedKeyName);
-	}
+	FName AttackTag = DirectAttackTag.IsValid()
+		                  ? DirectAttackTag.GetTagName()
+		                  : UAIBlackboardHelper::GetAbilityTagName(BB);
 
 	float MinRange, MaxRange;
-	MeleeAttacker->GetMeleeAttackRange(AttackTag, MinRange, MaxRange);
-	
+	if (!UAttackInfoProvider::GetRange(Pawn, AttackTag, MinRange, MaxRange)) return false;
+
 	return Distance >= MinRange && Distance <= MaxRange;
-	
-}
-
-void UBTDecorator_IsInMeleeRange::InitializeFromAsset(UBehaviorTree& Asset)
-{
-	Super::InitializeFromAsset(Asset);
-
-	if (UBlackboardData* BBAsset = GetBlackboardAsset())
-	{
-		TargetDistanceKey.ResolveSelectedKey(*BBAsset);
-		AttackTagKey.ResolveSelectedKey(*BBAsset);
-	}
 }
 
 FString UBTDecorator_IsInMeleeRange::GetStaticDescription() const
 {
-	return Super::GetStaticDescription();
+	if (DirectAttackTag.IsValid())
+	{
+		return FString::Printf(TEXT("In Range: %s"), *DirectAttackTag.ToString());
+	}
+	return TEXT("Is In Melee Range");
 }
 
 void UBTDecorator_IsInMeleeRange::OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	Super::OnBecomeRelevant(OwnerComp, NodeMemory);
 
-	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
-	if (!Blackboard) return;
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!BB) return;
 
-	// 혹시 이전 Observer가 남아있을 경우를 대비해 먼저 정리
-	Blackboard->UnregisterObserversFrom(this);
+	//혹시 이전 Observer가 남아있을 경우를 대비해 먼저 정리
+	BB->UnregisterObserversFrom(this);
 
 	const bool bInitialResult = CalculateRawConditionValue(OwnerComp, NodeMemory);
 
-	// TargetDistance 키 값이 변경될 때마다 콜백 호출
-	Blackboard->RegisterObserver(
-		TargetDistanceKey.GetSelectedKeyID(),
+	BB->RegisterObserver(
+		BB->GetKeyID("TargetDistance"),
 		this,
 		FOnBlackboardChangeNotification::CreateLambda(
-			// bLastResult: 이전 조건 결과를 람다가 캡처해서 변경 여부 비교
-			[this, bLastResult = bInitialResult](const UBlackboardComponent& BlackboardComp,
-			                                     FBlackboard::FKey ChangedKeyID) mutable
+			[this, &OwnerComp, bLastResult = bInitialResult](
+			const UBlackboardComponent& BlackboardComp, FBlackboard::FKey ChangedKey) mutable
 			{
-				UBehaviorTreeComponent* BehaviourTree = Cast<
-					UBehaviorTreeComponent>(BlackboardComp.GetBrainComponent());
-				if (!BehaviourTree) return EBlackboardNotificationResult::ContinueObserving;
+				UBehaviorTreeComponent* BT = Cast<UBehaviorTreeComponent>(BlackboardComp.GetBrainComponent());
 
-				const bool bCurrentResult = CalculateRawConditionValue(*BehaviourTree, nullptr);
+				if (!BT) return EBlackboardNotificationResult::ContinueObserving;
+
+				const bool bCurrentResult = CalculateRawConditionValue(*BT, nullptr);
 
 				// 이전 결과와 현재 결과가 다를 때만 BT 재평가 요청
-				// (매번 RequestExecution 호출 방지)	
+				// 				// (매번 RequestExecution 호출 방지)	
 				if (bCurrentResult != bLastResult)
 				{
 					bLastResult = bCurrentResult;
-					BehaviourTree->RequestExecution(this);
+					BT->RequestExecution(this);
 				}
-				// Observer 유지
 				return EBlackboardNotificationResult::ContinueObserving;
 			}
 		)
@@ -127,10 +89,9 @@ void UBTDecorator_IsInMeleeRange::OnBecomeRelevant(UBehaviorTreeComponent& Owner
 
 void UBTDecorator_IsInMeleeRange::OnCeaseRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	Super::OnCeaseRelevant(OwnerComp, NodeMemory);
-
 	if (UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent())
 	{
 		Blackboard->UnregisterObserversFrom(this);
 	}
+	Super::OnCeaseRelevant(OwnerComp, NodeMemory);
 }

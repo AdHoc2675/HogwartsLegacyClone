@@ -20,14 +20,14 @@ public:
 
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
-	virtual void InitializeFromAsset(UBehaviorTree& Asset) override;
+	// virtual void InitializeFromAsset(UBehaviorTree& Asset) override;
 
 	virtual FString GetStaticDescription() const override;
 
 private:
 	
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector AbilityTagKey;
+	// UPROPERTY(EditAnywhere, Category = "Blackboard")
+	// FBlackboardKeySelector AbilityTagKey;
 	
 	UPROPERTY(EditAnywhere, Category = "Filter")
 	FGameplayTagContainer ExcludeTags;

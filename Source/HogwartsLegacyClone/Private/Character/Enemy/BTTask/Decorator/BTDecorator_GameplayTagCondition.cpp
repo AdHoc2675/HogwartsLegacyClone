@@ -1,59 +1,75 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/Enemy/BTTask/Decorator/BTDecorator_GameplayTagCondition.h"
-
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "AIController.h"
 
 UBTDecorator_GameplayTagCondition::UBTDecorator_GameplayTagCondition()
 {
-	NodeName = "Has Gameplay Tag";
-	bNotifyBecomeRelevant = true;
-	bNotifyCeaseRelevant = true;
-	bCreateNodeInstance = true;
-	FlowAbortMode = EBTFlowAbortMode::Both;
+    NodeName = "GamePlayTag Condition";
+    bNotifyBecomeRelevant = true;
+    bNotifyCeaseRelevant = true;
+    bCreateNodeInstance = true;
+    FlowAbortMode = EBTFlowAbortMode::Both;
 }
 
-// ex) 현재 캐릭터(적)이 분노 상태인 경우, 조건을 충족하여 시퀀스 조건 충족
-// ex) 현재 캐릭터(적)이 스턴상태인경우 inverse로 설정하여 시퀀스 불충족
 bool UBTDecorator_GameplayTagCondition::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
 {
-	if (!AbilityComponent.IsValid()) return false;
-
-	return AbilityComponent->HasMatchingGameplayTag(TagToCheck);
+    UAbilitySystemComponent* ASC = GetASC(OwnerComp);
+    return ASC ? ASC->HasMatchingGameplayTag(TagToCheck) : false;
 }
 
 FString UBTDecorator_GameplayTagCondition::GetStaticDescription() const
 {
-	FString Prefix = IsInversed() ? TEXT("NOT ") : TEXT("");
-	return FString::Printf(TEXT("%sHas Tag: %s"), *Prefix, *TagToCheck.ToString());
+    FString Prefix = IsInversed() ? TEXT("NOT ") : TEXT("");
+    return FString::Printf(TEXT("%sHas Tag: %s"), *Prefix, *TagToCheck.ToString());
 }
 
 void UBTDecorator_GameplayTagCondition::OnBecomeRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	Super::OnBecomeRelevant(OwnerComp, NodeMemory);
-	
-	AAIController* AIController = OwnerComp.GetAIOwner();
-	if (!AIController) return;
+    Super::OnBecomeRelevant(OwnerComp, NodeMemory);
+    
+    BTComp = &OwnerComp;
+    
+    UAbilitySystemComponent* ASC = GetASC(OwnerComp);
+    if (!ASC) return;
 
-	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(AIController->GetPawn());
-	if (!ASCInterface) return;
+    TagChangedHandle = ASC->RegisterGameplayTagEvent(TagToCheck, EGameplayTagEventType::NewOrRemoved)
+        .AddUObject(this, &UBTDecorator_GameplayTagCondition::OnTagChanged);
+}
 
-	AbilityComponent = ASCInterface->GetAbilitySystemComponent();
-	if (!AbilityComponent.IsValid()) return;
+void UBTDecorator_GameplayTagCondition::OnCeaseRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+{
+    if (TagChangedHandle.IsValid())
+    {
+        if (UAbilitySystemComponent* ASC = GetASC(OwnerComp))
+        {
+            ASC->UnregisterGameplayTagEvent(TagChangedHandle, TagToCheck);
+        }
+        TagChangedHandle.Reset();
+    }
+    
+    BTComp.Reset();
+    
+    Super::OnCeaseRelevant(OwnerComp, NodeMemory);
+}
 
-	// 태그 변경 감지
-	// 적이 파괴되는 경우를 방지 WeakPtr
-	TWeakObjectPtr<UBehaviorTreeComponent> WeakBehaviourTree = &OwnerComp;
-	TWeakObjectPtr<UBTDecorator_GameplayTagCondition> WeakThis = this;
-	TagChangedHandle = AbilityComponent->RegisterGameplayTagEvent(TagToCheck, EGameplayTagEventType::NewOrRemoved)
-		.AddLambda([WeakThis, WeakBehaviourTree](const FGameplayTag& Tag, int32 NewCount)
-		{
-			if (WeakThis.IsValid() && WeakBehaviourTree.IsValid())
-			{
-				WeakBehaviourTree->RequestExecution(WeakThis.Get());
-			}
-		});
+void UBTDecorator_GameplayTagCondition::OnTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+    if (BTComp.IsValid())
+    {
+        BTComp->RequestExecution(this);
+    }
+}
+
+UAbilitySystemComponent* UBTDecorator_GameplayTagCondition::GetASC(const UBehaviorTreeComponent& OwnerComp) const
+{
+    AAIController* AIController = OwnerComp.GetAIOwner();
+    if (!AIController) return nullptr;
+
+    IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(AIController->GetPawn());
+    if (!ASCInterface) return nullptr;
+
+    return ASCInterface->GetAbilitySystemComponent();
 }

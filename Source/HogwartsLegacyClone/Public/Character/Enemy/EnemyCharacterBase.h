@@ -21,6 +21,7 @@ class UHOGAttributeSet;
 class AController;
 class UBehaviorTree;
 class UDamageNumberPool;
+class UEnemyDamageHandler;
 /**
  * 
  */
@@ -67,11 +68,13 @@ public:
 
 	
 protected:
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void PossessedBy(AController* NewController) override;
 	
 	// ===== 초기화 =====
 	virtual void InitializeAbilitySystem();
-	virtual void InitializeAttributes();
+	//virtual void InitializeAttributes();
 	virtual void GiveStartupAbilities();
 	virtual void BindAttributeCallbacks();
 	
@@ -94,24 +97,7 @@ protected:
 private:
 	void OnHealthChangedInternal(const FOnAttributeChangeData& Data);
 	
-	UPROPERTY(EditAnywhere, Category = "LifeSpan")
-	float LifeSpanWhenDead = 3.f;
-	
-	// ===== floating Damage =====
-	UFUNCTION()
-	void SpawnDamageNumber(float Damage);
-	void BindDamageDelegate();
-
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	FVector DamageNumberOffset = FVector(0.f, 0.f, 30.f);
-	
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UUserWidget> DamageNumberWidgetClass;
-	
 	UPROPERTY()
-	TWeakObjectPtr<UDamageNumberPool> DamageNumberPool;
+	TObjectPtr<UEnemyDamageHandler> DamageHandler;
 	
-	float LastDamageNumberZ = 0.f;
-	float DamageNumberSpacing = 20.f;
-	double LastDamageNumberTime = 0.0;
 };

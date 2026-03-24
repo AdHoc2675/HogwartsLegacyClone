@@ -18,28 +18,21 @@ class HOGWARTSLEGACYCLONE_API UBTTask_ActivateAbility : public UBTTaskNode
 	GENERATED_BODY()
 public:
 	UBTTask_ActivateAbility();
-    
+	
+	UPROPERTY(EditAnywhere, Category = "Ability")
+	FGameplayTag AbilityTag;
+
+protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 	virtual void OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult) override;
 	virtual FString GetStaticDescription() const override;
-	virtual void InitializeFromAsset(UBehaviorTree& Asset) override;
-
-protected:
-	UPROPERTY(EditAnywhere, Category = "Ability")
-	FGameplayTag AbilityTag;
-	
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector AbilityTagKey;
-	
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector TargetActorKey;
 
 private:
 	void OnAbilityEnded(const FAbilityEndedData& AbilityEndedData);
     
-	FGameplayTag ActiveAbilityTag;
 	TWeakObjectPtr<UBehaviorTreeComponent> BehaviourTree;
 	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystem;
-	FDelegateHandle AbilityEndedHandle;
 	
+	FGameplayTag ActiveAbilityTag;
+	FDelegateHandle AbilityEndedHandle;
 };

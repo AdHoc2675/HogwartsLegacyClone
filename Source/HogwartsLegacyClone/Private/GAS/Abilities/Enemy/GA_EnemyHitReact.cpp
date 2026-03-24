@@ -7,12 +7,14 @@
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Core/HOG_GameplayTags.h"
 #include "Data/Enemy/DA_EnemyConfigBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UGA_EnemyHitReact::UGA_EnemyHitReact()
 {
 	AbilityTags.AddTag(HOGGameplayTags::State_Hit);
 	ActivationOwnedTags.AddTag(HOGGameplayTags::State_Hit);
 	ActivationBlockedTags.AddTag(HOGGameplayTags::State_Hit);
+	ActivationBlockedTags.AddTag(HOGGameplayTags::State_Attacking);
 	CancelAbilitiesWithTag.AddTag(HOGGameplayTags::State_Attacking);
 }
 
@@ -27,6 +29,11 @@ void UGA_EnemyHitReact::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
+	}
+	
+	if (UCharacterMovementComponent* Movement = Enemy->GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
 	}
 	
 	UDA_EnemyConfigBase* Config = Enemy->GetEnemyConfig();
