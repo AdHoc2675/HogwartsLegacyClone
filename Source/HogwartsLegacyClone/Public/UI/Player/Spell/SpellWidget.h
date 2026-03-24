@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -24,6 +24,15 @@ public:
 	void UnLockSpell();
 
 private:
+	// === 애니메이션 ===
+	void UpdateUnlockAnimation();
+
+	FTimerHandle UnlockAnimTimerHandle;
+	float UnlockAnimStartTime;
+	const float UnlockDuration = 0.75f; // 애니메이션 지속 시간 (N초)
+	const float MaxScale = 2.0f;       // 최대 스케일 (N배 커짐)
+
+	// ===
 	void UpdateSpellCoolDown();
 
 	UPROPERTY(meta = (BindWidget))

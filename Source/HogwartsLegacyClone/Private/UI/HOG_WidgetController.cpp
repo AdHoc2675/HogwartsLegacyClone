@@ -191,7 +191,10 @@ void UHOG_WidgetController::UnBindLockOnComponent()
 void UHOG_WidgetController::HandleLockOn(const FLockOnTargetResult& TargetResult)
 {
 	if (!EnemyHUD || !TargetResult.TargetActor) return;
-	if (!TargetResult.TargetTags.HasTag(HOGGameplayTags::Team_Enemy)) return;
+	if (!TargetResult.TargetTags.HasTag(HOGGameplayTags::Team_Enemy)) {
+		HandleLockOnReleased(TargetResult);
+		return;
+	}
 	
 	ClearEnemyBinding();
 
