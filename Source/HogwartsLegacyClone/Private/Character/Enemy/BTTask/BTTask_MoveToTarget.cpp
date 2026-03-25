@@ -4,7 +4,6 @@
 #include "Character/Enemy/BTTask/BTTask_MoveToTarget.h"
 
 #include "AIController.h"
-#include "EditorCategoryUtils.h"
 #include "HOGDebugHelper.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Navigation/PathFollowingComponent.h"

@@ -249,15 +249,29 @@ bool UGA_Spell_Leviosa::StartLevitation()
 	{
 		if (UCharacterMovementComponent* MoveComp = TargetCharacter->GetCharacterMovement())
 		{
-			MoveComp->GravityScale = 0.0f;                // 중력 무시
-			MoveComp->SetMovementMode(MOVE_Flying);      // 낙하 방지
-			// 캐릭터의 경우 Velocity로 위로 미는 방식
-			MoveComp->Velocity = FVector(0.f, 0.f, FinalLevitateZOffset); // 위로 살짝 띄우기
+			MoveComp->GravityScale = 0.0f;
+			MoveComp->SetMovementMode(MOVE_Flying);
+			MoveComp->Velocity = FVector::ZeroVector; // 기존 이동 속도 상쇄
+
+			MoveComp->DisableMovement();
+			TargetCharacter->GetCapsuleComponent()->SetPhysicsLinearVelocity(FVector::ZeroVector);
+
 		}
+		
+		// 애니메이션 루트모션 이동 방지를 위해 타겟 컴포넌트 대신 캐릭터 자체를 타겟팅
+		HoverTargetComp = TargetCharacter->GetCapsuleComponent(); 
+		HoverInitialZ = TargetCharacter->GetActorLocation().Z;
+		HoverTargetZ = HoverInitialZ + FinalLevitateZOffset;
+		
+		HoverElapsedTime = 0.0f;
+		CurrentLevitateDuration = FMath::Max(0.1f, FinalRiseDuration);
+		
+		// 띄우는 중에는 AI/이동 방해 막기 위해 타이머 돌림
+		GetWorld()->GetTimerManager().SetTimer(HoverTimerHandle, this, &UGA_Spell_Leviosa::UpdateHovering, 0.01f, true);
 	}
 	else
 	{
-		// 사물(Platform)일 경우
+		// 사물(Platform)일 경우 기존 로직 유지
 		TArray<UPrimitiveComponent*> PrimitiveComps;
 		LevitatedTarget->GetComponents<UPrimitiveComponent>(PrimitiveComps);
 		for (UPrimitiveComponent* PrimComp : PrimitiveComps)
@@ -363,6 +377,10 @@ void UGA_Spell_Leviosa::EndAbility(
 			{
 				MoveComp->GravityScale = 1.0f;
 				MoveComp->SetMovementMode(MOVE_Falling);
+        
+				// 꺼두었던 이동 연산을 다시 활성화 (걷기 상태로 초기화)
+				MoveComp->SetMovementMode(MOVE_Walking); 
+
 			}
 		}
 		else if (HoverTargetComp)
@@ -383,31 +401,30 @@ void UGA_Spell_Leviosa::EndAbility(
 
 void UGA_Spell_Leviosa::UpdateHovering()
 {
-	if (!IsValid(LevitatedTarget) || !IsValid(HoverTargetComp))
+	if (!IsValid(LevitatedTarget) || (!IsValid(HoverTargetComp) && !LevitatedTarget->IsA<ACharacter>()))
 	{
 		GetWorld()->GetTimerManager().ClearTimer(HoverTimerHandle);
 		return;
 	}
 
-	// 타이머 주기(0.01f)만큼 경과 시간 증가
 	HoverElapsedTime += 0.01f;
-	
-	// 전체 지속 시간 대비 진행도 (0.0 ~ 1.0)
 	float Alpha = FMath::Clamp(HoverElapsedTime / CurrentLevitateDuration, 0.0f, 1.0f);
-
-	// 현재 위치
-	FVector CurrentLoc = HoverTargetComp->GetComponentLocation();
-
-	// 시간에 기반해 Z축 위치 계산 (InterpEaseOut 활용하여 위로 갈수록 살짝 부드러워지게 적용, 원치 않으면 단순 Lerp 사용 가능)
 	float EasedAlpha = FMath::InterpEaseOut(0.0f, 1.0f, Alpha, 2.0f);
 	float NewZ = FMath::Lerp(HoverInitialZ, HoverTargetZ, EasedAlpha);
 
-	CurrentLoc.Z = NewZ;
+	if (ACharacter* TargetCharacter = Cast<ACharacter>(LevitatedTarget))
+	{
+		FVector CurrentLoc = TargetCharacter->GetActorLocation();
+		CurrentLoc.Z = NewZ;
+		TargetCharacter->SetActorLocation(CurrentLoc, false); // Sweep 방벽 무시 강제 적용
+	}
+	else if (HoverTargetComp)
+	{
+		FVector CurrentLoc = HoverTargetComp->GetComponentLocation();
+		CurrentLoc.Z = NewZ;
+		HoverTargetComp->SetWorldLocation(CurrentLoc); // 사물은 기존 유지
+	}
 
-	// 컴포넌트의 위치를 강제로 이동
-	HoverTargetComp->SetWorldLocation(CurrentLoc);
-
-	// 목표 높이에 도달했으면 상승(업데이트) 정지, 마법 종료(OnLevitationDurationEnded) 때까지 공중에 머무름
 	if (Alpha >= 1.0f)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(HoverTimerHandle);
