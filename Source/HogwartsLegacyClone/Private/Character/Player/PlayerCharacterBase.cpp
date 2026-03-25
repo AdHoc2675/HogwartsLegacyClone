@@ -416,20 +416,23 @@ bool APlayerCharacterBase::ConsumeAndSpawnQueuedSpellVFX()
 		return false;
 	}
 
-	USkeletalMeshComponent* MeshComp = GetMesh();
-	if (!MeshComp)
-	{
-		QueuedSpellVFXData = FQueuedSpellVFXData();
-		return false;
-	}
-
 	FVector StartLocation = GetActorLocation();
 	FRotator SpawnRotation = GetActorRotation();
 
+	// 1) WandMesh(static mesh) 소켓 우선
 	if (QueuedSpellVFXData.StartSocketName != NAME_None &&
-		MeshComp->DoesSocketExist(QueuedSpellVFXData.StartSocketName))
+		WandMesh &&
+		WandMesh->DoesSocketExist(QueuedSpellVFXData.StartSocketName))
 	{
-		StartLocation = MeshComp->GetSocketLocation(QueuedSpellVFXData.StartSocketName);
+		StartLocation = WandMesh->GetSocketLocation(QueuedSpellVFXData.StartSocketName);
+	}
+	// 2) fallback : 캐릭터 SkeletalMesh 소켓
+	else if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		if (MeshComp->DoesSocketExist(QueuedSpellVFXData.StartSocketName))
+		{
+			StartLocation = MeshComp->GetSocketLocation(QueuedSpellVFXData.StartSocketName);
+		}
 	}
 
 	SpawnRotation = (QueuedSpellVFXData.TargetLocation - StartLocation).Rotation();

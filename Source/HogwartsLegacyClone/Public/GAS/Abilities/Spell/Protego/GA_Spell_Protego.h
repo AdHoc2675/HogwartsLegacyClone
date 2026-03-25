@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,10 +6,14 @@
 #include "GameplayTagContainer.h"
 #include "GA_Spell_Protego.generated.h"
 
+
 class UGE_Protego;
 class AProtegoActor;
 class UCombatComponent;
 class UGameplayAbility;
+class UAbilitySystemComponent;
+class USoundBase;
+class UAnimMontage;
 
 /**
  * Protego 스펠 Ability
@@ -25,10 +27,10 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Protego : public UGA_SpellBase
 {
 	GENERATED_BODY()
-	
+
 public:
 	UGA_Spell_Protego();
-	
+
 protected:
 	virtual void ActivateAbility(
 		const FGameplayAbilitySpecHandle Handle,
@@ -69,10 +71,26 @@ protected:
 	/** Protego 활성 직후 패링 판정 시간 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Parry", meta=(ClampMin="0.01"))
 	float ParryWindowSeconds = 0.30f;
-	
+
 	/** Protego 활성 직후 Block 판정 시간 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Timing", meta=(ClampMin="0.01"))
 	float BlockWindowSeconds = 1.00f;
+
+	/** 시전 보이스 사운드 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Sound")
+	TObjectPtr<USoundBase> CastVoiceSound = nullptr;
+
+	/** 시전 일반 사운드 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Sound")
+	TObjectPtr<USoundBase> CastSound = nullptr;
+
+	/** 패링 성공 사운드 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Sound")
+	TObjectPtr<USoundBase> ParrySuccessSound = nullptr;
+
+	/** Protego 발동 애니메이션 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Anim")
+	TObjectPtr<UAnimMontage> CastMontage = nullptr;
 
 	/** 스폰된 Protego Actor 참조 */
 	UPROPERTY()
@@ -84,13 +102,13 @@ protected:
 	/** 바인딩된 CombatComponent 캐시 */
 	UPROPERTY(Transient)
 	TObjectPtr<UCombatComponent> CachedCombatComponent;
-	
+
 	bool CanTriggerCounterStupefyFromAttacker(AActor* AttackerActor) const;
-	
+
 	UAbilitySystemComponent* ResolveAbilitySystemComponentFromActor(AActor* InActor) const;
-	
+
 	FTimerHandle ProtegoLifetimeTimerHandle;
-	
+
 protected:
 	virtual bool ShouldApplyCastingActiveTag() const override;
 };
