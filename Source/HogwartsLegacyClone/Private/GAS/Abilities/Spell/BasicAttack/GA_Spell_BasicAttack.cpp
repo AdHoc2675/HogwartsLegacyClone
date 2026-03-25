@@ -23,13 +23,11 @@ UGA_Spell_BasicAttack::UGA_Spell_BasicAttack()
 	bComboInProgress = false;
 	bNextComboQueued = false;
 	CurrentComboStep = 0;
+	LastComboQueuedTime = -1.f;
 	bBranchConsumed = false;
 	CurrentPlayingMontage = nullptr;
 	bAdvancingComboFromBranch = false;
-	LastComboQueuedTime = -1.f;
-	ProjectileDamage = 10.f;
-	ProjectileSpawnForwardOffset = 100.f;
-	ProjectileSpawnUpOffset = 20.f;
+	bProjectileFiredThisStep = false;
 }
 
 void UGA_Spell_BasicAttack::ActivateAbility(
@@ -77,6 +75,7 @@ void UGA_Spell_BasicAttack::ExecuteBasicAttackCast(
 	bBranchConsumed = false;
 	bAdvancingComboFromBranch = false;
 	CurrentPlayingMontage = nullptr;
+	bProjectileFiredThisStep = false;
 
 	PlayComboMontageOrFire(ActorInfo);
 }
@@ -123,27 +122,25 @@ void UGA_Spell_BasicAttack::PlayComboMontageOrFire(const FGameplayAbilityActorIn
 		return;
 	}
 
-	// 현재 단계: 각 타 시작 즉시 타격 처리
-	// 나중에 AttackHit Notify로 분리 가능
+	// 투사체 생성은 AnimNotify(UAN_BasicAttackFire)에서만 처리
 	//FireHitScan(ActorInfo);
-	SpawnBasicAttackActor();
-	
+	//SpawnBasicAttackActor();
 }
 
 bool UGA_Spell_BasicAttack::TryPlayCurrentComboMontage(const FGameplayAbilityActorInfo* ActorInfo)
 {
-	ACharacter* Character = ActorInfo ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
+	if (!ActorInfo)
+	{
+		return false;
+	}
+
+	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
 	if (!Character)
 	{
 		return false;
 	}
 
-	if (!Character->GetMesh())
-	{
-		return false;
-	}
-
-	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
+	UAnimInstance* AnimInstance = Character->GetMesh() ? Character->GetMesh()->GetAnimInstance() : nullptr;
 	if (!AnimInstance)
 	{
 		return false;
@@ -154,25 +151,24 @@ bool UGA_Spell_BasicAttack::TryPlayCurrentComboMontage(const FGameplayAbilityAct
 		return false;
 	}
 
-	UAnimMontage* MontageToPlay = ComboMontages[CurrentComboStep].Get();
+	UAnimMontage* MontageToPlay = ComboMontages[CurrentComboStep];
 	if (!MontageToPlay)
 	{
 		return false;
 	}
 
-	bBranchConsumed = false;
-	bAdvancingComboFromBranch = false;
-
-	AnimInstance->Montage_Stop(0.05f);
-
-	const float Duration = AnimInstance->Montage_Play(MontageToPlay, 1.f);
-
-	if (Duration <= 0.f)
+	const float PlayResult = Character->PlayAnimMontage(MontageToPlay);
+	if (PlayResult <= 0.f)
 	{
 		return false;
 	}
 
 	CurrentPlayingMontage = MontageToPlay;
+	bComboInProgress = true;
+	bNextComboQueued = false;
+	bBranchConsumed = false;
+	bAdvancingComboFromBranch = false;
+	bProjectileFiredThisStep = false;
 
 	FOnMontageEnded EndDelegate;
 	EndDelegate.BindUObject(this, &UGA_Spell_BasicAttack::OnMontageEnded);
@@ -219,8 +215,9 @@ void UGA_Spell_BasicAttack::TryAdvanceComboFromBranchPoint()
 		return;
 	}
 
+	// 투사체 생성은 AnimNotify(UAN_BasicAttackFire)에서만 처리
 	//FireHitScan(CurrentActorInfo);
-	SpawnBasicAttackActor();
+	//SpawnBasicAttackActor();
 }
 
 void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -258,8 +255,9 @@ void UGA_Spell_BasicAttack::OnMontageEnded(UAnimMontage* Montage, bool bInterrup
 			return;
 		}
 
+		// 투사체 생성은 AnimNotify(UAN_BasicAttackFire)에서만 처리
 		//FireHitScan(CurrentActorInfo);
-		SpawnBasicAttackActor();
+		//SpawnBasicAttackActor();
 		return;
 	}
 
@@ -277,10 +275,16 @@ void UGA_Spell_BasicAttack::ResetComboState()
 	CurrentPlayingMontage = nullptr;
 	bAdvancingComboFromBranch = false;
 	LastComboQueuedTime = -1.f;
+	bProjectileFiredThisStep = false;
 }
 
 void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 {
+	if (bProjectileFiredThisStep)
+	{
+		return;
+	}
+
 	if (!BasicAttackActorClass)
 	{
 		return;
@@ -392,6 +396,9 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 		return;
 	}
 
+	// 같은 타수에서 성공적으로 1발 생성했으므로 이후 중복 생성 차단
+	bProjectileFiredThisStep = true;
+
 	/* =========================
 	   Projectile 초기화
 	========================= */
@@ -399,7 +406,7 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 	Projectile->InitProjectile(
 		AvatarCharacter,
 		TargetActor,
-		ProjectileDamage
+		FinalProjectileDamage
 	);
 
 	Projectile->FireToDirection(ShootDirection);
