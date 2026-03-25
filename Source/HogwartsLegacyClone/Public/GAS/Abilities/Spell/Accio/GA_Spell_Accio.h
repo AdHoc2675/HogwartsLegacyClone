@@ -9,6 +9,8 @@ class USoundBase;
 class UNiagaraSystem;
 class UAudioComponent;
 class UNiagaraComponent;
+class UAbilitySystemComponent;
+class USceneComponent;
 
 UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Accio : public UGA_SpellBase
@@ -178,6 +180,10 @@ protected:
 
 	bool GetCurrentBeamStartLocation(FVector& OutStartLocation) const;
 	bool GetCurrentBeamEndLocation(FVector& OutEndLocation) const;
+	
+	AActor* ResolveCurrentBeamTargetActor() const;
+	UAbilitySystemComponent* GetBeamTargetASC(AActor* TargetActor) const;
+	USceneComponent* GetBeamEndAttachComponent(AActor* TargetActor) const;	
 
 	bool TryJumpMontageToSection(FName SectionName) const;
 	void BeginMontageEndTransition(bool bReplicateEndAbility, bool bWasCancelled);
