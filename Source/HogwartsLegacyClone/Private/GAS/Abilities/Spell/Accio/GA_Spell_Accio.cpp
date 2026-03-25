@@ -23,6 +23,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SceneComponent.h"
 
 UGA_Spell_Accio::UGA_Spell_Accio()
 {
@@ -375,15 +376,214 @@ bool UGA_Spell_Accio::GetCurrentBeamStartLocation(FVector& OutStartLocation) con
 	return true;
 }
 
+AActor* UGA_Spell_Accio::ResolveCurrentBeamTargetActor() const
+{
+	if (IsValid(TargetToMove))
+	{
+		return TargetToMove;
+	}
+
+	if (IsValid(OriginalTarget))
+	{
+		return OriginalTarget;
+	}
+
+	return nullptr;
+}
+
+UAbilitySystemComponent* UGA_Spell_Accio::GetBeamTargetASC(AActor* TargetActor) const
+{
+	if (!IsValid(TargetActor))
+	{
+		return nullptr;
+	}
+
+	return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetActor);
+}
+
+USceneComponent* UGA_Spell_Accio::GetBeamEndAttachComponent(AActor* TargetActor) const
+{
+	if (!IsValid(TargetActor))
+	{
+		return nullptr;
+	}
+
+	UAbilitySystemComponent* TargetASC = GetBeamTargetASC(TargetActor);
+
+	// 1) ASC 태그 기준 우선 분기
+	if (TargetASC)
+	{
+		FGameplayTagContainer OwnedTags;
+		TargetASC->GetOwnedGameplayTags(OwnedTags);
+
+		// Enemy -> SkeletalMesh 우선
+		if (OwnedTags.HasTag(HOGGameplayTags::Team_Enemy) ||
+			OwnedTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Unit.Enemy"))))
+		{
+			if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetActor))
+			{
+				if (USkeletalMeshComponent* CharacterMesh = TargetCharacter->GetMesh())
+				{
+					return CharacterMesh;
+				}
+			}
+
+			if (USkeletalMeshComponent* SkeletalMeshComp = TargetActor->FindComponentByClass<USkeletalMeshComponent>())
+			{
+				return SkeletalMeshComp;
+			}
+		}
+
+		// Object -> StaticMesh 우선
+		if (OwnedTags.HasTag(HOGGameplayTags::Team_Object) ||
+			OwnedTags.HasTag(HOGGameplayTags::Interactable_AccioTarget) ||
+			OwnedTags.HasTag(HOGGameplayTags::Interactable_AccioPlatform))
+		{
+			if (UStaticMeshComponent* StaticMeshComp = TargetActor->FindComponentByClass<UStaticMeshComponent>())
+			{
+				return StaticMeshComp;
+			}
+		}
+	}
+
+	// 2) fallback : 캐릭터면 SkeletalMesh
+	if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetActor))
+	{
+		if (USkeletalMeshComponent* CharacterMesh = TargetCharacter->GetMesh())
+		{
+			return CharacterMesh;
+		}
+	}
+
+	// 3) fallback : 물리 시뮬레이션 중인 Primitive
+	TArray<UPrimitiveComponent*> PrimitiveComps;
+	TargetActor->GetComponents<UPrimitiveComponent>(PrimitiveComps);
+
+	for (UPrimitiveComponent* PrimComp : PrimitiveComps)
+	{
+		if (PrimComp && PrimComp->IsSimulatingPhysics())
+		{
+			return PrimComp;
+		}
+	}
+
+	// 4) fallback : StaticMesh
+	if (UStaticMeshComponent* StaticMeshComp = TargetActor->FindComponentByClass<UStaticMeshComponent>())
+	{
+		return StaticMeshComp;
+	}
+
+	// 5) fallback : SkeletalMesh
+	if (USkeletalMeshComponent* SkeletalMeshComp = TargetActor->FindComponentByClass<USkeletalMeshComponent>())
+	{
+		return SkeletalMeshComp;
+	}
+
+	// 6) 최종 fallback : RootComponent
+	return TargetActor->GetRootComponent();
+}
+
+
 bool UGA_Spell_Accio::GetCurrentBeamEndLocation(FVector& OutEndLocation) const
 {
-	OutEndLocation = FVector::ZeroVector;
+		OutEndLocation = FVector::ZeroVector;
 
+	// =========================
+	// 1) 시각 기준은 항상 원래 맞춘 타겟 우선
+	//    - 발판 위에서 적에게 Accio를 쓴 경우에도
+	//      레이저는 적(OriginalTarget)에 꽂혀야 한다.
+	// =========================
+	if (IsValid(OriginalTarget))
+	{
+		UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OriginalTarget);
+
+		if (TargetASC)
+		{
+			// Enemy -> Character SkeletalMesh
+			if (TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Enemy) ||
+				TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Unit.Enemy"))))
+			{
+				if (ACharacter* TargetCharacter = Cast<ACharacter>(OriginalTarget))
+				{
+					if (USkeletalMeshComponent* CharacterMesh = TargetCharacter->GetMesh())
+					{
+						OutEndLocation = CharacterMesh->GetComponentLocation();
+						return true;
+					}
+				}
+
+				if (USkeletalMeshComponent* SkeletalMeshComp = OriginalTarget->FindComponentByClass<USkeletalMeshComponent>())
+				{
+					OutEndLocation = SkeletalMeshComp->GetComponentLocation();
+					return true;
+				}
+			}
+
+			// Object / Interactable -> StaticMesh
+			if (TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Object) ||
+				TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget) ||
+				TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform))
+			{
+				if (UStaticMeshComponent* StaticMeshComp = OriginalTarget->FindComponentByClass<UStaticMeshComponent>())
+				{
+					OutEndLocation = StaticMeshComp->GetComponentLocation();
+					return true;
+				}
+			}
+		}
+
+		// fallback 1 : Character mesh
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(OriginalTarget))
+		{
+			if (USkeletalMeshComponent* CharacterMesh = TargetCharacter->GetMesh())
+			{
+				OutEndLocation = CharacterMesh->GetComponentLocation();
+				return true;
+			}
+		}
+
+		// fallback 2 : StaticMesh
+		if (UStaticMeshComponent* StaticMeshComp = OriginalTarget->FindComponentByClass<UStaticMeshComponent>())
+		{
+			OutEndLocation = StaticMeshComp->GetComponentLocation();
+			return true;
+		}
+
+		// fallback 3 : Physics sim primitive
+		TArray<UPrimitiveComponent*> PrimitiveComps;
+		OriginalTarget->GetComponents<UPrimitiveComponent>(PrimitiveComps);
+
+		for (UPrimitiveComponent* PrimComp : PrimitiveComps)
+		{
+			if (PrimComp && PrimComp->IsSimulatingPhysics())
+			{
+				OutEndLocation = PrimComp->GetComponentLocation();
+				return true;
+			}
+		}
+
+		// final fallback
+		OutEndLocation = OriginalTarget->GetActorLocation();
+		return true;
+	}
+
+	// =========================
+	// 2) OriginalTarget이 없을 때만 이동 대상 fallback
+	// =========================
 	if (IsValid(TargetToMove))
 	{
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
 		{
-			OutEndLocation = TargetCharacter->GetActorLocation();
+			if (USkeletalMeshComponent* CharacterMesh = TargetCharacter->GetMesh())
+			{
+				OutEndLocation = CharacterMesh->GetComponentLocation();
+				return true;
+			}
+		}
+
+		if (UStaticMeshComponent* StaticMeshComp = TargetToMove->FindComponentByClass<UStaticMeshComponent>())
+		{
+			OutEndLocation = StaticMeshComp->GetComponentLocation();
 			return true;
 		}
 
@@ -400,12 +600,6 @@ bool UGA_Spell_Accio::GetCurrentBeamEndLocation(FVector& OutEndLocation) const
 		}
 
 		OutEndLocation = TargetToMove->GetActorLocation();
-		return true;
-	}
-
-	if (IsValid(OriginalTarget))
-	{
-		OutEndLocation = OriginalTarget->GetActorLocation();
 		return true;
 	}
 
