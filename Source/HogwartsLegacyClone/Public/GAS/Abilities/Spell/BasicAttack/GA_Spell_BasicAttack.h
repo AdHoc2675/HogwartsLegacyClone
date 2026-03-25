@@ -73,6 +73,10 @@ protected:
 	UPROPERTY(Transient)
 	bool bAdvancingComboFromBranch = false;
 
+	// 같은 타수에서 투사체가 이미 발사되었는지
+	UPROPERTY(Transient)
+	bool bProjectileFiredThisStep = false;
+
 	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Trace")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 
@@ -82,23 +86,21 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="HOG|Spell|BasicAttack|Debug")
 	bool bDrawDebugLine = false;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
 	TSubclassOf<class ABasicAttackActor> BasicAttackActorClass;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
 	float ProjectileDamage = 10.f;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
 	float FourthComboProjectileDamage = 20.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
 	float ProjectileSpawnForwardOffset = 100.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BasicAttack|Projectile")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
 	float ProjectileSpawnUpOffset = 20.f;
 	
-	
-
 private:
 	void PlayComboMontageOrFire(const FGameplayAbilityActorInfo* ActorInfo);
 
@@ -122,11 +124,11 @@ public:
 	
 protected:
 	virtual void OnPreCastFacingFinished(
-	const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo,
-	const FGameplayEventData* TriggerEventData
-) override;
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		const FGameplayEventData* TriggerEventData
+	) override;
 
 	void ExecuteBasicAttackCast(
 		const FGameplayAbilitySpecHandle Handle,
