@@ -113,6 +113,13 @@ void AEnemyCharacterBase::HandleDeath_Implementation()
 {
 	Super::HandleDeath_Implementation();
 	
+	// 애니메이션 실행중지
+	if (UEnemyAnimInstanceBase* AnimInstance = Cast<UEnemyAnimInstanceBase>(GetMesh()->GetAnimInstance()))
+	{
+		AnimInstance->SetDead();
+		AnimInstance->StopAllMontages(0.0f);
+	}
+	
 	// 콜리전 Disabled
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
@@ -121,13 +128,6 @@ void AEnemyCharacterBase::HandleDeath_Implementation()
 	GetCharacterMovement()->DisableMovement();
 	
 	OnEnemyDeath.Broadcast();
-	
-	// 애니메이션 실행중지
-	if (UEnemyAnimInstanceBase* AnimInstance = Cast<UEnemyAnimInstanceBase>(GetMesh()->GetAnimInstance()))
-	{
-		AnimInstance->StopAllMontages(0.0f);
-		AnimInstance->SetDead();
-	}
 }
 
 // GAS 초기화
@@ -208,7 +208,7 @@ void AEnemyCharacterBase::OnHealthChangedInternal(const FOnAttributeChangeData& 
 	}
 
 	// 적 Die
-	if (Data.NewValue <= 0.0f && !IsDead())
+	if (Data.NewValue <= 1.f && !IsDead())
 	{
 		Die();
 	}
