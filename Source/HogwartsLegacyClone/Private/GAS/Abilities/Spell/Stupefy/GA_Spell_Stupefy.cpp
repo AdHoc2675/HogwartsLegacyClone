@@ -8,13 +8,15 @@
 
 #include "Core/HOG_Struct.h"
 #include "GameplayEffect.h"
-#include "HOGDebugHelper.h"
 
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 UGA_SpellStupefy::UGA_SpellStupefy()
 {
@@ -136,6 +138,18 @@ void UGA_SpellStupefy::ExecuteStupefyCast(
 		return;
 	}
 
+	ACharacter* Character = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
+
+	if (CastVoiceSound && Character)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, Character->GetActorLocation());
+	}
+
+	if (CastSound && Character)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CastSound, Character->GetActorLocation());
+	}
+
 	// -------------------------
 	// Notify용 데이터 저장
 	// -------------------------
@@ -163,7 +177,7 @@ void UGA_SpellStupefy::ExecuteStupefyCast(
 	// -------------------------
 	// 몽타주 재생
 	// -------------------------
-	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
 	if (Character && Character->GetMesh() && CastMontage)
 	{
 		if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
@@ -207,8 +221,22 @@ void UGA_SpellStupefy::HandleCastNotify()
 
 	NotifySpellCastSucceeded(PendingResolvedCastContext);
 
+	// 여기서 바로 Ability를 끝내지 않는다.
+	// 몽타주가 재생 중이면 OnMontageEnded에서 종료한다.
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	UAnimInstance* AnimInstance =
+		(Character && Character->GetMesh()) ? Character->GetMesh()->GetAnimInstance() : nullptr;
+
+	const bool bIsCastMontagePlaying =
+		(AnimInstance && CastMontage && AnimInstance->Montage_IsPlaying(CastMontage));
+
 	ResetPendingCastData();
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+
+	// fallback (몽타주 없이 Notify만 실행된 경우)
+	if (!bIsCastMontagePlaying)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+	}
 }
 
 void UGA_SpellStupefy::PrepareCastContext(
@@ -243,7 +271,7 @@ bool UGA_SpellStupefy::ResolveTargetForCast(
 		if (IsValid(PendingForcedTarget) && DoesTargetMeetRequirements(PendingForcedTarget))
 		{
 			OutTarget = PendingForcedTarget;
-			OutAimPoint = PendingForcedTarget->GetActorLocation() + FVector(0,0,60);
+			OutAimPoint = PendingForcedTarget->GetActorLocation() + FVector(0, 0, 60);
 			return true;
 		}
 	}
@@ -330,13 +358,11 @@ void UGA_SpellStupefy::ResetPendingCastData()
 	PendingResolvedTargetActor = nullptr;
 	PendingResolvedTargetTags.Reset();
 	PendingResolvedAimPoint = FVector::ZeroVector;
-
-	bCastNotifyHandled = false;
 }
 
 void UGA_SpellStupefy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (bCastNotifyHandled)
+	if (Montage != CastMontage)
 	{
 		return;
 	}
@@ -348,5 +374,13 @@ void UGA_SpellStupefy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		return;
 	}
 
-	HandleCastNotify();
+	// Notify가 아직 안 왔으면 마지막 fallback으로 여기서 처리
+	if (!bCastNotifyHandled)
+	{
+		HandleCastNotify();
+		return;
+	}
+
+	// Notify 처리 후에는 몽타주 종료 시점에 Ability 종료
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
 }

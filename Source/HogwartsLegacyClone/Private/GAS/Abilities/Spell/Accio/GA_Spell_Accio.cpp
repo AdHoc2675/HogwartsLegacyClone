@@ -1,6 +1,5 @@
 ﻿#include "GAS/Abilities/Spell/Accio/GA_Spell_Accio.h"
 
-#include "HOGDebugHelper.h"
 #include "Core/HOG_GameplayTags.h"
 
 #include "AbilitySystemGlobals.h"
@@ -18,7 +17,7 @@
 
 #include "Engine/World.h"
 #include "TimerManager.h"
-#include "DrawDebugHelpers.h"
+#include "Character/Player/PlayerCharacterBase.h"
 
 #include "Components/AudioComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -41,14 +40,12 @@ void UGA_Spell_Accio::ActivateAbility(
 	FGameplayTagContainer RelevantTags;
 	if (!CheckCooldown(Handle, ActorInfo, &RelevantTags))
 	{
-		Debug::Print(TEXT("[Accio] CheckCooldown Failed"));
 		FinishAccioAbilityEnd(true, false);
 		return;
 	}
 
 	if (TryBeginPreCastFacing(Handle, ActorInfo, ActivationInfo, TriggerEventData))
 	{
-		Debug::Print(TEXT("[Accio] Waiting PreCastFacing"));
 		return;
 	}
 
@@ -61,7 +58,6 @@ void UGA_Spell_Accio::OnPreCastFacingFinished(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
-	Debug::Print(TEXT("[Accio] OnPreCastFacingFinished"));
 	ExecuteAccioCast(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
@@ -80,12 +76,9 @@ void UGA_Spell_Accio::ExecuteAccioCast(
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		Debug::Print(TEXT("[Accio] CommitAbility Failed"));
 		FinishAccioAbilityEnd(true, true);
 		return;
 	}
-
-	Debug::Print(TEXT("[Accio] ExecuteAccioCast Committed"));
 
 	ACharacter* Character = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
 
@@ -100,7 +93,6 @@ void UGA_Spell_Accio::ExecuteAccioCast(
 	}
 
 	RegisterCastNotifyToOwner();
-	Debug::Print(TEXT("[Accio] RegisterCastNotifyToOwner"));
 
 	if (Character && Character->GetMesh() && CastMontage)
 	{
@@ -109,20 +101,16 @@ void UGA_Spell_Accio::ExecuteAccioCast(
 			const float Duration = AnimInstance->Montage_Play(CastMontage, 1.0f);
 			if (Duration > 0.f)
 			{
-				Debug::Print(TEXT("[Accio] CastMontage Play Success"));
-
 				FOnMontageEnded EndDelegate;
 				EndDelegate.BindUObject(this, &UGA_Spell_Accio::OnMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
 
-				const bool bJumpedStart = TryJumpMontageToSection(StartSectionName);
-				Debug::Print(FString::Printf(TEXT("[Accio] Jump Start Result = %d"), bJumpedStart ? 1 : 0));
+				TryJumpMontageToSection(StartSectionName);
 				return;
 			}
 		}
 	}
 
-	Debug::Print(TEXT("[Accio] Montage Fallback -> HandleCastNotify"));
 	HandleCastNotify();
 }
 
@@ -133,22 +121,16 @@ void UGA_Spell_Accio::InputPressed(
 {
 	Super::InputPressed(Handle, ActorInfo, ActivationInfo);
 
-	Debug::Print(TEXT("[Accio] InputPressed"));
-
 	if (IsValid(TargetToMove))
 	{
-		Debug::Print(TEXT("[Accio] InputPressed -> BeginMontageEndTransition"));
 		BeginMontageEndTransition(true, false);
 	}
 }
 
 void UGA_Spell_Accio::HandleCastNotify()
 {
-	Debug::Print(TEXT("[Accio] HandleCastNotify Called"));
-
 	if (bCastNotifyHandled)
 	{
-		Debug::Print(TEXT("[Accio] HandleCastNotify Ignored AlreadyHandled"));
 		return;
 	}
 
@@ -156,47 +138,46 @@ void UGA_Spell_Accio::HandleCastNotify()
 
 	if (!FireAccio())
 	{
-		Debug::Print(TEXT("[Accio] FireAccio Failed"));
 		FinishAccioAbilityEnd(true, false);
 		return;
 	}
 
-	Debug::Print(TEXT("[Accio] FireAccio Success"));
+	SpawnPersistentBeamVFX();
 
-	const bool bBeamSpawned = SpawnPersistentBeamVFX();
-	Debug::Print(FString::Printf(TEXT("[Accio] SpawnPersistentBeamVFX = %d"), bBeamSpawned ? 1 : 0));
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (Character && Character->GetMesh() && HoldLoopMontage)
+	{
+		if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+		{
+			if (CastMontage)
+			{
+				bIgnoreNextCastMontageInterrupted = true;
+				AnimInstance->Montage_Stop(0.1f, CastMontage);
+			}
 
-	const bool bJumpedHold = TryJumpMontageToSection(HoldSectionName);
-	Debug::Print(FString::Printf(TEXT("[Accio] Jump Hold Result = %d"), bJumpedHold ? 1 : 0));
+			AnimInstance->Montage_Play(HoldLoopMontage, 1.0f);
+		}
+	}
 }
 
 bool UGA_Spell_Accio::TryJumpMontageToSection(FName SectionName) const
 {
 	if (SectionName.IsNone() || !CastMontage)
 	{
-		Debug::Print(TEXT("[Accio] TryJumpMontageToSection Failed | Section None or CastMontage Null"));
 		return false;
 	}
 
 	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
 	if (!Character || !Character->GetMesh())
 	{
-		Debug::Print(TEXT("[Accio] TryJumpMontageToSection Failed | Character/Mesh Null"));
 		return false;
 	}
 
 	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
 	if (!AnimInstance)
 	{
-		Debug::Print(TEXT("[Accio] TryJumpMontageToSection Failed | AnimInstance Null"));
 		return false;
 	}
-
-	Debug::Print(FString::Printf(
-		TEXT("[Accio] Montage_IsPlaying = %d | Try Section = %s"),
-		AnimInstance->Montage_IsPlaying(CastMontage) ? 1 : 0,
-		*SectionName.ToString()
-	));
 
 	if (!AnimInstance->Montage_IsPlaying(CastMontage))
 	{
@@ -204,18 +185,13 @@ bool UGA_Spell_Accio::TryJumpMontageToSection(FName SectionName) const
 	}
 
 	AnimInstance->Montage_JumpToSection(SectionName, CastMontage);
-
-	Debug::Print(FString::Printf(TEXT("[Accio] JumpToSection Success : %s"), *SectionName.ToString()));
 	return true;
 }
 
 void UGA_Spell_Accio::BeginMontageEndTransition(bool bReplicateEndAbility, bool bWasCancelled)
 {
-	Debug::Print(TEXT("[Accio] BeginMontageEndTransition Called"));
-
 	if (bPendingMontageEndTransition)
 	{
-		Debug::Print(TEXT("[Accio] BeginMontageEndTransition Ignored AlreadyPending"));
 		return;
 	}
 
@@ -223,24 +199,39 @@ void UGA_Spell_Accio::BeginMontageEndTransition(bool bReplicateEndAbility, bool 
 	bPendingEndAbilityReplicate = bReplicateEndAbility;
 	bPendingEndAbilityWasCancelled = bWasCancelled;
 
-	const bool bJumped = TryJumpMontageToSection(EndSectionName);
-	Debug::Print(FString::Printf(TEXT("[Accio] Jump End Result = %d"), bJumped ? 1 : 0));
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (!Character || !Character->GetMesh())
+	{
+		FinishAccioAbilityEnd(bReplicateEndAbility, bWasCancelled);
+		return;
+	}
+
+	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
+	if (!AnimInstance || !CastMontage)
+	{
+		FinishAccioAbilityEnd(bReplicateEndAbility, bWasCancelled);
+		return;
+	}
+
+	if (HoldLoopMontage)
+	{
+		AnimInstance->Montage_Stop(0.1f, HoldLoopMontage);
+	}
 
 	if (!bJumped)
 	{
-		Debug::Print(TEXT("[Accio] End Section Jump Failed -> FinishAccioAbilityEnd"));
 		FinishAccioAbilityEnd(bReplicateEndAbility, bWasCancelled);
 	}
+
+	FOnMontageEnded EndDelegate;
+	EndDelegate.BindUObject(this, &UGA_Spell_Accio::OnMontageEnded);
+	AnimInstance->Montage_SetEndDelegate(EndDelegate, CastMontage);
+
+	AnimInstance->Montage_JumpToSection(EndSectionName, CastMontage);
 }
 
 void UGA_Spell_Accio::FinishAccioAbilityEnd(bool bReplicateEndAbility, bool bWasCancelled)
 {
-	Debug::Print(FString::Printf(
-		TEXT("[Accio] FinishAccioAbilityEnd | Rep=%d | Cancel=%d"),
-		bReplicateEndAbility ? 1 : 0,
-		bWasCancelled ? 1 : 0
-	));
-
 	EndAbility(
 		CurrentSpecHandle,
 		CurrentActorInfo,
@@ -256,7 +247,6 @@ bool UGA_Spell_Accio::SpawnPersistentBeamVFX()
 
 	if (!AccioVFX)
 	{
-		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | AccioVFX Null"));
 		return false;
 	}
 
@@ -265,20 +255,17 @@ bool UGA_Spell_Accio::SpawnPersistentBeamVFX()
 
 	if (!GetCurrentBeamStartLocation(StartLocation))
 	{
-		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | StartLocation Invalid"));
 		return false;
 	}
 
 	if (!GetCurrentBeamEndLocation(EndLocation))
 	{
-		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | EndLocation Invalid"));
 		return false;
 	}
 
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | World Null"));
 		return false;
 	}
 
@@ -298,7 +285,6 @@ bool UGA_Spell_Accio::SpawnPersistentBeamVFX()
 
 	if (!ActiveBeamVFXComponent)
 	{
-		Debug::Print(TEXT("[Accio] SpawnPersistentBeamVFX Failed | Niagara Spawn Null"));
 		return false;
 	}
 
@@ -324,7 +310,6 @@ void UGA_Spell_Accio::UpdatePersistentBeamVFX()
 
 	if (!GetCurrentBeamStartLocation(StartLocation) || !GetCurrentBeamEndLocation(EndLocation))
 	{
-		Debug::Print(TEXT("[Accio] UpdatePersistentBeamVFX Invalid Start/End -> Clear"));
 		ClearPersistentBeamVFX();
 		return;
 	}
@@ -355,27 +340,36 @@ bool UGA_Spell_Accio::GetCurrentBeamStartLocation(FVector& OutStartLocation) con
 	OutStartLocation = FVector::ZeroVector;
 
 	AActor* Avatar = GetAvatarActorFromActorInfo();
-	ACharacter* Character = Cast<ACharacter>(Avatar);
-	if (!Character)
+	APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(Avatar);
+	if (!PlayerCharacter)
 	{
 		return false;
 	}
 
-	USkeletalMeshComponent* MeshComp = Character->GetMesh();
-	if (!MeshComp)
+	// 1) WandMesh(static mesh)의 소켓 우선 사용
+	if (UStaticMeshComponent* WandMeshComp = PlayerCharacter->GetWandMesh())
 	{
-		return false;
+		if (BeamStartSocketName != NAME_None &&
+			WandMeshComp->DoesSocketExist(BeamStartSocketName))
+		{
+			OutStartLocation = WandMeshComp->GetSocketLocation(BeamStartSocketName);
+			return true;
+		}
 	}
 
-	if (BeamStartSocketName != NAME_None && MeshComp->DoesSocketExist(BeamStartSocketName))
+	// 2) 기존 fallback : 캐릭터 SkeletalMesh 소켓
+	if (USkeletalMeshComponent* MeshComp = PlayerCharacter->GetMesh())
 	{
-		OutStartLocation = MeshComp->GetSocketLocation(BeamStartSocketName);
-	}
-	else
-	{
-		OutStartLocation = Character->GetActorLocation();
+		if (BeamStartSocketName != NAME_None &&
+			MeshComp->DoesSocketExist(BeamStartSocketName))
+		{
+			OutStartLocation = MeshComp->GetSocketLocation(BeamStartSocketName);
+			return true;
+		}
 	}
 
+	// 3) 최종 fallback : 캐릭터 위치
+	OutStartLocation = PlayerCharacter->GetActorLocation();
 	return true;
 }
 
@@ -418,12 +412,9 @@ bool UGA_Spell_Accio::GetCurrentBeamEndLocation(FVector& OutEndLocation) const
 
 bool UGA_Spell_Accio::FireAccio()
 {
-	Debug::Print(TEXT("[Accio] FireAccio Enter"));
-
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (!Avatar)
 	{
-		Debug::Print(TEXT("[Accio] FireAccio Failed | Avatar Null"));
 		return false;
 	}
 
@@ -432,7 +423,6 @@ bool UGA_Spell_Accio::FireAccio()
 	AActor* AcquiredTarget = nullptr;
 
 	const bool bHasTarget = TryConsumeLockedTarget(AcquiredTarget, TargetTags, AimPoint);
-	Debug::Print(FString::Printf(TEXT("[Accio] TryConsumeLockedTarget HasTarget=%d"), bHasTarget ? 1 : 0));
 
 	if (!IsValid(AcquiredTarget))
 	{
@@ -447,10 +437,6 @@ bool UGA_Spell_Accio::FireAccio()
 			const float SweepRadius = 50.f;
 			const FCollisionShape SphereShape = FCollisionShape::MakeSphere(SweepRadius);
 			FCollisionQueryParams Params(SCENE_QUERY_STAT(AccioTrace), false, Avatar);
-
-			DrawDebugLine(World, StartLoc, TargetLoc, FColor::Green, false, 2.0f, 0, 2.0f);
-			DrawDebugSphere(World, StartLoc, SweepRadius, 16, FColor::Green, false, 2.0f);
-			DrawDebugSphere(World, TargetLoc, SweepRadius, 16, FColor::Green, false, 2.0f);
 
 			TArray<FHitResult> HitResults;
 			const bool bHit = World->SweepMultiByChannel(
@@ -467,8 +453,6 @@ bool UGA_Spell_Accio::FireAccio()
 			{
 				for (const FHitResult& Hit : HitResults)
 				{
-					DrawDebugPoint(World, Hit.ImpactPoint, 15.f, FColor::Red, false, 2.0f);
-
 					AActor* HitActor = Hit.GetActor();
 					if (!IsValid(HitActor) || HitActor == Avatar)
 					{
@@ -498,8 +482,6 @@ bool UGA_Spell_Accio::FireAccio()
 					if (bIsTargetNode || bIsMovable)
 					{
 						AcquiredTarget = HitActor;
-						DrawDebugBox(World, AcquiredTarget->GetActorLocation(), FVector(60.f), FColor::Cyan, false,
-						             2.0f);
 						break;
 					}
 				}
@@ -509,7 +491,6 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (!IsValid(AcquiredTarget))
 	{
-		Debug::Print(TEXT("[Accio] FireAccio Failed | No AcquiredTarget"));
 		return false;
 	}
 
@@ -545,7 +526,6 @@ bool UGA_Spell_Accio::FireAccio()
 
 	if (!bCanBeMovedByAccioTag)
 	{
-		Debug::Print(TEXT("[Accio] FireAccio Failed | Target Not Movable By Accio Tag"));
 		return false;
 	}
 
@@ -574,7 +554,6 @@ bool UGA_Spell_Accio::FireAccio()
 		}
 		else
 		{
-			Debug::Print(TEXT("[Accio] FireAccio Failed | Need Platform First"));
 			return false;
 		}
 	}
@@ -617,7 +596,6 @@ bool UGA_Spell_Accio::FireAccio()
 	}
 
 	GetWorld()->GetTimerManager().SetTimer(PullTimerHandle, this, &UGA_Spell_Accio::UpdatePulling, 0.02f, true);
-	Debug::Print(TEXT("[Accio] FireAccio Success | PullTimer Started"));
 	return true;
 }
 
@@ -627,7 +605,6 @@ void UGA_Spell_Accio::UpdatePulling()
 
 	if (!IsValid(TargetToMove) || !IsValid(PullDestination))
 	{
-		Debug::Print(TEXT("[Accio] UpdatePulling Invalid Target/Destination"));
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
 		BeginMontageEndTransition(true, false);
 		return;
@@ -669,12 +646,9 @@ void UGA_Spell_Accio::UpdatePulling()
 	}
 
 	const float Distance = FVector::Dist2D(DestLoc, MoveLoc);
-	//Debug::Print(FString::Printf(TEXT("[Accio] Distance = %.2f | StopDistance = %.2f"), Distance, StopDistance));
 
 	if (Distance <= StopDistance)
 	{
-		Debug::Print(TEXT("[Accio] Reached StopDistance -> BeginMontageEndTransition"));
-
 		GetWorld()->GetTimerManager().ClearTimer(PullTimerHandle);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(TargetToMove))
@@ -706,26 +680,31 @@ void UGA_Spell_Accio::UpdatePulling()
 
 void UGA_Spell_Accio::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	Debug::Print(TEXT("[Accio] OnMontageEnded Called"));
+	if (Montage != CastMontage)
+	{
+		return;
+	}
 
 	if (bInterrupted)
 	{
-		Debug::Print(TEXT("[Accio] OnMontageEnded Interrupted"));
+		if (bIgnoreNextCastMontageInterrupted)
+		{
+			bIgnoreNextCastMontageInterrupted = false;
+			return;
+		}
+
 		FinishAccioAbilityEnd(true, true);
 		return;
 	}
 
 	if (!bCastNotifyHandled)
 	{
-		Debug::Print(TEXT("[Accio] OnMontageEnded Fallback -> HandleCastNotify"));
 		HandleCastNotify();
 		return;
 	}
 
 	if (bPendingMontageEndTransition)
 	{
-		Debug::Print(TEXT("[Accio] OnMontageEnded PendingEndTransition -> FinishAccioAbilityEnd"));
-
 		const bool bReplicate = bPendingEndAbilityReplicate;
 		const bool bWasCancelled = bPendingEndAbilityWasCancelled;
 
@@ -744,8 +723,6 @@ void UGA_Spell_Accio::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	Debug::Print(TEXT("[Accio] EndAbility Enter"));
-
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(PullTimerHandle);
