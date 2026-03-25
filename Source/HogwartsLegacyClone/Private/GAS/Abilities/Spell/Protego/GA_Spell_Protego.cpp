@@ -28,6 +28,9 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
+#include "GameFramework/HOG_PlayerController.h"
+#include "UI/HOG_WidgetController.h"
+
 UGA_Spell_Protego::UGA_Spell_Protego()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;

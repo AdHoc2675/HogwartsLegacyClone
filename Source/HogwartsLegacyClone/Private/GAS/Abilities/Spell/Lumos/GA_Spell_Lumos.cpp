@@ -17,6 +17,9 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 
+#include "GameFramework/HOG_PlayerController.h"
+#include "UI/HOG_WidgetController.h"
+
 UGA_Spell_Lumos::UGA_Spell_Lumos()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
