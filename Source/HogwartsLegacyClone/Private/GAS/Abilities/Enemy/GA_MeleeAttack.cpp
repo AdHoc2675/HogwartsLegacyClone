@@ -15,9 +15,6 @@
 
 UGA_MeleeAttack::UGA_MeleeAttack()
 {
-	// 어빌리티 태그 등록
-	AbilityTags.AddTag(HOGGameplayTags::Ability_Enemy_MeleeAttack);
-
 	// 어빌리티 시작되면 자동 추가, 끝나면 자동 제거, 공격중인 상태에서 새로운 공격 block
 	ActivationOwnedTags.AddTag(HOGGameplayTags::State_Attacking);
 

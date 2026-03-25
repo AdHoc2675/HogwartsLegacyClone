@@ -30,8 +30,11 @@ namespace HOGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Burned, "State.Burned")
 
 	//Enemy Ability 
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack, "Ability.Enemy.MeleeAttack")
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack1, "Ability.Enemy.MeleeAttack1")
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack2, "Ability.Enemy.MeleeAttack2")
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack3, "Ability.Enemy.MeleeAttack3")
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack4, "Ability.Enemy.MeleeAttack4")
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_MeleeAttack5, "Ability.Enemy.MeleeAttack5")
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Enemy_Dash, "Ability.Enemy.Dash")
 
 

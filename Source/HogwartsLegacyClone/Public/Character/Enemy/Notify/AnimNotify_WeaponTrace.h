@@ -28,7 +28,7 @@ public:
 
 
 	UPROPERTY(EditAnywhere)
-	float TraceRadius = 30.f;
+	float TraceRadius = 70.f;
 
 private:
 	void DoTrace(USkeletalMeshComponent* MeshComp);
