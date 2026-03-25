@@ -14,7 +14,7 @@ UCLASS()
 class HOGWARTSLEGACYCLONE_API UGA_Spell_Accio : public UGA_SpellBase
 {
 	GENERATED_BODY()
-	
+
 public:
 	UGA_Spell_Accio();
 
@@ -55,7 +55,10 @@ protected:
 	// ====== Accio 설정 ======
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
 	TObjectPtr<UAnimMontage> CastMontage = nullptr;
-	
+
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
+	TObjectPtr<UAnimMontage> HoldLoopMontage = nullptr;
+
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
 	FName StartSectionName = TEXT("Start");
 
@@ -137,7 +140,7 @@ protected:
 	// 지속형 빔 컴포넌트
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraComponent> ActiveBeamVFXComponent = nullptr;
-	
+
 	UPROPERTY(Transient)
 	bool bPendingMontageEndTransition = false;
 
@@ -146,7 +149,10 @@ protected:
 
 	UPROPERTY(Transient)
 	bool bPendingEndAbilityWasCancelled = false;
-	
+
+	UPROPERTY(Transient)
+	bool bIgnoreNextCastMontageInterrupted = false;
+
 protected:
 	virtual void OnPreCastFacingFinished(
 		const FGameplayAbilitySpecHandle Handle,
@@ -172,9 +178,8 @@ protected:
 
 	bool GetCurrentBeamStartLocation(FVector& OutStartLocation) const;
 	bool GetCurrentBeamEndLocation(FVector& OutEndLocation) const;
-	
+
 	bool TryJumpMontageToSection(FName SectionName) const;
 	void BeginMontageEndTransition(bool bReplicateEndAbility, bool bWasCancelled);
 	void FinishAccioAbilityEnd(bool bReplicateEndAbility, bool bWasCancelled);
-	
 };
