@@ -9,6 +9,7 @@ class UGameplayEffect;
 class AActor;
 class UAnimMontage;
 class UNiagaraSystem;
+class USoundBase;
 
 /**
  * Stupefy
@@ -125,6 +126,12 @@ protected:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Anim")
 	TObjectPtr<UAnimMontage> CastMontage = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Sound")
+	TObjectPtr<USoundBase> CastVoiceSound = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Sound")
+	TObjectPtr<USoundBase> CastSound = nullptr;
 
 protected:
 	virtual FSpellCastRequest BuildSpellCastRequest(ESpellCastContext CastContext) const override;
@@ -160,7 +167,7 @@ protected:
 
 	/** 빔 시작 소켓 이름 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX")
-	FName BeamStartSocketName = TEXT("RightHandWandSocket");
+	FName BeamStartSocketName = TEXT("WandSocket");
 
 protected:
 	/**
