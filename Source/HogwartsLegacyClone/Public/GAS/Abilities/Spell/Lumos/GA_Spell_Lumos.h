@@ -69,6 +69,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Sound")
 	TObjectPtr<USoundBase> CastVoiceSound;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Lumos|Sound")
+	FString CastSubtitleText = TEXT("루모스!");
+
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Lumos|Sound")
 	TObjectPtr<USoundBase> EndVoiceSound;
 

@@ -85,6 +85,15 @@ void UGA_Spell_Protego::ActivateAbility(
 	if (CastVoiceSound && Character)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, Character->GetActorLocation());
+		
+		// =============== [자막 호출] ===============
+		if (AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(Character->GetController()))
+		{
+			if (UHOG_WidgetController* UIController = PC->GetWidgetController())
+			{
+				UIController->RequestSubtitle(CastSubtitleText, 1.0f);
+			}
+		}
 	}
 
 	if (CastSound && Character)

@@ -11,6 +11,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Interactable/InteractableLevitatable.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/HOG_PlayerController.h"
+#include "UI/HOG_WidgetController.h"
 
 UGA_Spell_Leviosa::UGA_Spell_Leviosa()
 {
@@ -67,6 +69,16 @@ void UGA_Spell_Leviosa::ExecuteLeviosaCast(
 	if (CastVoiceSound && Character)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, Character->GetActorLocation());
+		
+		// ===== [자막 호출] =====
+		if (AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(Character->GetController()))
+		{
+			// PlayerController에 GetWidgetController() 함수가 있다고 가정 (프로젝트에 맞게 호출)
+			if (UHOG_WidgetController* UIController = PC->GetWidgetController())
+			{
+				UIController->RequestSubtitle(CastSubtitleText, 1.0f); // 2초 유지
+			}
+		}
 	}
 
 	// 2. 타겟 획득 (LockOn 우선)

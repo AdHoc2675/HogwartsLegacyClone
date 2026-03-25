@@ -98,6 +98,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Sound")
 	TObjectPtr<USoundBase> CastVoiceSound;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Incendio|Sound")
+	FString CastSubtitleText = TEXT("인센디오!");
+
 	// 화염 발사/폭발 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Incendio|Sound")
 	TObjectPtr<USoundBase> ExplosionSound;

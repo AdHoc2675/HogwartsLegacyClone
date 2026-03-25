@@ -83,6 +83,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Sound")
 	TObjectPtr<USoundBase> LevitateSound;
 
+	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Leviosa|Sound")
+	FString CastSubtitleText = TEXT("윙가디움 레비오사!");
+
 	// ====== 런타임 트래킹 ======
 
 	// 현재 제어 중인 대상 (런타임 트래킹 용도)

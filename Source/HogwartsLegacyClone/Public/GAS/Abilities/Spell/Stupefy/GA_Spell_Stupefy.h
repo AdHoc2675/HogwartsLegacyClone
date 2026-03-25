@@ -130,6 +130,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Sound")
 	TObjectPtr<USoundBase> CastVoiceSound = nullptr;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Stupefy|Sound")
+	FString CastSubtitleText = TEXT("스투페파이!");
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Spell|Stupefy|Sound")
 	TObjectPtr<USoundBase> CastSound = nullptr;
 

@@ -80,6 +80,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Sound")
 	TObjectPtr<USoundBase> CastVoiceSound = nullptr;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Protego|Sound")
+	FString CastSubtitleText = TEXT("프로테고!");
+
 	/** 시전 일반 사운드 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Protego|Sound")
 	TObjectPtr<USoundBase> CastSound = nullptr;
