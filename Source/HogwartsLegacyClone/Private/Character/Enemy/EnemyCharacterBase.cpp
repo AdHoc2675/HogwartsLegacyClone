@@ -1,5 +1,6 @@
 #include "Character/Enemy/EnemyCharacterBase.h"
 
+
 #include "Character/Enemy/Anim/EnemyAnimInstanceBase.h"
 #include "Character/Enemy/Handler/EnemyDamageHandler.h"
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
@@ -8,8 +9,7 @@
 #include "GAS/Attributes/HOGAttributeSet.h"
 #include "Core/HOG_GameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/HOG_PlayerController.h"
-#include "Pool/DamageNumberPool.h"
+
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -122,7 +122,7 @@ void AEnemyCharacterBase::HandleDeath_Implementation()
 	
 	// 콜리전 Disabled
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
+	
 	// 움직임 멈춤
 	GetCharacterMovement()->StopMovementImmediately();
 	GetCharacterMovement()->DisableMovement();
@@ -208,7 +208,7 @@ void AEnemyCharacterBase::OnHealthChangedInternal(const FOnAttributeChangeData& 
 	}
 
 	// 적 Die
-	if (Data.NewValue <= 1.f && !IsDead())
+	if (Data.NewValue <= 0.f && !IsDead())
 	{
 		Die();
 	}
