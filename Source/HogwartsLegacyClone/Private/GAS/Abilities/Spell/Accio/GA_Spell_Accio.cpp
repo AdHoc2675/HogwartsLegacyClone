@@ -36,7 +36,7 @@ void UGA_Spell_Accio::ActivateAbility(
 	const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
+
 	FGameplayTagContainer RelevantTags;
 	if (!CheckCooldown(Handle, ActorInfo, &RelevantTags))
 	{
@@ -218,11 +218,9 @@ void UGA_Spell_Accio::BeginMontageEndTransition(bool bReplicateEndAbility, bool 
 		AnimInstance->Montage_Stop(0.1f, HoldLoopMontage);
 	}
 
-	const float Duration = AnimInstance->Montage_Play(CastMontage, 1.0f);
-	if (Duration <= 0.f)
+	if (!bJumped)
 	{
 		FinishAccioAbilityEnd(bReplicateEndAbility, bWasCancelled);
-		return;
 	}
 
 	FOnMontageEnded EndDelegate;
@@ -433,8 +431,8 @@ bool UGA_Spell_Accio::FireAccio()
 		{
 			FVector StartLoc = Avatar->GetActorLocation();
 			FVector TargetLoc = AimPoint.IsNearlyZero()
-				? StartLoc + (Avatar->GetActorForwardVector() * GetCastRange())
-				: AimPoint;
+				                    ? StartLoc + (Avatar->GetActorForwardVector() * GetCastRange())
+				                    : AimPoint;
 
 			const float SweepRadius = 50.f;
 			const FCollisionShape SphereShape = FCollisionShape::MakeSphere(SweepRadius);
@@ -461,8 +459,10 @@ bool UGA_Spell_Accio::FireAccio()
 						continue;
 					}
 
-					UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(HitActor);
-					const bool bIsTargetNode = TargetASC && TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
+					UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
+						HitActor);
+					const bool bIsTargetNode = TargetASC && TargetASC->HasMatchingGameplayTag(
+						HOGGameplayTags::Interactable_AccioTarget);
 
 					bool bIsSimulatingPhysics = false;
 					TArray<UPrimitiveComponent*> PrimitiveComps;
@@ -508,8 +508,9 @@ bool UGA_Spell_Accio::FireAccio()
 	const bool bIsHitTarget = TargetASC && TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioTarget);
 
 	UAbilitySystemComponent* FloorASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CurrentFloorActor);
-	const bool bIsStandingOnPlatform = FloorASC && FloorASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
-	
+	const bool bIsStandingOnPlatform = FloorASC && FloorASC->HasMatchingGameplayTag(
+		HOGGameplayTags::Interactable_AccioPlatform);
+
 	bool bCanBeMovedByAccioTag = false;
 
 	if (TargetASC)
@@ -537,7 +538,7 @@ bool UGA_Spell_Accio::FireAccio()
 			CurrentPullSpeed = InteractablePullSpeed;
 		}
 		else if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Unit.Enemy"))) ||
-				 TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Enemy))
+			TargetASC->HasMatchingGameplayTag(HOGGameplayTags::Team_Enemy))
 		{
 			bIsPullingInteractable = false;
 			CurrentPullSpeed = EnemyPullSpeed;
@@ -580,8 +581,10 @@ bool UGA_Spell_Accio::FireAccio()
 		{
 			if (MovePrimComp && MovePrimComp->IsSimulatingPhysics())
 			{
-				UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
-				const bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
+				UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
+					TargetToMove);
+				const bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(
+					HOGGameplayTags::Interactable_AccioPlatform);
 
 				if (!bIsPlatform)
 				{
@@ -727,18 +730,6 @@ void UGA_Spell_Accio::EndAbility(
 
 	ClearPersistentBeamVFX();
 
-	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
-	if (Character && Character->GetMesh())
-	{
-		if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
-		{
-			if (HoldLoopMontage)
-			{
-				AnimInstance->Montage_Stop(0.1f, HoldLoopMontage);
-			}
-		}
-	}
-
 	if (PullAudioComponent)
 	{
 		PullAudioComponent->Stop();
@@ -760,14 +751,16 @@ void UGA_Spell_Accio::EndAbility(
 			{
 				if (MovePrimComp && MovePrimComp->IsSimulatingPhysics())
 				{
-					UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetToMove);
-					const bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(HOGGameplayTags::Interactable_AccioPlatform);
-					
+					UAbilitySystemComponent* MoveASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
+						TargetToMove);
+					const bool bIsPlatform = MoveASC && MoveASC->HasMatchingGameplayTag(
+						HOGGameplayTags::Interactable_AccioPlatform);
+
 					if (!bIsPlatform)
 					{
 						MovePrimComp->SetEnableGravity(true);
 					}
-					
+
 					MovePrimComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
 					break;
 				}
@@ -783,7 +776,6 @@ void UGA_Spell_Accio::EndAbility(
 	bPendingEndAbilityReplicate = false;
 	bPendingEndAbilityWasCancelled = false;
 	bIsPullingInteractable = false;
-	bIgnoreNextCastMontageInterrupted = false;
 	CurrentPullSpeed = 0.f;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

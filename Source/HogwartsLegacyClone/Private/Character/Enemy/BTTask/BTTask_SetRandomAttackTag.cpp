@@ -7,41 +7,29 @@
 #include "HOGDebugHelper.h"
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Character/Enemy/Helper/AIBlackboardHelper.h"
+#include "Character/Enemy/Helper/AttackInfoProvider.h"
 
 UBTTask_SetRandomAttackTag::UBTTask_SetRandomAttackTag()
 {
 	NodeName = "Set Random Attack Tag";
-	
-	AbilityTagKey.AddNameFilter(this,                                    
-	GET_MEMBER_NAME_CHECKED(UBTTask_SetRandomAttackTag, AbilityTagKey));
 }
 
 EBTNodeResult::Type UBTTask_SetRandomAttackTag::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
-	if (!Blackboard) return EBTNodeResult::Failed;
-
 	AAIController* AIC = OwnerComp.GetAIOwner();
-	if (!AIC)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("no AIC"));
-		return EBTNodeResult::Failed;
-	}
+	if (!AIC) return EBTNodeResult::Failed;
 	
-	IIMeleeAttacker* Attacker = Cast<IIMeleeAttacker>(AIC->GetPawn());
-	if (!Attacker)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("no Attacker"));
-		return EBTNodeResult::Failed;
-	}
+	APawn* Pawn = AIC->GetPawn();
+	if (!Pawn) return EBTNodeResult::Failed;
 	
-	TArray<FGameplayTag> Tags = Attacker->GetMeleeAttackTags();
-	if (Tags.IsEmpty())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("no Tags"));
-		return EBTNodeResult::Failed;
-	}
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!BB) return EBTNodeResult::Failed;
 	
+	TArray<FGameplayTag> Tags = UAttackInfoProvider::GetAllTags(Pawn);
+	if (Tags.IsEmpty()) return EBTNodeResult::Failed;
+	
+	// 제외 태그 
 	Tags.RemoveAll([this](const FGameplayTag& Tag)
 	{
 		return ExcludeTags.HasTag(Tag);
@@ -49,28 +37,14 @@ EBTNodeResult::Type UBTTask_SetRandomAttackTag::ExecuteTask(UBehaviorTreeCompone
 	
 	if (Tags.IsEmpty()) return EBTNodeResult::Failed;
 	
-	// Config의 MeleeAttacks에서 랜덤 선택
 	int32 RandomIndex = FMath::RandRange(0, Tags.Num() - 1);
-
-	Blackboard->SetValueAsName(AbilityTagKey.SelectedKeyName, Tags[RandomIndex].GetTagName());
-
+	
+	// 랜덤한 어빌리티 set
+	UAIBlackboardHelper::SetAbilityTagName(BB, Tags[RandomIndex].GetTagName());
+	
 	return EBTNodeResult::Succeeded;
-	
 }
-
-void UBTTask_SetRandomAttackTag::InitializeFromAsset(UBehaviorTree& Asset)
-{
-	Super::InitializeFromAsset(Asset);
-	
-	if (UBlackboardData* BBAsset = GetBlackboardAsset())
-	{
-		AbilityTagKey.ResolveSelectedKey(*BBAsset);
-	}
-}
-
 FString UBTTask_SetRandomAttackTag::GetStaticDescription() const
 {
-	return FString::Printf(TEXT("Set Goblin Attack Type\nKey: %s"),
-		*AbilityTagKey.SelectedKeyName.ToString());
-
+	return TEXT("Set Random Attack Tag");
 }

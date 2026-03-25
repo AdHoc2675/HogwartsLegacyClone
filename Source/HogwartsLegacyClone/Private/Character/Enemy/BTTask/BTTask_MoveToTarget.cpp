@@ -4,22 +4,20 @@
 #include "Character/Enemy/BTTask/BTTask_MoveToTarget.h"
 
 #include "AIController.h"
+#include "EditorCategoryUtils.h"
 #include "HOGDebugHelper.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
+#include "Character/Enemy/Helper/AIBlackboardHelper.h"
+#include "Character/Enemy/Helper/AttackInfoProvider.h"
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
 
 UBTTask_MoveToTarget::UBTTask_MoveToTarget()
 {
 	NodeName = "Move To Target";
 	bNotifyTick = true;
-    
-	// 인스턴스화 하지 않으면 Task를 공유하는 문제
 	bCreateNodeInstance = true;
-	
-	AbilityTagKey.AddNameFilter(this,
-	GET_MEMBER_NAME_CHECKED(UBTTask_MoveToTarget, AbilityTagKey));
 }
 
 EBTNodeResult::Type UBTTask_MoveToTarget::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -27,126 +25,97 @@ EBTNodeResult::Type UBTTask_MoveToTarget::ExecuteTask(UBehaviorTreeComponent& Ow
 	AIController = OwnerComp.GetAIOwner();
 	if (!AIController.IsValid()) return EBTNodeResult::Failed;
 	
-	Pawn = AIController->GetPawn();
-	if (!Pawn.IsValid()) return EBTNodeResult::Failed;;
+	APawn* Pawn = AIController->GetPawn();
+	if (!Pawn) return EBTNodeResult::Failed;
 	
-	Blackboard = OwnerComp.GetBlackboardComponent();
-	if (!Blackboard.IsValid())  return EBTNodeResult::Failed;
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!BB) return EBTNodeResult::Failed;
 	
-	Enemy = Cast<AEnemyCharacterBase>(Pawn.Get());
-	if (!Enemy.IsValid()) return EBTNodeResult::Failed;
+	AActor* Target = UAIBlackboardHelper::GetTargetActor(BB);
+	if (!Target) return EBTNodeResult::Failed;
 	
-	AActor* TargetActor = Cast<AActor>(Blackboard->GetValueAsObject(TargetActorKey.SelectedKeyName));
-	if (!TargetActor) return EBTNodeResult::Failed;
+	// 공격 범위
+	float AcceptanceRadius = GetAcceptanceRadius(BB, Pawn);
 	
-	// 공격범위
-	float AttackRange = GetAcceptanceRadius();
-	
-	EPathFollowingRequestResult::Type MoveResult = AIController->MoveToActor(
-		TargetActor, AttackRange, true, true, true, nullptr, true);
+	// 이동 결괄
+	EPathFollowingRequestResult::Type Result = AIController->MoveToActor(Target, AcceptanceRadius, true, true,true,nullptr, true);
 	
 	// 경로가 없는 경우
-	if (MoveResult == EPathFollowingRequestResult::Failed)
-		return EBTNodeResult::Failed;
+	if (Result == EPathFollowingRequestResult::Failed) return EBTNodeResult::Failed;
 	
-	// 이미 Range 안에 있는 경우
-	if (MoveResult == EPathFollowingRequestResult::AlreadyAtGoal)
-		return EBTNodeResult::Succeeded;
+	// 도착
+	if (Result == EPathFollowingRequestResult::AlreadyAtGoal) return EBTNodeResult::Succeeded;
 	
+	// 이동 중
 	return EBTNodeResult::InProgress;
-	
 }
 
 void UBTTask_MoveToTarget::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	if (!AIController.IsValid() || !Blackboard.IsValid() || !Enemy.IsValid())
+	if (!AIController.IsValid())
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		return;
+	}
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	if (!BB)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 	
-	AActor* TargetActor = Cast<AActor>(Blackboard->GetValueAsObject(TargetActorKey.SelectedKeyName));
-	if (!TargetActor)
+	AActor* Target = UAIBlackboardHelper::GetTargetActor(BB);
+	if (!Target)
 	{
 		AIController->StopMovement();
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 	
-	float Distance = Blackboard->GetValueAsFloat(TargetDistanceKey.SelectedKeyName);
-	float AttackRange = GetAcceptanceRadius();
+	float Distance = UAIBlackboardHelper::GetTargetDistance(BB);
+	float AcceptanceRadius = GetAcceptanceRadius(BB, AIController->GetPawn());
 	
-	// 공격 범위 이내 인 경우 Success
-	if (Distance <= AttackRange)
+	// 도착 시 완료
+	if (Distance <= AcceptanceRadius)
 	{
 		AIController->StopMovement();
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		return;
 	}
 	
-	// 경로 갱신 (타겟 이동 시)
-	UPathFollowingComponent* PathComp = AIController->GetPathFollowingComponent();
-	if (PathComp && PathComp->GetStatus() != EPathFollowingStatus::Moving)
+	// 길이 있고
+	if (UPathFollowingComponent* PathComp = AIController->GetPathFollowingComponent())
 	{
-		AIController->MoveToActor(TargetActor, AttackRange, true, true, true, nullptr, true);
+		// 움직이지 않을 떄
+		if (PathComp->GetStatus() != EPathFollowingStatus::Moving)
+		{
+			// 이동
+			AIController->MoveToActor(Target, AcceptanceRadius, true, true,true,nullptr, true);
+		}
 	}
 }
 
 void UBTTask_MoveToTarget::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory,
 	EBTNodeResult::Type TaskResult)
 {
-	// Abort 케이스인경우 정지
+	// Task 노드의 우선권이 변경
 	if (AIController.IsValid() && TaskResult != EBTNodeResult::Aborted)
 	{
 		AIController->StopMovement();
 	}
+	AIController->Reset();
+}
+
+float UBTTask_MoveToTarget::GetAcceptanceRadius(UBlackboardComponent* BB, APawn* Pawn) const
+{
+	if (!BB || !Pawn) return 150.f;
 	
-	AIController.Reset();
-	Pawn.Reset();
-	Blackboard.Reset();
-	Enemy.Reset();
-}
-
-void UBTTask_MoveToTarget::InitializeFromAsset(UBehaviorTree& Asset)
-{
-	Super::InitializeFromAsset(Asset);
-
-	if (UBlackboardData* BBAsset = GetBlackboardAsset())
-	{
-		TargetActorKey.ResolveSelectedKey(*BBAsset);
-		TargetDistanceKey.ResolveSelectedKey(*BBAsset);
-		AbilityTagKey.ResolveSelectedKey(*BBAsset);
-	}
-}
-
-FString UBTTask_MoveToTarget::GetStaticDescription() const
-{
-	if (!TargetActorKey.SelectedKeyName.IsValid() || !TargetDistanceKey.SelectedKeyName.IsValid())
-	{
-		return TEXT("Move To Target\n[No Key Set]");
-	}
-
-	return FString::Printf(TEXT("Move To Target\nTarget: %s\nDistance Key: %s"),
-		*TargetActorKey.SelectedKeyName.ToString(),
-		*TargetDistanceKey.SelectedKeyName.ToString());
-}
-
-float UBTTask_MoveToTarget::GetAcceptanceRadius() const
-{
-	// BB에서 AttackType 읽고 IMeleeAttacker로 MaxRange 가져옴
-	if (Pawn.IsValid() && Blackboard.IsValid() && AbilityTagKey.SelectedKeyName.IsValid())
-	{
-		if (IIMeleeAttacker* MeleeAttacker = Cast<IIMeleeAttacker>(Pawn.Get()))
-		{
-			FName AttackTag = Blackboard->GetValueAsName(AbilityTagKey.SelectedKeyName);
-			float MinRange, MaxRange;
-			MeleeAttacker->GetMeleeAttackRange(AttackTag, MinRange, MaxRange);
-			return MaxRange;
-		}
-	}
+	FName AttackTag = UAIBlackboardHelper::GetAbilityTagName(BB);
 	
-	if (Enemy.IsValid())
-		return Enemy->GetMinAttackRange();
-
-	return 100.f;
+	float MinRange, MaxRange;
+	if (UAttackInfoProvider::GetRange(Pawn, AttackTag, MinRange, MaxRange))
+	{
+		return MaxRange;
+	}
+	return 150.f;
 }

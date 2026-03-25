@@ -57,9 +57,6 @@ protected:
 	TObjectPtr<UAnimMontage> CastMontage = nullptr;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
-	TObjectPtr<UAnimMontage> HoldLoopMontage=nullptr;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
 	FName StartSectionName = TEXT("Start");
 
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Anim")
@@ -149,11 +146,6 @@ protected:
 
 	UPROPERTY(Transient)
 	bool bPendingEndAbilityWasCancelled = false;
-	
-	UPROPERTY(Transient)
-	bool bIgnoreNextCastMontageInterrupted = false;
-	
-	
 	
 protected:
 	virtual void OnPreCastFacingFinished(

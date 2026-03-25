@@ -17,14 +17,6 @@ class HOGWARTSLEGACYCLONE_API UBTService_UpdateTargetInfo : public UBTService
 public:
 	UBTService_UpdateTargetInfo();
 
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector TargetActorKey;
-
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	FBlackboardKeySelector TargetDistanceKey;
-
 protected:
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
-	virtual void InitializeFromAsset(UBehaviorTree& Asset) override;
-	
 };

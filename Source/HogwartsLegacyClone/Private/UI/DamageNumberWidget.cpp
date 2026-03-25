@@ -3,22 +3,18 @@
 
 #include "UI/DamageNumberWidget.h"
 
-#include "HOGDebugHelper.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetComponent.h"
 #include "Pool/DamageNumberPool.h"
 
-void UDamageNumberWidget::FloatDamageNumber(float Damage, UWidgetComponent* InWidgetComponent,
-                                            UDamageNumberPool* InPool)
+void UDamageNumberWidget::FloatDamageNumber(float Damage, FVector2D ScreenPosition, UDamageNumberPool* InPool)
 {
-	WidgetComponent = InWidgetComponent;
+	StartLocation = ScreenPosition;
 	DamageNumberPool = InPool;
-
-	StartLocation = InWidgetComponent->GetRelativeLocation();
 	
 	DamageText->SetText(FText::AsNumber(FMath::RoundToInt(Damage)));
-
 	SetRenderOpacity(1.f);
+	SetVisibility(ESlateVisibility::HitTestInvisible);
 
 	StartTime = GetWorld()->GetTimeSeconds();
 
@@ -30,12 +26,12 @@ void UDamageNumberWidget::UpdateAnimation()
 	float Elapsed = GetWorld()->GetTimeSeconds() - StartTime;
 	float Alpha = FMath::Clamp(Elapsed / Duration, 0.0f, 1.0f);
 
-	FVector NewLocation = StartLocation;
+	FVector2D NewLocation = StartLocation;
 	// RiseSpeed에 비례하여 위로 상승
 	// 처음은 Alpha가 0이므로 상승하지 않음
-	NewLocation.Z += RiseSpeed * Alpha;
+	NewLocation.Y -= RiseSpeed * Alpha;
 
-	WidgetComponent->SetRelativeLocation(NewLocation); 
+	SetPositionInViewport(NewLocation);
 	// 원 마이너스 하여 점점 Alpha가 작아지도록
 	SetRenderOpacity(1.f - Alpha);
 	
@@ -43,10 +39,11 @@ void UDamageNumberWidget::UpdateAnimation()
 	{
 		GetWorld()->GetTimerManager().ClearTimer(AnimTimerHandle);
 		
+		SetVisibility(ESlateVisibility::Collapsed);
 		// 현재 widgetComponent 반환
 		if (DamageNumberPool)
 		{
-			DamageNumberPool->Release(WidgetComponent);
+			DamageNumberPool->Release(this);
 		}
 	}
 }
