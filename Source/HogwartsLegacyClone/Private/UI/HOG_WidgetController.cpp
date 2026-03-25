@@ -17,6 +17,7 @@
 #include "Minimap/MinimapCaptureComponent.h"
 #include "Minimap/MinimapWidget.h"
 #include "UI/Enemy/HOGEnemyHUDBase.h"
+#include "UI/SubtitleWidget.h"
 
 void UHOG_WidgetController::Init(AHOG_PlayerController* InPlayerController, APlayerCharacterBase* InPlayerCharacter,
                                  TSubclassOf<UHOGPlayerHUDBase> InPlayerHUDClass,
@@ -48,6 +49,9 @@ void UHOG_WidgetController::Init(AHOG_PlayerController* InPlayerController, APla
 	
 	MinimapWidgetClass = InMinimapClass;
 	CreateMiniMapWidget(InPlayerController, InPlayerCharacter);
+
+	// SubtitleWidget 생성
+	CreateSubtitleWidget(InPlayerController);
 }
 
 void UHOG_WidgetController::UnlockSpellSlot(FGameplayTag SpellID)
@@ -292,4 +296,28 @@ void UHOG_WidgetController::Shutdown()
 	UnBindLockOnComponent();
 	ClearEnemyBinding();
 	ShutdownMiniMapWidget();
+}
+
+void UHOG_WidgetController::CreateSubtitleWidget(AHOG_PlayerController* InPlayerController)
+{
+	if (!InPlayerController) return;
+
+	// PlayerController에 선언될 SubtitleWidgetClass를 가져옴
+	if (InPlayerController->SubtitleWidgetClass)
+	{
+		SubtitleWidget = CreateWidget<USubtitleWidget>(InPlayerController, InPlayerController->SubtitleWidgetClass);
+		if (SubtitleWidget)
+		{
+			SubtitleWidget->AddToViewport(50); // 다른 UI보다 위에
+			SubtitleWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+}
+
+void UHOG_WidgetController::RequestSubtitle(const FString& Text, float Duration)
+{
+	if (SubtitleWidget)
+	{
+		SubtitleWidget->ShowSubtitle(Text, Duration);
+	}
 }

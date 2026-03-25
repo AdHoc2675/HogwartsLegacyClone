@@ -41,6 +41,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "HOG|UI")
 	void UnlockSpellUI(FGameplayTag SpellID);
 
+	// WidgetController Getter
+	UFUNCTION(BlueprintCallable, Category = "HOG|UI")
+	class UHOG_WidgetController* GetWidgetController() const { return WidgetController; }
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<class USubtitleWidget> SubtitleWidgetClass;
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

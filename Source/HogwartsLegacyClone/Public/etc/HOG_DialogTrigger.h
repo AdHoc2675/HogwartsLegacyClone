@@ -41,6 +41,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HOG|Dialog")
 	FString DialogText;
 
+	// 자막이 화면에 유지되는 시간 (초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HOG|Dialog")
+	float DialogDuration = 3.0f;
+
 	// 한 번만 실행되게 할지 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HOG|Dialog")
 	bool bTriggerOnce = true;

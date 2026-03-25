@@ -81,6 +81,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HOG|Spell|Accio|Sound")
 	TObjectPtr<USoundBase> PullSound = nullptr;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HOG|Spell|Accio|Sound")
+	FString CastSubtitleText = TEXT("아씨오!");
+
 	// 진행 중인 당기기 사운드를 끄기 위한 컴포넌트
 	UPROPERTY(Transient)
 	TObjectPtr<UAudioComponent> PullAudioComponent = nullptr;

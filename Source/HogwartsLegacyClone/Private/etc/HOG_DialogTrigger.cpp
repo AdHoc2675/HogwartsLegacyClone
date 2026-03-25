@@ -4,6 +4,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "HOGDebugHelper.h"
 
+#include "GameFramework/HOG_PlayerController.h"
+#include "UI/HOG_WidgetController.h"
+
 AHOG_DialogTrigger::AHOG_DialogTrigger()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -56,11 +59,17 @@ void AHOG_DialogTrigger::OnOverlapBegin(
 			UGameplayStatics::PlaySoundAtLocation(this, DialogSound, PlayerCharacter->GetActorLocation());
 		}
 
-		// 2. 대사 자막 출력 (현재는 디버그 텍스트로 대체)
+		// 2. 대사 자막 출력
 		if (!DialogText.IsEmpty())
 		{
-			// TODO: 나중에 화면 하단 UI 위젯을 호출하는 코드로 변경
-			Debug::Print(FString::Printf(TEXT("[플레이어] : %s"), *DialogText), FColor::Cyan);
+			if (AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(PlayerCharacter->GetController()))
+			{
+				if (UHOG_WidgetController* UIController = PC->GetWidgetController())
+				{
+					// 추가한 Duration 변수를 통해 에디터에서 설정한 시간만큼 표시
+					UIController->RequestSubtitle(DialogText, DialogDuration); 
+				}
+			}
 		}
 	}
 }

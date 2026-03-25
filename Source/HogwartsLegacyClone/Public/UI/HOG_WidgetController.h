@@ -16,7 +16,9 @@ class AHOG_PlayerController;
 class USpellComponent;
 class AHOG_PlayerState;
 class UMinimapWidget;
+class USubtitleWidget;
 struct FLockOnTargetResult;
+
 /**
  * 
  */
@@ -98,4 +100,19 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UMinimapWidget> MinimapWidget;
+	
+public:
+	// ===== Subtitle =====
+	
+	// 자막을 띄워 달라고 요청받을 외부 인터페이스
+	void RequestSubtitle(const FString& Text, float Duration = 2.0f);
+
+	// 자막 위젯용 Tsubclass
+	UPROPERTY()
+	TSubclassOf<USubtitleWidget> SubtitleWidgetClass;
+
+	void CreateSubtitleWidget(AHOG_PlayerController* InPlayerController);
+
+	UPROPERTY()
+	TObjectPtr<USubtitleWidget> SubtitleWidget;
 };

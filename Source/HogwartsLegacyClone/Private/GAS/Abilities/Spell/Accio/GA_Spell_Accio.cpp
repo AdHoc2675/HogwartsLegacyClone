@@ -7,6 +7,8 @@
 
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/HOG_PlayerController.h"
+#include "UI/HOG_WidgetController.h"
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
@@ -86,6 +88,15 @@ void UGA_Spell_Accio::ExecuteAccioCast(
 	if (CastVoiceSound && Character)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, Character->GetActorLocation());
+
+		// =============== [자막 호출] ===============
+		if (AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(Character->GetController()))
+		{
+			if (UHOG_WidgetController* UIController = PC->GetWidgetController())
+			{
+				UIController->RequestSubtitle(CastSubtitleText, 1.0f);
+			}
+		}
 	}
 
 	if (CastSound && Character)

@@ -44,6 +44,15 @@ void UGA_Spell_Lumos::ActivateAbility(
 		if (CastVoiceSound)
 		{
 			UGameplayStatics::PlaySoundAtLocation(this, CastVoiceSound, PlayerCharacter->GetActorLocation());
+            
+			// =============== [자막 호출] ===============
+			if (AHOG_PlayerController* PC = Cast<AHOG_PlayerController>(PlayerCharacter->GetController()))
+			{
+				if (UHOG_WidgetController* UIController = PC->GetWidgetController())
+				{
+					UIController->RequestSubtitle(CastSubtitleText, 1.0f);
+				}
+			}
 		}
 		if (CastSound)
 		{
