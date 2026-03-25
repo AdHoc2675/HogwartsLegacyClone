@@ -27,6 +27,8 @@
 #include "GAS/Abilities/GA_SpellBase.h"
 
 
+
+
 APlayerCharacterBase::APlayerCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -96,24 +98,7 @@ void APlayerCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (UHOGAbilitySystemComponent* HOGASC = GetHOGAbilitySystemComponent())
-	{
-		HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Combat_Active, EGameplayTagEventType::NewOrRemoved)
-			.AddUObject(this, &APlayerCharacterBase::HandleCombatActiveTagChanged);
-
-		HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Combat_Inactive, EGameplayTagEventType::NewOrRemoved)
-			.AddUObject(this, &APlayerCharacterBase::HandleCombatInactiveTagChanged);
-
-		HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Casting_Active, EGameplayTagEventType::NewOrRemoved)
-			.AddUObject(this, &APlayerCharacterBase::HandleCastingActiveTagChanged);
-
-		HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Casting_Inactive, EGameplayTagEventType::NewOrRemoved)
-			.AddUObject(this, &APlayerCharacterBase::HandleCastingInactiveTagChanged);
-
-		bCombatActive = HOGASC->HasMatchingGameplayTag(HOGGameplayTags::State_Combat_Active);
-		bCastingActive = HOGASC->HasMatchingGameplayTag(HOGGameplayTags::State_Casting_Active);
-	}
-
+	BindASCGameplayTagCallbacks();
 	RefreshWandVisibilityFromCombatState();
 }
 
@@ -131,6 +116,7 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	TeamTag = HOGGameplayTags::Team_Player;
 
 	InitializeAbilityActorInfo();
+	BindASCGameplayTagCallbacks();
 }
 
 void APlayerCharacterBase::OnRep_PlayerState()
@@ -138,6 +124,7 @@ void APlayerCharacterBase::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	InitializeAbilityActorInfo();
+	BindASCGameplayTagCallbacks();
 }
 
 void APlayerCharacterBase::InitializeAbilityActorInfo()
@@ -158,6 +145,39 @@ void APlayerCharacterBase::InitializeAbilityActorInfo()
 	HOGASC->InitAbilityActorInfo(HOGPlayerState, this);
 }
 
+void APlayerCharacterBase::BindASCGameplayTagCallbacks()
+{
+	UHOGAbilitySystemComponent* HOGASC = GetHOGAbilitySystemComponent();
+	if (!HOGASC)
+	{
+		return;
+	}
+
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Combat_Active, EGameplayTagEventType::NewOrRemoved)
+		.RemoveAll(this);
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Combat_Active, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &APlayerCharacterBase::HandleCombatActiveTagChanged);
+
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Combat_Inactive, EGameplayTagEventType::NewOrRemoved)
+		.RemoveAll(this);
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Combat_Inactive, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &APlayerCharacterBase::HandleCombatInactiveTagChanged);
+
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Casting_Active, EGameplayTagEventType::NewOrRemoved)
+		.RemoveAll(this);
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Casting_Active, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &APlayerCharacterBase::HandleCastingActiveTagChanged);
+
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Casting_Inactive, EGameplayTagEventType::NewOrRemoved)
+		.RemoveAll(this);
+	HOGASC->RegisterGameplayTagEvent(HOGGameplayTags::State_Casting_Inactive, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &APlayerCharacterBase::HandleCastingInactiveTagChanged);
+
+	
+
+	bCombatActive = HOGASC->HasMatchingGameplayTag(HOGGameplayTags::State_Combat_Active);
+	bCastingActive = HOGASC->HasMatchingGameplayTag(HOGGameplayTags::State_Casting_Active);
+}
 
 void APlayerCharacterBase::BeginForcedFacingToLocation(const FVector& TargetLocation)
 {
@@ -171,31 +191,28 @@ void APlayerCharacterBase::BeginForcedFacingToLocation(const FVector& TargetLoca
 
 	const FRotator TargetRot = ToTarget.Rotation();
 	BeginForcedFacingToRotation(TargetRot);
-	
 }
 
 void APlayerCharacterBase::BeginForcedFacingToRotation(const FRotator& TargetRotation)
 {
-	ForcedFacingTargetRotation=FRotator(0.f,TargetRotation.Yaw,0.f);
-	bForcedFacingActive=true;
+	ForcedFacingTargetRotation = FRotator(0.f, TargetRotation.Yaw, 0.f);
+	bForcedFacingActive = true;
 	
-	//강제 회전중에는 이동방향 일시 중지 
-	if (UCharacterMovementComponent* MoveComp=GetCharacterMovement())
+	// 강제 회전중에는 이동방향 일시 중지
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{
-		MoveComp->bOrientRotationToMovement=false;
+		MoveComp->bOrientRotationToMovement = false;
 	}
 }
 
 void APlayerCharacterBase::StopForcedFacing()
 {
-	bForcedFacingActive=false;
-{
-}
-	
-	//평상시 회전 복구
-	if (UCharacterMovementComponent* MoveComp=GetCharacterMovement())
+	bForcedFacingActive = false;
+
+	// 평상시 회전 복구
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{
-		MoveComp->bOrientRotationToMovement=true;
+		MoveComp->bOrientRotationToMovement = true;
 	}
 }
 
@@ -208,6 +225,7 @@ bool APlayerCharacterBase::IsForcedFacingFinished() const
 
 	return DeltaYaw <= ForcedFacingAcceptAngle;
 }
+
 void APlayerCharacterBase::UpdateForcedFacing(float DeltaSeconds)
 {
 	if (!bForcedFacingActive)
@@ -215,8 +233,8 @@ void APlayerCharacterBase::UpdateForcedFacing(float DeltaSeconds)
 		return;
 	}
 	
-	const FRotator CurrentRot=GetActorRotation();
-	const FRotator NewRot = FMath::RInterpTo(CurrentRot,ForcedFacingTargetRotation,DeltaSeconds,ForcedFacingInterpSpeed);
+	const FRotator CurrentRot = GetActorRotation();
+	const FRotator NewRot = FMath::RInterpTo(CurrentRot, ForcedFacingTargetRotation, DeltaSeconds, ForcedFacingInterpSpeed);
 	
 	SetActorRotation(FRotator(0.f, NewRot.Yaw, 0.f));
 
@@ -226,7 +244,6 @@ void APlayerCharacterBase::UpdateForcedFacing(float DeltaSeconds)
 		StopForcedFacing();
 	}
 }
-
 
 UHOGAbilitySystemComponent* APlayerCharacterBase::GetHOGAbilitySystemComponent() const
 {
@@ -238,8 +255,6 @@ UHOGAbilitySystemComponent* APlayerCharacterBase::GetHOGAbilitySystemComponent()
 
 	return Cast<UHOGAbilitySystemComponent>(HOGPlayerState->GetAbilitySystemComponent());
 }
-
-
 
 void APlayerCharacterBase::Input_Move(const FInputActionValue& Value)
 {
@@ -290,18 +305,17 @@ void APlayerCharacterBase::Input_Interact()
 	FVector EndLoc = StartLoc + (GetActorForwardVector() * 300.0f); // 전방 300 유닛(3M) 앞까지 탐색
 
 	TArray<AActor*> ActorsToIgnore;
-	ActorsToIgnore.Add(this); // 자기 자신은 무시
+	ActorsToIgnore.Add(this);
 
 	FHitResult HitResult;
 
-	// 디버그 드로우 모드로 선과 맞은 지점을 그려줌
 	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
 		this, StartLoc, EndLoc,
-		50.0f, // 상호작용 탐색 구체 반지름
-		TraceTypeQuery1, // Visibility 채널
+		50.0f,
+		TraceTypeQuery1,
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration, // 디버그 선 그리기 (5초 유지)
+		EDrawDebugTrace::ForDuration,
 		HitResult, true
 	);
 
@@ -309,13 +323,10 @@ void APlayerCharacterBase::Input_Interact()
 	{
 		AActor* HitActor = HitResult.GetActor();
 
-		// 맞은 대상이 UInteractableInterface를 상속받았는지 확인 (C++ 상자 베이스)
 		if (HitActor->Implements<UInteractableInterface>())
 		{
-			// 대상이 현재 상호작용 가능한 상태인지 확인
 			if (IInteractableInterface::Execute_CanInteract(HitActor, this))
 			{
-				// 상호작용 실행
 				IInteractableInterface::Execute_Interact(HitActor, this);
 			}
 		}
@@ -374,10 +385,12 @@ void APlayerCharacterBase::HandleCastingInactiveTagChanged(const FGameplayTag Ca
 	}
 }
 
+
+
+
 void APlayerCharacterBase::RefreshWandVisibilityFromCombatState()
 {
 	const bool bShouldShowWand = (bCombatActive || bCastingActive);
-
 	SetWandVisible(bShouldShowWand);
 }
 
@@ -443,8 +456,8 @@ bool APlayerCharacterBase::ConsumeAndSpawnQueuedSpellVFX()
 		StartLocation,
 		SpawnRotation,
 		FVector(1.f),
-		true,   // AutoDestroy
-		true,   // AutoActivate
+		true,
+		true,
 		ENCPoolMethod::None,
 		true
 	);
