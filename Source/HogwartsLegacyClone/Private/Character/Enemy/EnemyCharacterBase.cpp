@@ -1,5 +1,6 @@
 #include "Character/Enemy/EnemyCharacterBase.h"
 
+#include "Character/Enemy/Anim/EnemyAnimInstanceBase.h"
 #include "Character/Enemy/Handler/EnemyDamageHandler.h"
 #include "Character/Enemy/Interface/IMeleeAttacker.h"
 #include "Components/CapsuleComponent.h"
@@ -120,16 +121,13 @@ void AEnemyCharacterBase::HandleDeath_Implementation()
 	GetCharacterMovement()->DisableMovement();
 	
 	OnEnemyDeath.Broadcast();
-
-	if (AbilitySystemComponent)
+	
+	// 애니메이션 실행중지
+	if (UEnemyAnimInstanceBase* AnimInstance = Cast<UEnemyAnimInstanceBase>(GetMesh()->GetAnimInstance()))
 	{
-		FGameplayTagContainer DeathTag;
-		DeathTag.AddTag(HOGGameplayTags::State_Dead);
-		AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+		AnimInstance->StopAllMontages(0.0f);
+		AnimInstance->SetDead();
 	}
-
-	// 현재는 Dead 상태일 경우 3초 후에 파괴
-	SetLifeSpan(3);
 }
 
 // GAS 초기화

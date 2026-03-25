@@ -2,6 +2,8 @@
 
 
 #include "Character/Enemy/Anim/EnemyAnimInstanceBase.h"
+
+#include "HOGDebugHelper.h"
 #include "KismetAnimationLibrary.h"
 #include "Core/HOG_GameplayTags.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
@@ -24,6 +26,8 @@ void UEnemyAnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 	
 	if (!EnemyCharacter) return;
 	
+	if (bIsDead) return;
+	
 	FVector Velocity = EnemyCharacter->GetVelocity();
 	Speed = Velocity.Size2D();
 	
@@ -37,4 +41,9 @@ void UEnemyAnimInstanceBase::NativeUpdateAnimation(float DeltaSeconds)
 		bIsDead = AbilitySystemComponent->HasMatchingGameplayTag(HOGGameplayTags::State_Dead);
 	}
 		
+}
+
+void UEnemyAnimInstanceBase::SetDead()
+{
+	bIsDead = true;
 }

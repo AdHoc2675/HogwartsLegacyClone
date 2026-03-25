@@ -15,3 +15,4 @@ UDA_EnemyConfigBase* ATrollEnemyCharacter::GetEnemyConfig() const
 	return TrollConfig;
 }
 
+
