@@ -17,6 +17,7 @@ class UAbilitySystemComponent;
 class UNiagaraSystem;
 class UGA_SpellBase;
 
+
 /**
  * 플레이어 캐릭터 베이스
  * - 카메라(SpringArm + Camera)
@@ -61,10 +62,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="GAS")
 	UHOGAbilitySystemComponent* GetHOGAbilitySystemComponent() const;
-	
+
 	UFUNCTION(BlueprintCallable, Category="HOG|Combat")
 	UStaticMeshComponent* GetWandMesh() const { return WandMesh; }
-	
+
 public:
 	// =========================
 	// Spell Facing
@@ -83,8 +84,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="HOG|Look")
 	bool IsForcedFacingFinished() const;
-	
-	
 
 protected:
 	virtual void BeginPlay() override;
@@ -94,8 +93,10 @@ protected:
 
 	void InitializeAbilityActorInfo();
 	void UpdateForcedFacing(float DeltaSeconds);
+	void BindASCGameplayTagCallbacks();
 
 #pragma region Camera
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -105,6 +106,7 @@ protected:
 #pragma endregion
 
 #pragma region Tuning
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="HOG|Move")
 	float MoveForwardScale = 1.0f;
@@ -144,8 +146,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Component", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<ULockOnComponent> LockOnComponent;
-	
-	
+
 protected:
 	// =========================
 	// Forced Facing Runtime
@@ -155,9 +156,9 @@ protected:
 
 	UPROPERTY(Transient)
 	FRotator ForcedFacingTargetRotation = FRotator::ZeroRotator;
-	
 
 #pragma region Wand
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="HOG|Combat", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UStaticMeshComponent> WandMesh;
@@ -181,7 +182,7 @@ protected:
 	void RefreshWandVisibilityFromCombatState();
 	void SetWandVisible(bool bVisible);
 #pragma endregion
-	
+
 #pragma region Combo
 
 protected:
@@ -196,29 +197,26 @@ public:
 	bool CanQueueNextCombo() const { return bCanQueueNextCombo; }
 
 #pragma endregion
-	
-	
+
 public:
 	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
 	void QueueSpellVFX(const FQueuedSpellVFXData& InVFXData);
 
 	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
 	bool ConsumeAndSpawnQueuedSpellVFX();
-	
+
 protected:
 	UPROPERTY(Transient)
 	FQueuedSpellVFXData QueuedSpellVFXData;
-	
+
 protected:
 	UPROPERTY(Transient)
 	TObjectPtr<UGA_SpellBase> QueuedCastNotifyAbility = nullptr;
-	
+
 public:
 	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
 	void QueueCastNotifyAbility(UGA_SpellBase* InAbility);
 
 	UFUNCTION(BlueprintCallable, Category="Spell|VFX")
 	void ConsumeCastNotifyAbility();
-	
-	
 };
