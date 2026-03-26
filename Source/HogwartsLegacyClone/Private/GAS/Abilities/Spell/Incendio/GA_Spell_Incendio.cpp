@@ -70,6 +70,17 @@ void UGA_Spell_Incendio::ExecuteIncendioCast(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
+
+	// Cast 시전 가능 여부 체크 (쿨다운, 자원 등). 실패 시 즉시 종료
+	FSpellCastCheckResult CheckResult;
+	if (!CanCastAsNormal(CheckResult))
+	{
+		const FSpellCastRequest FailedRequest = BuildSpellCastRequest(ESpellCastContext::Normal);
+		NotifySpellCastFailedResult(FailedRequest, CheckResult);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -92,6 +103,8 @@ void UGA_Spell_Incendio::ExecuteIncendioCast(
 			}
 		}
 	}
+
+	NotifySpellCastSucceeded(ESpellCastContext::Normal);
 
 	if (!Character || !Character->GetMesh() || !CastMontage)
 	{

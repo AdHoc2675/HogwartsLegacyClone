@@ -154,6 +154,8 @@ void UGA_Spell_Accio::HandleCastNotify()
 		return;
 	}
 
+	NotifySpellCastSucceeded(ESpellCastContext::Normal);
+
 	SpawnPersistentBeamVFX();
 
 	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());

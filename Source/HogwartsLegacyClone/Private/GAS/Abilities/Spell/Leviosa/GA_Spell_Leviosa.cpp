@@ -65,6 +65,8 @@ void UGA_Spell_Leviosa::ExecuteLeviosaCast(
 
 	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
 
+	NotifySpellCastSucceeded(ESpellCastContext::Normal);
+
 	// 1. 주문 시전 사운드 재생
 	if (CastVoiceSound && Character)
 	{
