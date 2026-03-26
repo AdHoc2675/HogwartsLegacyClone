@@ -15,6 +15,8 @@
 #include "GAS/HOGAbilitySystemComponent.h"
 #include "Pool/DamageNumberPool.h"
 #include "UI/HOG_WidgetController.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
 
 AHOG_PlayerController::AHOG_PlayerController()
 {
@@ -300,5 +302,41 @@ void AHOG_PlayerController::UnlockSpellUI(FGameplayTag SpellID)
 	if (WidgetController)
 	{
 		WidgetController->UnlockSpellSlot(SpellID);
+	}
+}
+
+// =============== [BGM System] ===============
+void AHOG_PlayerController::PlayBGMWithFade(USoundBase* NewBGM, float FadeInTime, float FadeOutTime)
+{
+	if (!NewBGM) return;
+
+	// 새로 재생할 음악이 현재 재생중인 음악과 같다면 무시
+	if (CurrentBGMComponent && CurrentBGMComponent->Sound == NewBGM && CurrentBGMComponent->IsPlaying())
+	{
+		return;
+	}
+
+	// 1. 기존에 재생 중인 음악이 있다면 Fade Out
+	if (CurrentBGMComponent && CurrentBGMComponent->IsPlaying())
+	{
+		// FadeOut이 끝나면 컴포넌트는 자동으로 Destroy 됩니다 (기본 bAutoDestroy=true 속성)
+		CurrentBGMComponent->FadeOut(FadeOutTime, 0.0f);
+	}
+
+	// 2. 새로운 음악을 생성하고 Fade In
+	CurrentBGMComponent = UGameplayStatics::CreateSound2D(this, NewBGM);
+	if (CurrentBGMComponent)
+	{
+		CurrentBGMComponent->FadeIn(FadeInTime);
+	}
+}
+
+void AHOG_PlayerController::StopBGMWithFade(float FadeOutTime)
+{
+	// 현재 재생 중인 음악을 서서히 줄여서 끕니다.
+	if (CurrentBGMComponent && CurrentBGMComponent->IsPlaying())
+	{
+		CurrentBGMComponent->FadeOut(FadeOutTime, 0.0f);
+		CurrentBGMComponent = nullptr;
 	}
 }

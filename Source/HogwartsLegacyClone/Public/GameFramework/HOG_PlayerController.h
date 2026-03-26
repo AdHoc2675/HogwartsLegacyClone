@@ -21,6 +21,9 @@ class UHOGEnemyHUDBase;
 class UUserWidget;
 class UDamageNumberPool;
 
+class UAudioComponent;
+class USoundBase;
+
 /**
  * DataAsset 기반 PlayerController
  * - UDA_InputConfig를 읽어 EnhancedInput 바인딩/IMC 추가
@@ -134,4 +137,19 @@ protected:
 
 	UPROPERTY()
 	UDamageNumberPool* DamageNumberPool;
+
+public:
+	// =============== [BGM System] ===============
+	/** 새로운 배경음악을 페이드인 하며 재생. 기존 음악은 페이드아웃 */
+	UFUNCTION(BlueprintCallable, Category = "HOG|BGM")
+	void PlayBGMWithFade(USoundBase* NewBGM, float FadeInTime = 1.0f, float FadeOutTime = 1.0f);
+		
+	/** 현재 재생중인 배경음악을 페이드아웃 하며 정지 */
+	UFUNCTION(BlueprintCallable, Category = "HOG|BGM")
+	void StopBGMWithFade(float FadeOutTime = 1.0f);
+
+protected:
+	/** 현재 재생중인 BGM 컴포넌트 추적용 */
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> CurrentBGMComponent;
 };
