@@ -101,6 +101,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="BasicAttack|Projectile")
 	float ProjectileSpawnUpOffset = 20.f;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HOG|Spell|BasicAttack|Sound")
+	TObjectPtr<class USoundBase> CastSound = nullptr;
+
 private:
 	void PlayComboMontageOrFire(const FGameplayAbilityActorInfo* ActorInfo);
 

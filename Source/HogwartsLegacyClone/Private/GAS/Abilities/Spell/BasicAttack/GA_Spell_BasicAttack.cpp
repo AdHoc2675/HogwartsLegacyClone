@@ -12,6 +12,8 @@
 #include "CollisionQueryParams.h"
 #include "AbilitySystemComponent.h"
 #include "HOGDebugHelper.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h" 
 
 #include "GAS/Abilities/Spell/BasicAttack/BasicAttackActor.h"
 
@@ -410,6 +412,11 @@ void UGA_Spell_BasicAttack::SpawnBasicAttackActor()
 	);
 
 	Projectile->FireToDirection(ShootDirection);
+
+	if (CastSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CastSound, AvatarCharacter->GetActorLocation());
+	}
 }
 
 bool UGA_Spell_BasicAttack::BuildTraceStartEnd(
